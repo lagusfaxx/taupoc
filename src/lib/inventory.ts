@@ -110,7 +110,7 @@ export interface LowStockRow {
 export async function getLowStock(limit = 100): Promise<LowStockRow[]> {
   const settings = await getSettings();
   const variants = await prisma.variant.findMany({
-    where: { active: true, product: { status: { in: ['ACTIVE', 'COMING_SOON'] } } },
+    where: { active: true, product: { status: 'ACTIVE' } },
     include: { product: { select: { name: true, slug: true } }, color: { select: { name: true } } },
     orderBy: { stock: 'asc' },
     take: 500,

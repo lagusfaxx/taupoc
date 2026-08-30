@@ -14,3 +14,9 @@ public/uploads/*
 coverage
 .tsbuildinfo
 *.tsbuildinfo
+
+# Herramientas de verificación local
+*.mjs
+!eslint.config.mjs
+!next.config.mjs
+!postcss.config.mjs

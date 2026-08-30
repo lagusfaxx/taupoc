@@ -17,7 +17,7 @@ export function Card({
   padded?: boolean;
 }) {
   return (
-    <section className={cn('border border-line bg-ink-900', className)}>
+    <section className={cn('min-w-0 border border-line bg-ink-900', className)}>
       {title ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5">
           <div>
@@ -29,7 +29,7 @@ export function Card({
           {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
         </div>
       ) : null}
-      <div className={padded ? 'p-5' : ''}>{children}</div>
+      <div className={cn('min-w-0', padded && 'p-5')}>{children}</div>
     </section>
   );
 }

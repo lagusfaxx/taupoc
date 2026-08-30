@@ -65,8 +65,8 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         }
       />
 
-      <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
-        <div className="space-y-5">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
+        <div className="min-w-0 space-y-5">
           <Card title={`Productos (${order.items.length})`} padded={false}>
             <Table minWidth={640}>
               <thead>
@@ -212,7 +212,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           </Card>
         </div>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <OrderStatusForm orderId={order.id} status={order.status} />
           <TrackingForm
             orderId={order.id}

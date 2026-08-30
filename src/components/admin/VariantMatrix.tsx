@@ -154,10 +154,10 @@ export function VariantMatrix({
                       <button
                         type="button"
                         onClick={() => fill({ size }, 0)}
-                        title={`Poner en cero la talla ${size}`}
+                        title={`Poner en cero toda la talla ${size}`}
                         className="px-1 font-display text-[9px] uppercase tracking-wide text-chalk-faint hover:text-signal-bad"
                       >
-                        0
+                        Vaciar
                       </button>
                       <button
                         type="button"
@@ -165,10 +165,10 @@ export function VariantMatrix({
                           const value = Number(window.prompt(`Stock para toda la talla ${size}:`, '5'));
                           if (Number.isFinite(value) && value >= 0) fill({ size }, value);
                         }}
-                        title={`Rellenar la talla ${size}`}
+                        title={`Poner el mismo stock en toda la talla ${size}`}
                         className="px-1 font-display text-[9px] uppercase tracking-wide text-chalk-faint hover:accent-text"
                       >
-                        Set
+                        Igualar
                       </button>
                       <button
                         type="button"
@@ -213,10 +213,10 @@ export function VariantMatrix({
                         <button
                           type="button"
                           onClick={() => fill({ colorId: color.id }, 0)}
-                          title={`Poner en cero ${color.name}`}
+                          title={`Poner en cero todas las tallas de ${color.name}`}
                           className="px-1 font-display text-[9px] uppercase text-chalk-faint hover:text-signal-bad"
                         >
-                          0
+                          Vaciar
                         </button>
                         <button
                           type="button"
@@ -224,10 +224,10 @@ export function VariantMatrix({
                             const value = Number(window.prompt(`Stock para todas las tallas de ${color.name}:`, '5'));
                             if (Number.isFinite(value) && value >= 0) fill({ colorId: color.id }, value);
                           }}
-                          title={`Rellenar ${color.name}`}
+                          title={`Poner el mismo stock en todas las tallas de ${color.name}`}
                           className="px-1 font-display text-[9px] uppercase text-chalk-faint hover:accent-text"
                         >
-                          Set
+                          Igualar
                         </button>
                       </span>
                     </span>
@@ -283,7 +283,7 @@ export function VariantMatrix({
                           <span className="sr-only">
                             SKU {variant.sku} activo
                           </span>
-                          <span aria-hidden>{active ? 'on' : 'off'}</span>
+                          <span aria-hidden>{active ? 'a la venta' : 'oculto'}</span>
                         </label>
                       </td>
                     );

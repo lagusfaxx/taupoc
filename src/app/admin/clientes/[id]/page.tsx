@@ -68,7 +68,7 @@ export default async function AdminCustomerDetail({ params }: { params: Promise<
         />
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[1.55fr_1fr]">
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <Card title={`Pedidos (${orders.length})`} padded={false}>
           <Table minWidth={560}>
             <thead>
@@ -105,7 +105,7 @@ export default async function AdminCustomerDetail({ params }: { params: Promise<
           </Table>
         </Card>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Card title="Datos de la cuenta">
             <dl className="space-y-3 text-[13.5px]">
               {[

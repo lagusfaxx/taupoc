@@ -84,8 +84,11 @@
   }
 
   /* Contenedor de tabla que nunca provoca scroll horizontal en el body. */
+  /* Las tablas anchas hacen scroll dentro de su caja, nunca arrastran la página.
+     min-w-0 es indispensable cuando el contenedor es ítem de grilla o flex. */
   .table-scroll {
-    @apply -mx-5 overflow-x-auto px-5 lg:mx-0 lg:px-0;
+    @apply -mx-5 w-screen min-w-0 max-w-[100vw] overflow-x-auto px-5;
+    @apply lg:mx-0 lg:w-full lg:max-w-full lg:px-0;
   }
 
   .skeleton {

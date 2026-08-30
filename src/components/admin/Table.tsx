@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 
 export function Table({ children, minWidth = 720 }: { children: ReactNode; minWidth?: number }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="w-full max-w-full min-w-0 overflow-x-auto">
       <table className="w-full border-collapse text-[13.5px]" style={{ minWidth }}>
         {children}
       </table>

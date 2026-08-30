@@ -66,7 +66,7 @@ const productSchema = z.object({
 });
 
 export async function saveProduct(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
-  const admin = await requireAdmin();
+  await requireAdmin();
   const parsed = productSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { ok: false, message: 'Revisa los campos marcados.', fieldErrors: errorsOf(parsed.error) };

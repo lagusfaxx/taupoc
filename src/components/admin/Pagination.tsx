@@ -29,7 +29,7 @@ export function Pagination({ page, pageCount, total }: { page: number; pageCount
       <p className="text-[12.5px] text-chalk-faint">
         Página {page} de {pageCount} · {total} registros
       </p>
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <button
           type="button"
           onClick={() => go(page - 1)}

@@ -25,9 +25,12 @@ export default async function CartPage() {
     return (
       <div className="container py-20 lg:py-28">
         <div className="mx-auto max-w-lg">
+          <h1 className="mb-8 text-center font-display text-[30px] leading-none tracking-tightest text-chalk sm:text-[38px]">
+            Tu carrito
+          </h1>
           <Empty
             icon={<IconCart className="h-10 w-10" />}
-            title="Tu carrito está vacío"
+            title="Todavía no agregaste nada"
             description="Revisa el catálogo de competición: nueve tallas, stock real y homologación World Aquatics verificable."
             action={<ButtonLink href="/catalogo" size="lg">Ver catálogo</ButtonLink>}
           />

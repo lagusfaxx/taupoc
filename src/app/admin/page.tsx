@@ -103,7 +103,7 @@ export default async function AdminDashboard() {
         />
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+      <div className="mt-5 grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Card title="Ventas de los últimos 30 días" description={`Total ${formatCLP(points.reduce((s, p) => s + p.total, 0))}`}>
           <SalesChart points={points} />
         </Card>
@@ -146,7 +146,7 @@ export default async function AdminDashboard() {
         </Card>
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+      <div className="mt-5 grid min-w-0 items-start gap-5 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <Card
           title="Últimos pedidos"
           actions={
@@ -188,15 +188,16 @@ export default async function AdminDashboard() {
               ))}
               {recentOrders.length === 0 ? (
                 <tr>
-                  <Td className="py-8 text-center text-chalk-faint">Todavía no hay pedidos.</Td>
-                  <Td /><Td /><Td />
+                  <td colSpan={4} className="px-4 py-10 text-center text-[13.5px] text-chalk-faint">
+                    Todavía no hay pedidos.
+                  </td>
                 </tr>
               ) : null}
             </tbody>
           </Table>
         </Card>
 
-        <div className="space-y-5">
+        <div className="min-w-0 space-y-5">
           <Card title="Más vendidos del mes" padded={false}>
             {bestProducts.length === 0 ? (
               <p className="p-5 text-[13px] text-chalk-faint">Sin ventas registradas este mes.</p>

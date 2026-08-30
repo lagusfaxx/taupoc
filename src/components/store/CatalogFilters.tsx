@@ -265,27 +265,27 @@ export function CatalogShell({
   return (
     <>
       {/* Barra de control: resultado, orden y acceso a filtros en móvil. */}
-      <div className="mb-8 flex items-center justify-between gap-4 border-b border-line pb-4">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4">
         <p className="text-[13px] text-chalk-faint" aria-live="polite">
           {resultCount} {resultCount === 1 ? 'producto' : 'productos'}
           {activeCount > 0 ? ` · ${activeCount} ${activeCount === 1 ? 'filtro' : 'filtros'}` : ''}
         </p>
 
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2.5">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="border border-line px-3.5 py-2 font-display text-[11px] font-semibold uppercase tracking-widest text-chalk lg:hidden"
+            className="shrink-0 border border-line px-3 py-2 font-display text-[11px] font-semibold uppercase tracking-widest text-chalk lg:hidden"
           >
             Filtros{activeCount > 0 ? ` (${activeCount})` : ''}
           </button>
 
-          <label className="flex items-center gap-2">
+          <label className="relative flex min-w-0 items-center">
             <span className="sr-only">Ordenar por</span>
             <select
               value={params.get('orden') ?? 'destacados'}
               onChange={(e) => setParam('orden', e.target.value === 'destacados' ? null : e.target.value)}
-              className="border border-line bg-ink-900 py-2 pl-3 pr-8 text-[13px] text-chalk focus:border-[var(--accent)] focus:outline-none"
+              className="w-full min-w-0 appearance-none truncate border border-line bg-ink-900 py-2 pl-3 pr-9 text-[13px] text-chalk focus:border-[var(--accent)] focus:outline-none"
             >
               {SORTS.map((s) => (
                 <option key={s.value} value={s.value}>
@@ -293,6 +293,13 @@ export function CatalogShell({
                 </option>
               ))}
             </select>
+            <svg
+              aria-hidden
+              viewBox="0 0 12 8"
+              className="pointer-events-none absolute right-3 h-2 w-3 fill-none stroke-chalk-faint stroke-[1.6]"
+            >
+              <path d="M1 1.5 6 6.5 11 1.5" />
+            </svg>
           </label>
         </div>
       </div>

@@ -107,7 +107,7 @@ export default async function ReportsPage({
         </Card>
       </div>
 
-      <div className="mt-5 grid gap-5 xl:grid-cols-2">
+      <div className="mt-5 grid min-w-0 gap-5 xl:grid-cols-2">
         <Card title="Productos más vendidos" padded={false}>
           <Table minWidth={420}>
             <thead>

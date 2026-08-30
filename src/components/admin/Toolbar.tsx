@@ -54,18 +54,25 @@ export function Toolbar({
       </form>
 
       {filters.map((filter) => (
-        <label key={filter.name} className="shrink-0">
+        <label key={filter.name} className="relative flex shrink-0 items-center">
           <span className="sr-only">{filter.label}</span>
           <select
             value={params.get(filter.name) ?? ''}
             onChange={(e) => setParam(filter.name, e.target.value)}
-            className="h-10 border border-line bg-ink-900 px-3 text-[13px] text-chalk focus:border-[var(--accent)] focus:outline-none"
+            className="h-10 appearance-none border border-line bg-ink-900 px-3 pr-8 text-[13px] text-chalk focus:border-[var(--accent)] focus:outline-none"
           >
             <option value="">{filter.label}</option>
             {filter.options.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
+          <svg
+            aria-hidden
+            viewBox="0 0 12 8"
+            className="pointer-events-none absolute right-3 h-2 w-3 fill-none stroke-chalk-faint stroke-[1.6]"
+          >
+            <path d="M1 1.5 6 6.5 11 1.5" />
+          </svg>
         </label>
       ))}
     </div>

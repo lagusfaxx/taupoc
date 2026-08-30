@@ -59,7 +59,7 @@ export function OrderStatusForm({ orderId, status }: { orderId: string; status: 
       <Status state={state} />
       <form action={action} className="space-y-3">
         <input type="hidden" name="orderId" value={orderId} />
-        <Select label="Estado" name="status" defaultValue={status}>
+        <Select key={status} label="Estado" name="status" defaultValue={status}>
           {Object.entries(ORDER_STATUS_LABEL).map(([value, label]) => (
             <option key={value} value={value}>{label}</option>
           ))}
@@ -92,12 +92,13 @@ export function TrackingForm({
       <Status state={state} />
       <form action={action} className="space-y-3">
         <input type="hidden" name="orderId" value={orderId} />
-        <Select label="Courier" name="carrier" defaultValue={carrier ?? 'Chilexpress'}>
+        <Select key={carrier ?? 'default'} label="Courier" name="carrier" defaultValue={carrier ?? 'Chilexpress'}>
           {['Chilexpress', 'Starken', 'Correos de Chile', 'Blue Express', 'Retiro en tienda', 'Entrega en torneo'].map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </Select>
         <Input
+          key={trackingNumber ?? 'empty'}
           label="Número de seguimiento"
           name="trackingNumber"
           required

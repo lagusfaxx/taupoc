@@ -250,7 +250,7 @@ export function SizeChart({
               </div>
 
               {/* Tablas */}
-              <div className="mb-4 flex gap-1 border-b border-line">
+              <div role="tablist" aria-label="Vista de la tabla" className="mb-4 flex gap-1 border-b border-line">
                 {(
                   [
                     ['medidas', 'Medidas del cuerpo'],
@@ -260,6 +260,7 @@ export function SizeChart({
                   <button
                     key={value}
                     type="button"
+                    role="tab"
                     onClick={() => setTab(value)}
                     aria-selected={tab === value}
                     className={cn(

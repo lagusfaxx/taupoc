@@ -32,7 +32,7 @@ export default async function AdminBlogPage() {
         }
       />
 
-      <div className="border border-line bg-ink-900">
+      <div className="min-w-0 border border-line bg-ink-900">
         <Table minWidth={760}>
           <thead>
             <tr>
