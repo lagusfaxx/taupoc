@@ -49,10 +49,6 @@ Es idempotente: puede volver a ejecutarse sin duplicar datos, y **no regenera la
 imágenes de un producto que ya tiene alguna**, así que nunca pisa las fotografías
 reales cargadas desde el panel.
 
-**Acceso al panel:** `/admin/ingresar`
-Usuario y clave por defecto: `admin@taupoc.cl` / `taupoc2024`
-(configurables con `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`).
-Cámbiala en el primer ingreso desde *Mi cuenta → Contraseña*.
 
 ### Comandos
 
