@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.github
+*.md
+!README.md
+.env
+.env.local
+.env*.local
+public/uploads/*
+!public/uploads/.gitkeep
+npm-debug.log*
+.DS_Store
+coverage
+*.tsbuildinfo
