@@ -1,0 +1,193 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Acento dinámico: la ficha de producto lo sobrescribe con el color del traje. */
+    --accent: #00e0b8;
+    --accent-contrast: #07090b;
+  }
+
+  * {
+    @apply border-line;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink text-chalk font-sans antialiased;
+    font-feature-settings: 'ss01', 'cv01';
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  /* Foco visible y coherente en toda la aplicación. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display uppercase tracking-tightest;
+    font-weight: 800;
+  }
+
+  /* Scrollbar discreta en escritorio. */
+  @media (min-width: 1024px) {
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: #0b0e11; }
+    ::-webkit-scrollbar-thumb { background: #232a33; border: 2px solid #0b0e11; }
+    ::-webkit-scrollbar-thumb:hover { background: #39424e; }
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+}
+
+@layer components {
+  /* Etiqueta técnica en versalitas: el recurso tipográfico base de la marca. */
+  .eyebrow {
+    @apply font-display text-[11px] font-semibold uppercase tracking-mega text-chalk-faint;
+  }
+
+  .eyebrow-accent {
+    @apply font-display text-[11px] font-semibold uppercase tracking-mega;
+    color: var(--accent);
+  }
+
+  /* Regla diagonal que separa bloques, referencia al corte de los trajes. */
+  .rule-diagonal {
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.07) 0 1px,
+      transparent 1px 7px
+    );
+  }
+
+  .surface {
+    @apply border border-line bg-ink-900;
+  }
+
+  .surface-raised {
+    @apply border border-line bg-ink-800 shadow-card;
+  }
+
+  /* Contenedor de tabla que nunca provoca scroll horizontal en el body. */
+  .table-scroll {
+    @apply -mx-5 overflow-x-auto px-5 lg:mx-0 lg:px-0;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden bg-ink-700;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 animate-sweep;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+  }
+
+  .prose-taupoc {
+    @apply text-[15px] leading-[1.75] text-chalk-dim;
+  }
+  .prose-taupoc h2 {
+    @apply mb-3 mt-10 font-display text-xl uppercase tracking-tight text-chalk;
+  }
+  .prose-taupoc h3 {
+    @apply mb-2 mt-7 font-display text-base uppercase tracking-wide text-chalk;
+  }
+  .prose-taupoc p {
+    @apply mb-4;
+  }
+  .prose-taupoc ul {
+    @apply mb-5 list-none space-y-2 pl-0;
+  }
+  .prose-taupoc li {
+    @apply relative pl-5;
+  }
+  .prose-taupoc li::before {
+    content: '';
+    @apply absolute left-0 top-[0.62em] h-[5px] w-[5px];
+    background: var(--accent);
+  }
+  .prose-taupoc ol {
+    @apply mb-5 list-decimal space-y-2 pl-5 marker:font-display marker:text-chalk-faint;
+  }
+  .prose-taupoc strong {
+    @apply font-semibold text-chalk;
+  }
+  .prose-taupoc a {
+    @apply underline underline-offset-4;
+    color: var(--accent);
+  }
+  .prose-taupoc table {
+    @apply mb-6 w-full border-collapse text-sm;
+  }
+  .prose-taupoc th {
+    @apply border-b border-line px-3 py-2 text-left font-display text-[11px] uppercase tracking-widest text-chalk-faint;
+  }
+  .prose-taupoc td {
+    @apply border-b border-line-soft px-3 py-2;
+  }
+  .prose-taupoc blockquote {
+    @apply my-6 border-l-2 pl-4 italic text-chalk-dim;
+    border-color: var(--accent);
+  }
+  .prose-taupoc code {
+    @apply bg-ink-700 px-1.5 py-0.5 font-mono text-[13px] text-chalk;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  /* Corte angular inferior derecho: firma visual de botones y tarjetas. */
+  .clip-notch {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%);
+  }
+  .clip-notch-sm {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%);
+  }
+  .accent-bg {
+    background-color: var(--accent);
+    color: var(--accent-contrast);
+  }
+  .accent-text {
+    color: var(--accent);
+  }
+  .accent-border {
+    border-color: var(--accent);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

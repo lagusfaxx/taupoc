@@ -1,0 +1,639 @@
+// TAUPOC Chile — esquema de datos
+// Moneda: CLP. Todos los montos son enteros (el peso chileno no usa decimales).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Usuarios y cuentas
+// ─────────────────────────────────────────────────────────────
+
+enum Role {
+  CUSTOMER
+  STAFF
+  ADMIN
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String?
+  name             String
+  lastName         String?
+  phone            String?
+  rut              String?
+  role             Role      @default(CUSTOMER)
+  clubName         String?
+  acceptsMarketing Boolean   @default(false)
+  lastLoginAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  addresses   Address[]
+  orders      Order[]
+  resetTokens PasswordResetToken[]
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  label      String?
+  firstName  String
+  lastName   String
+  phone      String
+  street     String
+  number     String
+  extra      String?
+  commune    String
+  city       String
+  region     String
+  postalCode String?
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Catálogo
+// ─────────────────────────────────────────────────────────────
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  COMING_SOON
+  ARCHIVED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  UNISEX
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  slug        String    @unique
+  name        String
+  description String?
+  imageUrl    String?
+  sortOrder   Int       @default(0)
+  active      Boolean   @default(true)
+  products    Product[]
+}
+
+/// Línea técnica (R-SKIN, VEL-SKIN, accesorios...). Editable desde el admin.
+model ProductLine {
+  id          String         @id @default(cuid())
+  slug        String         @unique
+  name        String
+  tagline     String?
+  description String?
+  accentHex   String         @default("#00E0B8")
+  sortOrder   Int            @default(0)
+  active      Boolean        @default(true)
+  products    Product[]
+  sizeChart   SizeChartRow[]
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  name        String
+  /// Código de modelo del fabricante, ej. TS703
+  modelCode   String        @unique
+  subtitle    String?
+  description String        @default("")
+  status      ProductStatus @default(DRAFT)
+  gender      Gender        @default(UNISEX)
+
+  categoryId String?
+  category   Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  lineId     String?
+  line       ProductLine? @relation(fields: [lineId], references: [id], onDelete: SetNull)
+
+  /// Homologación World Aquatics — el argumento de venta principal.
+  approvalCode      String?
+  approvalBody      String  @default("World Aquatics")
+  approvalYear      Int?
+  approvalVerifyUrl String?
+
+  basePrice      Int
+  compareAtPrice Int?
+  /// Peso unitario en gramos, para el cálculo de envío.
+  weightGrams    Int  @default(180)
+
+  // Ficha técnica
+  composition   String?
+  construction  String?
+  finish        String?
+  countryOrigin String?
+  careNotes     String?
+  /// Notas de calce. Los trajes de competencia se usan 1-2 tallas por debajo.
+  fitNotes      String?
+  fitOffset     Int     @default(1)
+
+  featured  Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  seoTitle       String?
+  seoDescription String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  colors     ProductColor[]
+  variants   Variant[]
+  images     ProductImage[]
+  sizeChart  SizeChartRow[]
+  specs      ProductSpec[]
+  orderItems OrderItem[]
+  coupons    CouponProduct[]
+
+  @@index([status])
+  @@index([gender])
+  @@index([lineId])
+  @@index([featured])
+}
+
+model ProductSpec {
+  id        String  @id @default(cuid())
+  productId String
+  label     String
+  value     String
+  sortOrder Int     @default(0)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductColor {
+  id           String  @id @default(cuid())
+  productId    String
+  name         String
+  slug         String
+  /// Color principal del swatch.
+  hex          String  @default("#111111")
+  /// Segundo color para swatches bicolor (opcional).
+  hexSecondary String?
+  /// Acento de interfaz cuando este color está seleccionado.
+  accentHex    String  @default("#00E0B8")
+  sortOrder    Int     @default(0)
+  active       Boolean @default(true)
+
+  product  Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variants Variant[]
+  images   ProductImage[]
+
+  @@unique([productId, slug])
+  @@index([productId])
+}
+
+model Variant {
+  id                String  @id @default(cuid())
+  productId         String
+  colorId           String
+  /// Talla numérica de competición: 20 a 36.
+  size              String
+  sku               String  @unique
+  stock             Int     @default(0)
+  /// Stock reservado por pedidos pendientes de pago.
+  reserved          Int     @default(0)
+  priceOverride     Int?
+  lowStockThreshold Int     @default(3)
+  barcode           String?
+  active            Boolean @default(true)
+  sortOrder         Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product    Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color      ProductColor        @relation(fields: [colorId], references: [id], onDelete: Cascade)
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  movements  InventoryMovement[]
+
+  @@unique([productId, colorId, size])
+  @@index([productId])
+  @@index([colorId])
+  @@index([stock])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  colorId   String?
+  url       String
+  alt       String  @default("")
+  width     Int     @default(0)
+  height    Int     @default(0)
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  product Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color   ProductColor? @relation(fields: [colorId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([colorId])
+}
+
+/// Tabla de tallas. Se define por línea (heredada) o se sobrescribe por producto.
+model SizeChartRow {
+  id          String  @id @default(cuid())
+  lineId      String?
+  productId   String?
+  size        String
+  /// Medidas del cuerpo en centímetros.
+  chestMinCm  Int?
+  chestMaxCm  Int?
+  waistMinCm  Int?
+  waistMaxCm  Int?
+  hipMinCm    Int?
+  hipMaxCm    Int?
+  heightMinCm Int?
+  heightMaxCm Int?
+  // Equivalencias internacionales
+  cn          String?
+  usa         String?
+  uk          String?
+  aus         String?
+  nz          String?
+  sortOrder   Int     @default(0)
+
+  line    ProductLine? @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  product Product?     @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([lineId])
+  @@index([productId])
+}
+
+enum MovementType {
+  ADJUST
+  SALE
+  RETURN
+  RESTOCK
+  CANCEL
+}
+
+model InventoryMovement {
+  id         String       @id @default(cuid())
+  variantId  String
+  type       MovementType
+  delta      Int
+  resulting  Int
+  reason     String?
+  actorEmail String?
+  orderId    String?
+  createdAt  DateTime     @default(now())
+  variant    Variant      @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
+  @@index([createdAt])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Carrito
+// ─────────────────────────────────────────────────────────────
+
+model Cart {
+  id         String     @id @default(cuid())
+  token      String     @unique
+  userId     String?
+  couponCode String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  items      CartItem[]
+
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  variantId String
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, variantId])
+  @@index([cartId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Envíos
+// ─────────────────────────────────────────────────────────────
+
+enum RateMode {
+  FLAT
+  BY_WEIGHT
+  BY_SUBTOTAL
+}
+
+model ShippingZone {
+  id        String         @id @default(cuid())
+  name      String
+  /// Códigos de región de Chile cubiertos por la zona (ver src/lib/chile.ts).
+  regions   String[]
+  sortOrder Int            @default(0)
+  active    Boolean        @default(true)
+  rates     ShippingRate[]
+}
+
+model ShippingRate {
+  id          String   @id @default(cuid())
+  zoneId      String
+  carrier     String   @default("Chilexpress")
+  label       String
+  description String?
+  mode        RateMode @default(FLAT)
+  price       Int      @default(0)
+
+  /// Rango de peso en gramos (modo BY_WEIGHT).
+  minWeightG       Int?
+  maxWeightG       Int?
+  /// Rango de subtotal en CLP (modo BY_SUBTOTAL).
+  minSubtotal      Int?
+  maxSubtotal      Int?
+  /// Envío gratis cuando el subtotal supera este monto.
+  freeOverSubtotal Int?
+
+  etaMinDays Int     @default(2)
+  etaMaxDays Int     @default(5)
+  /// Retiro en tienda o entrega en torneo: no requiere dirección de despacho.
+  isPickup   Boolean @default(false)
+  pickupInfo String?
+
+  active    Boolean @default(true)
+  sortOrder Int     @default(0)
+
+  zone ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@index([zoneId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Cupones
+// ─────────────────────────────────────────────────────────────
+
+enum CouponType {
+  PERCENT
+  FIXED
+  FREE_SHIPPING
+}
+
+model Coupon {
+  id           String     @id @default(cuid())
+  code         String     @unique
+  description  String?
+  type         CouponType @default(PERCENT)
+  /// Porcentaje (1-100) o monto fijo en CLP según el tipo.
+  value        Int        @default(0)
+  minSubtotal  Int?
+  maxUses      Int?
+  usedCount    Int        @default(0)
+  perUserLimit Int?
+  startsAt     DateTime?
+  endsAt       DateTime?
+  active       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  products CouponProduct[]
+  orders   Order[]
+}
+
+model CouponProduct {
+  couponId  String
+  productId String
+  coupon    Coupon  @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([couponId, productId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Pedidos
+// ─────────────────────────────────────────────────────────────
+
+enum OrderStatus {
+  PENDING
+  PAID
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  IN_PROCESS
+  APPROVED
+  REJECTED
+  REFUNDED
+  CHARGED_BACK
+  CANCELLED
+}
+
+model Order {
+  id     String  @id @default(cuid())
+  /// Número visible al cliente, ej. TP-1042
+  number String  @unique
+  userId String?
+  email  String
+  phone  String?
+
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  subtotal      Int    @default(0)
+  discountTotal Int    @default(0)
+  shippingTotal Int    @default(0)
+  total         Int    @default(0)
+  currency      String @default("CLP")
+
+  couponId   String?
+  couponCode String?
+
+  // Snapshot de despacho
+  shippingRateId  String?
+  shippingLabel   String?
+  shippingCarrier String?
+  isPickup        Boolean @default(false)
+  firstName       String?
+  lastName        String?
+  street          String?
+  streetNumber    String?
+  addressExtra    String?
+  commune         String?
+  city            String?
+  region          String?
+  postalCode      String?
+  customerNote    String?
+
+  // Seguimiento
+  trackingNumber String?
+  trackingUrl    String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+  paidAt         DateTime?
+
+  // Mercado Pago
+  mpPreferenceId String?
+  mpPaymentId    String?
+  mpStatusDetail String?
+  mpPaymentType  String?
+  mpInstallments Int?
+
+  adminNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  coupon Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  items  OrderItem[]
+  events OrderEvent[]
+
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@index([email])
+  @@index([mpPaymentId])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  variantId String?
+  productId String?
+
+  // Snapshot: el pedido no debe cambiar si el catálogo cambia.
+  productName String
+  colorName   String
+  size        String
+  sku         String
+  imageUrl    String?
+  unitPrice   Int
+  quantity    Int
+  lineTotal   Int
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant Variant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderEvent {
+  id        String   @id @default(cuid())
+  orderId   String
+  type      String
+  message   String
+  actor     String?
+  payload   Json?
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+// ─────────────────────────────────────────────────────────────
+// Contenido y captación
+// ─────────────────────────────────────────────────────────────
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Post {
+  id             String     @id @default(cuid())
+  slug           String     @unique
+  title          String
+  excerpt        String     @default("")
+  body           String     @default("")
+  coverUrl       String?
+  tags           String[]
+  author         String     @default("Equipo TAUPOC Chile")
+  status         PostStatus @default(DRAFT)
+  publishedAt    DateTime?
+  seoTitle       String?
+  seoDescription String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([status, publishedAt])
+}
+
+enum QuoteStatus {
+  NEW
+  CONTACTED
+  QUOTED
+  WON
+  LOST
+}
+
+model QuoteRequest {
+  id          String      @id @default(cuid())
+  clubName    String
+  contactName String
+  email       String
+  phone       String
+  region      String?
+  athletes    Int?
+  interest    String?
+  message     String      @default("")
+  status      QuoteStatus @default(NEW)
+  adminNote   String?
+  createdAt   DateTime    @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model NewsletterSubscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String?
+  createdAt DateTime @default(now())
+}
+
+/// Configuración editable desde el panel: analytics, correos, umbrales, textos.
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+/// Contador para generar números de pedido correlativos.
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}
