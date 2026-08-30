@@ -20,7 +20,7 @@ conocimientos técnicos.
 | Pagos | **Mercado Pago Checkout Pro** | Es el estándar en Chile: crédito, débito y cuotas sin implementar PCI. |
 | Autenticación | **JWT propio + bcrypt** | Sin dependencias en beta; control total de los roles cliente / equipo / administrador. |
 | Imágenes | **sharp + volumen local** | Conversión a WEBP al subir. Sin depender de S3 ni de un servicio externo. |
-| Correo | **Nodemailer sobre SMTP** | Compatible con cualquier proveedor. Si no hay SMTP, la tienda sigue vendiendo. |
+| Correo | **Resend por API, con SMTP de respaldo** | La API va por HTTPS y evita el puerto 587, que varios proveedores bloquean. Sin proveedor configurado la tienda sigue vendiendo. |
 
 Sin librería de gráficos: el gráfico de ventas del panel es SVG generado a mano,
 para no cargar 100 kB extra de JavaScript en una pantalla interna.
@@ -34,10 +34,15 @@ Requisitos: Node.js 22 y PostgreSQL 16.
 ```bash
 npm install
 cp .env.example .env          # completa DATABASE_URL y AUTH_SECRET
-npx prisma migrate deploy     # crea el esquema
+npx prisma migrate deploy     # crea la base y las tablas
 npm run db:seed               # catálogo, envíos, cupones, blog y admin
 npm run dev                   # http://localhost:3000
 ```
+
+`migrate deploy` crea la base de datos si no existe, siempre que el usuario de la
+conexión tenga permiso `CREATEDB`. Si tu Postgres te dio un usuario restringido,
+créala antes con `createdb taupoc`. En Coolify no aplica: la imagen de Postgres ya
+la crea a partir de `POSTGRES_DB`.
 
 El seed carga el catálogo y el inventario del primer pedido: 4 productos, 306 SKU
 y 48 unidades repartidas en 24 SKU (tallas 22 a 28, 2 unidades cada uno). Además
@@ -81,7 +86,8 @@ npm run db:studio    # explorador visual de la base
    | `MP_ACCESS_TOKEN` | Access token de Mercado Pago. |
    | `NEXT_PUBLIC_MP_PUBLIC_KEY` | Public key de Mercado Pago. |
    | `MP_WEBHOOK_SECRET` | Firma secreta del webhook (panel de MP → Webhooks). |
-   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Servidor de correo saliente. |
+   | `RESEND_API_KEY` | Clave de Resend. Es la vía recomendada: va por HTTPS. |
+   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Alternativa por SMTP, si no usas la API. |
    | `MAIL_FROM` | Remitente, ej. `TAUPOC Chile <pedidos@taupoc.cl>`. |
    | `ADMIN_ALERT_EMAIL` | Destino de alertas de pedidos y stock bajo. |
    | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Credenciales del admin inicial. |
@@ -211,8 +217,18 @@ Se envían automáticamente al cliente: pedido recibido, pago confirmado y pedid
 despachado con número de seguimiento. Al equipo: pedido pagado, alerta de stock
 bajo (máximo una vez cada 12 horas) y nueva cotización de club.
 
-Si no hay SMTP configurado, los mensajes se registran en el log del servidor y la
-tienda sigue funcionando: el correo nunca bloquea una venta.
+El transporte se elige en este orden:
+
+1. **Resend por API** si existe `RESEND_API_KEY`.
+2. **SMTP** si existe `SMTP_HOST`. Resend también funciona por esta vía: host
+   `smtp.resend.com`, usuario `resend`, contraseña la API key.
+3. **Log del servidor** si no hay ninguno configurado. La tienda sigue vendiendo:
+   el correo nunca bloquea una venta.
+
+El dominio de `MAIL_FROM` tiene que estar verificado en Resend (Domains → Add
+Domain, y cargar los registros DNS). Sin eso el envío falla con 403 y el motivo
+queda registrado en el log. El panel muestra en *Ajustes* qué transporte está
+activo.
 
 ---
 

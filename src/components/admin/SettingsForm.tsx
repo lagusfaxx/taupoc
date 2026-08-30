@@ -151,7 +151,7 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
             content: (
               <Card
                 title="Notificaciones por correo"
-                description="Los datos del servidor SMTP se configuran por variables de entorno."
+                description="El proveedor de envío se configura por variables de entorno."
               >
                 <div className="space-y-4">
                   <Checkbox
@@ -171,10 +171,9 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                   />
                 </div>
                 <p className="mt-5 border-l-2 accent-border bg-ink-800 px-4 py-3 text-[12.5px] leading-relaxed text-chalk-dim">
-                  Las alertas internas llegan a la dirección definida en la variable{' '}
-                  <code className="font-mono">ADMIN_ALERT_EMAIL</code>. Si no hay servidor SMTP
-                  configurado, los correos se registran en el log del servidor y la tienda sigue
-                  funcionando normalmente.
+                  Las alertas internas llegan a la dirección definida en{' '}
+                  <code className="font-mono">ADMIN_ALERT_EMAIL</code>. Sin proveedor configurado los
+                  correos se registran en el log y la tienda sigue funcionando.
                 </p>
               </Card>
             ),

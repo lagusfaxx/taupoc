@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
 import { submitContact, type ContactState } from '@/actions/contact';
 import { Input, Select, Textarea } from '@/components/ui/Field';
@@ -31,10 +31,16 @@ function Submit() {
 export function ContactForm() {
   const [state, action] = useActionState<ContactState | null, FormData>(submitContact, null);
   const e = state?.fieldErrors ?? {};
+  const doneRef = useRef<HTMLDivElement>(null);
+
+  // El encabezado es fijo: sin esto la confirmación queda oculta detrás.
+  useEffect(() => {
+    if (state?.ok) doneRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [state?.ok]);
 
   if (state?.ok) {
     return (
-      <div className="surface flex items-start gap-4 p-7">
+      <div ref={doneRef} className="surface flex items-start gap-4 p-7 scroll-mt-28">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center border border-signal-ok/40 bg-signal-ok/10 text-signal-ok">
           <IconCheck className="h-5 w-5" />
         </span>

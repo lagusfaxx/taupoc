@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import { getSettings } from '@/lib/settings';
 import { buildMetadata } from '@/lib/seo';
 import { mpConfigured, mpMode } from '@/lib/mercadopago';
+import { mailTransport } from '@/lib/mail';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { SettingsForm } from '@/components/admin/SettingsForm';
 import { Badge } from '@/components/ui/Badge';
@@ -14,7 +15,7 @@ export default async function AdminSettingsPage() {
   await requireAdmin();
   const settings = await getSettings();
 
-  const smtpReady = Boolean(process.env.SMTP_HOST);
+  const transport = mailTransport();
   const mpReady = mpConfigured();
 
   return (
@@ -44,10 +45,14 @@ export default async function AdminSettingsPage() {
         <div className="border border-line bg-ink-900 p-4">
           <p className="font-display text-[9.5px] uppercase tracking-mega text-chalk-faint">Correo saliente</p>
           <div className="mt-2">
-            <Badge tone={smtpReady ? 'ok' : 'warn'}>{smtpReady ? 'SMTP conectado' : 'Sin SMTP'}</Badge>
+            <Badge tone={transport === 'none' ? 'warn' : 'ok'}>
+              {transport === 'resend' ? 'Resend' : transport === 'smtp' ? 'SMTP' : 'Sin configurar'}
+            </Badge>
           </div>
           <p className="mt-2 text-[12px] leading-relaxed text-chalk-faint">
-            Sin SMTP los correos se registran en el log, sin interrumpir las compras.
+            {transport === 'none'
+              ? 'Los correos se registran en el log, sin interrumpir las compras.'
+              : 'El remitente debe usar un dominio verificado en el proveedor.'}
           </p>
         </div>
 

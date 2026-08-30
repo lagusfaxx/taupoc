@@ -4,21 +4,36 @@ import { formatCLP } from './money';
 import { getSettings } from './settings';
 
 /**
- * Correo transaccional por SMTP. Si no hay SMTP configurado, los mensajes
- * se registran en consola en vez de fallar: la tienda nunca debe romperse
- * porque el correo esté caído.
+ * Correo transaccional. Se elige el transporte en este orden:
+ *
+ *   1. API de Resend, si hay RESEND_API_KEY. Va por HTTPS, así que no depende
+ *      del puerto 587 saliente, que varios proveedores bloquean.
+ *   2. SMTP, si hay SMTP_HOST. Sirve para Resend y para cualquier otro.
+ *   3. Consola. Sin transporte configurado el mensaje se registra y la compra
+ *      sigue su curso: el correo nunca debe bloquear una venta.
  */
+
+export type MailTransport = 'resend' | 'smtp' | 'none';
+
+export function mailTransport(): MailTransport {
+  if (process.env.RESEND_API_KEY) return 'resend';
+  if (process.env.SMTP_HOST) return 'smtp';
+  return 'none';
+}
+
+function mailFrom(): string {
+  return process.env.MAIL_FROM || 'TAUPOC Chile <no-reply@taupoc.cl>';
+}
 
 let transporter: Transporter | null = null;
 
-function getTransport(): Transporter | null {
+function smtpTransport(): Transporter {
   if (transporter) return transporter;
-  const host = process.env.SMTP_HOST;
-  if (!host) return null;
+  const port = Number(process.env.SMTP_PORT ?? 587);
   transporter = nodemailer.createTransport({
-    host,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: Number(process.env.SMTP_PORT ?? 587) === 465,
+    host: process.env.SMTP_HOST,
+    port,
+    secure: port === 465,
     auth: process.env.SMTP_USER
       ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
       : undefined,
@@ -26,18 +41,53 @@ function getTransport(): Transporter | null {
   return transporter;
 }
 
-export async function sendMail(opts: { to: string; subject: string; html: string; text?: string }) {
-  const transport = getTransport();
-  const from = process.env.MAIL_FROM || 'TAUPOC Chile <no-reply@taupoc.cl>';
-  if (!transport) {
-    console.info(`[mail:no-smtp] → ${opts.to} · ${opts.subject}`);
+interface MailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  replyTo?: string;
+}
+
+async function sendWithResend(opts: MailOptions): Promise<void> {
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: mailFrom(),
+      to: [opts.to],
+      subject: opts.subject,
+      html: opts.html,
+      ...(opts.text ? { text: opts.text } : {}),
+      ...(opts.replyTo ? { reply_to: opts.replyTo } : {}),
+    }),
+  });
+
+  if (!response.ok) {
+    // El cuerpo de Resend explica el motivo: dominio sin verificar, clave
+    // inválida, remitente no autorizado. Vale la pena registrarlo entero.
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Resend respondió ${response.status}: ${detail.slice(0, 300)}`);
+  }
+}
+
+export async function sendMail(opts: MailOptions) {
+  const transport = mailTransport();
+
+  if (transport === 'none') {
+    console.info(`[mail:sin-transporte] → ${opts.to} · ${opts.subject}`);
     return { skipped: true as const };
   }
+
   try {
-    await transport.sendMail({ from, ...opts });
+    if (transport === 'resend') await sendWithResend(opts);
+    else await smtpTransport().sendMail({ from: mailFrom(), ...opts });
     return { skipped: false as const };
   } catch (error) {
-    console.error('[mail:error]', error);
+    console.error(`[mail:error:${transport}]`, error);
     return { skipped: true as const, error };
   }
 }
