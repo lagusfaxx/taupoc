@@ -4,8 +4,10 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
 import { getFeatured } from '@/lib/catalog';
+import { getHomeBlocks } from '@/lib/home';
 import { buildMetadata, jsonLd, absoluteUrl, SITE_NAME } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
+import { HomeBlocks } from '@/components/store/home/HomeBlocks';
 import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
 
@@ -21,15 +23,43 @@ export const metadata: Metadata = buildMetadata({
 // solicitud. Declararlo permite compilar la imagen sin base de datos.
 export const dynamic = 'force-dynamic';
 
-interface Entry {
-  label: string;
-  href: string;
-  imageUrl: string | null;
+export default async function HomePage() {
+  const [settings, blocks] = await Promise.all([getSettings(), getHomeBlocks()]);
+
+  const store = {
+    '@context': 'https://schema.org',
+    '@type': 'Store',
+    name: SITE_NAME,
+    description:
+      'Distribuidor oficial de TAUPOC Swimwear en Chile. Trajes de competición homologados por World Aquatics.',
+    url: absoluteUrl('/'),
+    email: settings.contactEmail,
+    telephone: settings.contactPhone,
+    address: { '@type': 'PostalAddress', addressLocality: 'Santiago', addressCountry: 'CL' },
+    currenciesAccepted: 'CLP',
+    paymentAccepted: 'Tarjeta de crédito, tarjeta de débito, Mercado Pago',
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(store)} />
+
+      <h1 className="sr-only">
+        TAUPOC Chile — trajes de competición homologados por World Aquatics
+      </h1>
+
+      {blocks.length > 0 ? <HomeBlocks blocks={blocks} /> : <PortadaPorDefecto />}
+    </>
+  );
 }
 
-export default async function HomePage() {
-  const [settings, featured, lines] = await Promise.all([
-    getSettings(),
+/**
+ * Portada mientras el panel no tenga bloques: catálogo, accesos por género y
+ * línea, y el bloque de clubes. Se arma sola desde los productos, así que una
+ * instalación nueva no queda en blanco.
+ */
+async function PortadaPorDefecto() {
+  const [featured, lines] = await Promise.all([
     getFeatured(4),
     prisma.productLine.findMany({
       where: { active: true, slug: { in: ['r-skin', 'vel-skin'] } },
@@ -54,12 +84,16 @@ export default async function HomePage() {
     },
   });
 
-  const pick = (modelCode: string, colorSlug: string, fallback: (i: (typeof covers)[number]) => boolean) =>
+  const pick = (
+    modelCode: string,
+    colorSlug: string,
+    fallback: (i: (typeof covers)[number]) => boolean,
+  ) =>
     covers.find((i) => i.product.modelCode === modelCode && i.color?.slug === colorSlug)?.url ??
     covers.find(fallback)?.url ??
     null;
 
-  const entries: Entry[] = [
+  const entries = [
     {
       label: 'Hombre',
       href: '/catalogo?genero=MALE',
@@ -80,28 +114,8 @@ export default async function HomePage() {
     })),
   ];
 
-  const store = {
-    '@context': 'https://schema.org',
-    '@type': 'Store',
-    name: SITE_NAME,
-    description:
-      'Distribuidor oficial de TAUPOC Swimwear en Chile. Trajes de competición homologados por World Aquatics.',
-    url: absoluteUrl('/'),
-    email: settings.contactEmail,
-    telephone: settings.contactPhone,
-    address: { '@type': 'PostalAddress', addressLocality: 'Santiago', addressCountry: 'CL' },
-    currenciesAccepted: 'CLP',
-    paymentAccepted: 'Tarjeta de crédito, tarjeta de débito, Mercado Pago',
-  };
-
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(store)} />
-
-      <h1 className="sr-only">
-        TAUPOC Chile — trajes de competición homologados por World Aquatics
-      </h1>
-
       <section className="container pb-10 pt-6 lg:pb-12 lg:pt-7">
         <div className="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4 lg:gap-x-6">
           {featured.map((product, i) => (

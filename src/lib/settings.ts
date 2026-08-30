@@ -15,6 +15,10 @@ export interface SiteSettings {
   whatsapp: string;
   instagram: string;
   addressLine: string;
+  // Logo subido desde el panel. Vacío usa la marca dibujada en SVG.
+  logoUrl: string;
+  // Alto del logo en el encabezado, en píxeles.
+  logoHeight: number;
 
   // Comercial
   freeShippingOver: number | null;
@@ -42,6 +46,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   whatsapp: '+56900000000',
   instagram: 'taupoc.chile',
   addressLine: 'Santiago, Chile',
+  logoUrl: '',
+  logoHeight: 28,
 
   freeShippingOver: 120000,
   lowStockThreshold: 1,

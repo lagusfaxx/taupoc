@@ -15,6 +15,8 @@ const schema = z.object({
   whatsapp: z.string().optional(),
   instagram: z.string().optional(),
   addressLine: z.string().optional(),
+  logoUrl: z.string().optional(),
+  logoHeight: z.string().optional(),
 
   freeShippingOver: z.string().optional(),
   lowStockThreshold: z.string().optional(),
@@ -53,6 +55,8 @@ export async function updateSettings(
     whatsapp: d.whatsapp?.trim() ?? '',
     instagram: d.instagram?.trim().replace('@', '') ?? '',
     addressLine: d.addressLine?.trim() ?? '',
+    logoUrl: d.logoUrl?.trim() ?? '',
+    logoHeight: Math.min(80, Math.max(16, Number(d.logoHeight ?? 28) || 28)),
 
     freeShippingOver: freeShipping ? parseCLP(freeShipping) : null,
     lowStockThreshold: Math.max(0, Number(d.lowStockThreshold ?? 3) || 3),

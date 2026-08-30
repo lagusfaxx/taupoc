@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { Card } from './Card';
 import { AdminTabs } from './AdminTabs';
 import { Checkbox, Input, Textarea } from '@/components/ui/Field';
+import { MediaField } from './MediaField';
 
 function Submit() {
   const { pending } = useFormStatus();
@@ -52,6 +53,21 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
               <div className="grid gap-5 xl:grid-cols-2">
                 <Card title="Identidad">
                   <div className="space-y-4">
+                    <MediaField
+                      name="logoUrl"
+                      label="Logo"
+                      hint="PNG o SVG con fondo transparente"
+                      defaultValue={settings.logoUrl}
+                    />
+                    <Input
+                      label="Alto del logo"
+                      name="logoHeight"
+                      type="number"
+                      min={16}
+                      max={80}
+                      help="En píxeles, dentro del encabezado."
+                      defaultValue={settings.logoHeight}
+                    />
                     <Input label="Nombre de la tienda" name="storeName" required defaultValue={settings.storeName} />
                     <Input label="Bajada" name="tagline" defaultValue={settings.tagline} />
                     <Input label="Correo de contacto" name="contactEmail" type="email" required defaultValue={settings.contactEmail} />

@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { mediaSrcSet } from '@/lib/media-url';
 
 /**
  * Marca TAUPOC: dos arcos cruzados sobre el wordmark.
@@ -23,7 +24,39 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ className, compact }: { className?: string; compact?: boolean }) {
+/**
+ * Marca del sitio.
+ *
+ * Con un logo subido desde el panel se muestra ese archivo; sin él, la marca
+ * dibujada. La URL de una imagen subida lleva su propio identificador, así que
+ * al reemplazarla cambia la dirección y el navegador no puede seguir mostrando
+ * la anterior desde su caché.
+ */
+export function Logo({
+  className,
+  compact,
+  src,
+  height = 28,
+}: {
+  className?: string;
+  compact?: boolean;
+  src?: string | null;
+  height?: number;
+}) {
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={src}
+        srcSet={mediaSrcSet(src)}
+        sizes={`${height * 6}px`}
+        alt="TAUPOC Chile"
+        style={{ height }}
+        className={cn('w-auto max-w-[240px] object-contain', className)}
+      />
+    );
+  }
+
   return (
     <span className={cn('inline-flex items-center gap-2.5 text-chalk', className)}>
       <LogoMark className="h-7 w-auto" />

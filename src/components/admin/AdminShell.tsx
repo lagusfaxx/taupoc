@@ -7,7 +7,8 @@ import { logoutUser } from '@/actions/auth';
 import { cn } from '@/lib/utils';
 import { LogoMark } from '@/components/ui/Logo';
 import {
-  IconBox, IconChart, IconClose, IconDoc, IconMenu, IconSettings,
+  IconBox,
+  IconSpark, IconChart, IconClose, IconDoc, IconMenu, IconSettings,
   IconTag, IconTruck, IconUsers, IconExternal,
 } from '@/components/ui/Icons';
 
@@ -19,12 +20,14 @@ interface NavGroup {
 export function AdminShell({
   children,
   user,
+  logoUrl,
   pendingOrders,
   newQuotes,
   lowStock,
 }: {
   children: React.ReactNode;
   user: { name: string; email: string; role: string };
+  logoUrl?: string;
   pendingOrders: number;
   newQuotes: number;
   lowStock: number;
@@ -50,6 +53,12 @@ export function AdminShell({
         { href: '/admin/productos', label: 'Productos', icon: IconTag },
         { href: '/admin/inventario', label: 'Inventario', icon: IconBox, badge: lowStock },
         { href: '/admin/cupones', label: 'Cupones', icon: IconTag },
+      ],
+    },
+    {
+      title: 'Contenido',
+      items: [
+        { href: '/admin/inicio', label: 'Inicio', icon: IconSpark },
         { href: '/admin/blog', label: 'Blog', icon: IconDoc },
       ],
     },
@@ -66,9 +75,18 @@ export function AdminShell({
   const nav = (
     <nav aria-label="Panel" className="flex h-full flex-col">
       <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-line px-5">
-        <LogoMark className="h-6 w-auto accent-text" />
+        {logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="" className="h-6 w-auto max-w-[150px] object-contain" />
+        ) : (
+          <LogoMark className="h-6 w-auto accent-text" />
+        )}
         <div className="leading-none">
-          <p className="font-display text-[13px] font-extrabold tracking-[0.2em] text-chalk">TAUPOC</p>
+          {logoUrl ? null : (
+            <p className="font-display text-[13px] font-extrabold tracking-[0.2em] text-chalk">
+              TAUPOC
+            </p>
+          )}
           <p className="mt-[3px] font-display text-[8px] font-semibold tracking-[0.3em] text-chalk-faint">
             PANEL
           </p>

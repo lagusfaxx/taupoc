@@ -170,6 +170,7 @@ model Product {
   specs      ProductSpec[]
   orderItems OrderItem[]
   coupons    CouponProduct[]
+  homeItems  HomeBlockItem[]
 
   @@index([status])
   @@index([gender])
@@ -638,4 +639,137 @@ model Setting {
 model Counter {
   key   String @id
   value Int    @default(0)
+}
+
+// ─────────────────────────────────────────────────────────────
+// Medios e inicio editable
+// ─────────────────────────────────────────────────────────────
+
+/// Archivo subido desde el panel.
+///
+/// Se guarda en Postgres y no en disco porque el contenedor se reemplaza en
+/// cada despliegue: cualquier archivo escrito en el sistema de archivos se
+/// pierde salvo que haya un volumen montado. En la base entra además en el
+/// respaldo de la tienda sin configurar nada aparte.
+model MediaAsset {
+  id       String @id @default(cuid())
+  filename String
+  mimeType String
+  size     Int
+  bytes    Bytes
+  alt      String @default("")
+
+  createdAt DateTime @default(now())
+
+  variants MediaVariant[]
+}
+
+/// Copia de una imagen en un ancho y formato concretos.
+///
+/// Es caché: el original nunca se toca y si falta se sirve tal cual se subió.
+model MediaVariant {
+  id      String     @id @default(cuid())
+  mediaId String
+  media   MediaAsset @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  /// 0 significa "el ancho original".
+  width  Int
+  /// avif, webp u "origen" cuando solo cambia el ancho.
+  format String
+
+  mimeType String
+  size     Int
+  bytes    Bytes
+
+  createdAt DateTime @default(now())
+
+  @@unique([mediaId, width, format])
+}
+
+enum HomeBlockType {
+  BANNER
+  PRODUCTOS
+  CATEGORIAS
+  MEDIA
+  TEXTO
+}
+
+enum BlockHeight {
+  AUTO
+  COMPACTA
+  MEDIA
+  ALTA
+  PANTALLA
+}
+
+enum BlockAlign {
+  IZQUIERDA
+  CENTRO
+  DERECHA
+}
+
+/// Una sección del inicio. El orden lo decide `position`.
+model HomeBlock {
+  id       String        @id @default(cuid())
+  type     HomeBlockType
+  position Int           @default(0)
+  active   Boolean       @default(true)
+
+  /// Nombre interno para reconocer el bloque en el panel.
+  label String @default("")
+
+  eyebrow  String?
+  title    String?
+  subtitle String?
+  body     String?
+
+  ctaLabel      String?
+  ctaHref       String?
+  ctaAltLabel   String?
+  ctaAltHref    String?
+
+  /// URL de la imagen o el video: una subida (/api/media/…) o una externa.
+  imageUrl       String?
+  /// Versión para pantallas angostas; si falta se usa la principal.
+  imageMobileUrl String?
+  videoUrl       String?
+  posterUrl      String?
+
+  /// contain deja ver la imagen completa; cover la recorta para llenar.
+  fit     String      @default("cover")
+  /// Oscurecido sobre el medio, de 0 a 90, para que el texto se lea.
+  overlay Int         @default(40)
+  height  BlockHeight @default(MEDIA)
+  align   BlockAlign  @default(IZQUIERDA)
+  /// Fondo del bloque cuando no lleva imagen.
+  background String @default("ink")
+
+  /// Cuántas columnas usa una grilla de productos o de mosaico.
+  columns Int @default(4)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items HomeBlockItem[]
+
+  @@index([active, position])
+}
+
+/// Elemento de un bloque: un producto elegido a mano o una tarjeta suelta.
+model HomeBlockItem {
+  id      String    @id @default(cuid())
+  blockId String
+  block   HomeBlock @relation(fields: [blockId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  position Int     @default(0)
+  label    String?
+  caption  String?
+  href     String?
+  imageUrl String?
+  videoUrl String?
+
+  @@index([blockId, position])
 }

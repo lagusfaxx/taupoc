@@ -208,6 +208,20 @@ usados. El historial tiene que seguir siendo legible.
 `InventoryMovement` con el motivo y quién lo hizo. Es lo que permite cuadrar lo
 vendido en el stand del torneo con lo vendido online.
 
+**Las fotos y videos del panel se guardan en la base de datos.** El contenedor
+se reemplaza en cada despliegue, así que un archivo escrito en disco desaparece
+salvo que haya un volumen montado. En la base entra además en el respaldo. Se
+sirven desde `/api/media/<id>`: como el identificador se genera al subir y no se
+reutiliza, la dirección nunca cambia de contenido y se cachea para siempre —y
+por eso reemplazar el logo se ve al instante, sin caché vieja de por medio.
+
+**Las imágenes se optimizan; los videos no se recodifican.** De cada imagen se
+generan versiones en AVIF y WEBP en cinco anchos, en segundo plano y guardadas
+aparte: el original nunca se toca y, si algo falla, se sirve tal cual. Un video
+se valida (formato, códec, índice al inicio, peso) y se sirve por tramos, pero
+se descarga como se subió: recodificarlo necesitaría ffmpeg en la imagen. Por
+eso el panel avisa cuando un video pasa de 8 MB o viene en H.265.
+
 **Las tarifas de envío viven en la base de datos.** El admin crea zonas, couriers
 y reglas por peso o por monto sin tocar código ni volver a desplegar.
 
@@ -224,6 +238,10 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
   talla × color** editable como planilla, con relleno por fila y por columna;
   carga de imágenes con drag & drop y asignación por color; tabla de tallas y
   ficha técnica editables.
+- **Inicio** — bloques que arman la portada en el orden que se quiera: banners
+  con foto o video, franjas de productos elegidos a mano, tarjetas de acceso,
+  bloques de texto. Cada bloque se sube, se baja, se duplica, se oculta o se
+  borra. Las fotos y los videos se suben arrastrándolos o pegando una dirección.
 - **Inventario** — ajuste rápido de cualquier SKU, filtros por agotado y stock bajo.
 - **Clientes** — historial de compras, talla habitual, gestión de permisos.
 - **Envíos** — zonas por región, tarifas por courier, precio fijo o por peso o
@@ -234,7 +252,7 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
 - **Blog** — editor markdown con portada, etiquetas y campos SEO.
 - **Reportes** — ingresos, productos, tallas y colores más vendidos, ventas por
   región y uso de cupones, por período.
-- **Ajustes** — identidad, umbral de envío gratis, cuotas, barra de anuncio,
+- **Ajustes** — logo, identidad, umbral de envío gratis, cuotas, barra de anuncio,
   portada, Google Analytics, Google Tag Manager, Meta Pixel y notificaciones.
 - **Exportación a CSV** en pedidos, productos, inventario, clientes,
   cotizaciones y ventas, con separador y codificación compatibles con Excel en

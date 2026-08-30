@@ -145,6 +145,23 @@ export async function getFeatured(limit = 4) {
   return products.map(toCardData);
 }
 
+/**
+ * Productos elegidos a mano en el panel, en el orden en que se eligieron.
+ * Los que estén ocultos o borrados simplemente no aparecen.
+ */
+export async function getProductsByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+  const products = await prisma.product.findMany({
+    where: { id: { in: ids }, status: { in: VISIBLE } },
+    include: CARD_INCLUDE,
+  });
+  const byId = new Map(products.map((product) => [product.id, product]));
+  return ids.flatMap((id) => {
+    const product = byId.get(id);
+    return product ? [toCardData(product)] : [];
+  });
+}
+
 /** Facetas para la barra de filtros, calculadas sobre el catálogo visible. */
 export async function getCatalogFacets() {
   const [lines, categories, colors, variants, priceRange] = await Promise.all([

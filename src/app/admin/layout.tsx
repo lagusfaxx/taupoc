@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentUser, isStaff } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { getLowStock } from '@/lib/inventory';
+import { getSettings } from '@/lib/settings';
 import { AdminShell } from '@/components/admin/AdminShell';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +22,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!user) redirect('/admin/ingresar');
   if (!isStaff(user.role)) redirect('/admin/ingresar?error=permisos');
 
-  const [pendingOrders, newQuotes, lowStock] = await Promise.all([
+  const [settings, pendingOrders, newQuotes, lowStock] = await Promise.all([
+    getSettings(),
     prisma.order.count({ where: { status: { in: ['PAID', 'PROCESSING'] } } }),
     prisma.quoteRequest.count({ where: { status: 'NEW' } }),
     getLowStock(200).then((rows) => rows.length),
@@ -30,6 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <AdminShell
       user={{ name: user.name, email: user.email, role: user.role }}
+      logoUrl={settings.logoUrl}
       pendingOrders={pendingOrders}
       newQuotes={newQuotes}
       lowStock={lowStock}
