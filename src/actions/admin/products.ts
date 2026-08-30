@@ -260,13 +260,19 @@ export async function deleteProduct(id: string) {
 
 // ── Colores ───────────────────────────────────────────────────
 
+const hexRule = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Usa un color en formato #RRGGBB.');
+
 const colorSchema = z.object({
   productId: z.string().min(1),
   id: z.string().optional(),
   name: z.string().min(1, 'Ingresa el nombre del color.'),
-  hex: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Usa un color en formato #RRGGBB.'),
-  accentHex: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Usa un color en formato #RRGGBB.'),
+  code: z.string().optional(),
+  hex: hexRule,
+  accentHex: hexRule,
+  stripCode: z.string().optional(),
+  stripHex: z.union([hexRule, z.literal('')]).optional(),
   sortOrder: z.string().optional(),
+  active: z.string().optional(),
 });
 
 export async function saveColor(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
@@ -276,21 +282,25 @@ export async function saveColor(_prev: AdminState | null, formData: FormData): P
     return { ok: false, message: 'Revisa los datos del color.', fieldErrors: errorsOf(parsed.error) };
   }
   const d = parsed.data;
-  const slug = slugify(d.name);
+  const code = d.code?.trim() || null;
+  const slug = slugify(code ? `${d.name} ${code}` : d.name);
 
   const product = await prisma.product.findUnique({ where: { id: d.productId } });
   if (!product) return { ok: false, message: 'Producto no encontrado.' };
 
+  const fields = {
+    name: d.name.trim(),
+    code,
+    hex: d.hex,
+    accentHex: d.accentHex,
+    stripCode: d.stripCode?.trim() || null,
+    stripHex: d.stripHex?.trim() || null,
+    active: d.active === 'on',
+    sortOrder: d.sortOrder ? Number(d.sortOrder) || 0 : 0,
+  };
+
   if (d.id) {
-    await prisma.productColor.update({
-      where: { id: d.id },
-      data: {
-        name: d.name.trim(),
-        hex: d.hex,
-        accentHex: d.accentHex,
-        sortOrder: d.sortOrder ? Number(d.sortOrder) || 0 : 0,
-      },
-    });
+    await prisma.productColor.update({ where: { id: d.id }, data: fields });
   } else {
     const exists = await prisma.productColor.findUnique({
       where: { productId_slug: { productId: d.productId, slug } },
@@ -299,14 +309,7 @@ export async function saveColor(_prev: AdminState | null, formData: FormData): P
 
     const count = await prisma.productColor.count({ where: { productId: d.productId } });
     const color = await prisma.productColor.create({
-      data: {
-        productId: d.productId,
-        name: d.name.trim(),
-        slug,
-        hex: d.hex,
-        accentHex: d.accentHex,
-        sortOrder: count,
-      },
+      data: { ...fields, productId: d.productId, slug, sortOrder: fields.sortOrder || count },
     });
 
     // Un color nuevo hereda las tallas ya definidas en el producto.
@@ -325,7 +328,7 @@ export async function saveColor(_prev: AdminState | null, formData: FormData): P
         productId: d.productId,
         colorId: color.id,
         size,
-        sku: `${product.modelCode}-${slug.toUpperCase().slice(0, 3)}-${size}`,
+        sku: `${product.modelCode}-${code ?? slug.toUpperCase().slice(0, 3)}-${size}`,
         stock: 0,
         sortOrder: i,
       })),

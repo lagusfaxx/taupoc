@@ -106,7 +106,10 @@ export interface LowStockRow {
   threshold: number;
 }
 
-/** Variantes activas por debajo de su umbral. */
+/**
+ * Variantes que se están agotando. Un SKU en cero no entra acá: para el negocio
+ * es "agotado", no "por reponer", y se filtra desde la vista de inventario.
+ */
 export async function getLowStock(limit = 100): Promise<LowStockRow[]> {
   const settings = await getSettings();
   const variants = await prisma.variant.findMany({
@@ -126,7 +129,7 @@ export async function getLowStock(limit = 100): Promise<LowStockRow[]> {
       stock: v.stock,
       threshold: v.lowStockThreshold || settings.lowStockThreshold,
     }))
-    .filter((v) => v.stock <= v.threshold)
+    .filter((v) => v.stock > 0 && v.stock <= v.threshold)
     .slice(0, limit);
 }
 

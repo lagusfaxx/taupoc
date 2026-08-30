@@ -1,7 +1,7 @@
 # TAUPOC Chile
 
 Tienda en línea del distribuidor oficial de TAUPOC Swimwear en Chile: trajes de
-competición homologados por World Aquatics, con stock real por talla y color.
+competición homologados por World Aquatics, con inventario por talla y color.
 
 Incluye tienda pública, checkout con Mercado Pago, cálculo de envíos configurable
 y un panel de administración completo en español, pensado para operarse sin
@@ -39,10 +39,11 @@ npm run db:seed               # catálogo, envíos, cupones, blog y admin
 npm run dev                   # http://localhost:3000
 ```
 
-El seed crea el catálogo inicial completo: 4 productos, 306 SKU, tarifas de envío
-por zona geográfica de Chile, tres cupones de ejemplo y tres notas de blog. También
-genera imágenes de producto provisionales con la identidad de marca, para que la
-tienda nunca se vea rota antes de cargar la fotografía real.
+El seed carga el catálogo y el inventario del primer pedido: 4 productos, 306 SKU
+y 48 unidades repartidas en 24 SKU (tallas 22 a 28, 2 unidades cada uno). Además
+crea las tarifas de envío por zona, tres cupones y tres notas de blog, y genera
+imágenes de producto provisionales con la identidad de marca mientras no haya
+fotografía definitiva.
 
 Es idempotente: puede volver a ejecutarse sin duplicar datos, y **no regenera las
 imágenes de un producto que ya tiene alguna**, así que nunca pisa las fotografías

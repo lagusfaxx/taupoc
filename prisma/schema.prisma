@@ -194,12 +194,15 @@ model ProductColor {
   productId    String
   name         String
   slug         String
-  /// Color principal del swatch.
+  /// Código de colorway del fabricante, ej. 9192.
+  code         String?
   hex          String  @default("#111111")
-  /// Segundo color para swatches bicolor (opcional).
   hexSecondary String?
   /// Acento de interfaz cuando este color está seleccionado.
   accentHex    String  @default("#00E0B8")
+  /// Color del vivo o ribete, ej. 1360. Es parte de la especificación del traje.
+  stripCode    String?
+  stripHex     String?
   sortOrder    Int     @default(0)
   active       Boolean @default(true)
 
@@ -222,7 +225,7 @@ model Variant {
   /// Stock reservado por pedidos pendientes de pago.
   reserved          Int     @default(0)
   priceOverride     Int?
-  lowStockThreshold Int     @default(3)
+  lowStockThreshold Int     @default(1)
   barcode           String?
   active            Boolean @default(true)
   sortOrder         Int     @default(0)

@@ -8,10 +8,8 @@ import { formatDate } from '@/lib/utils';
 import { readingMinutes, renderMarkdown } from '@/lib/markdown';
 import { NewsletterForm } from '@/components/store/NewsletterForm';
 
-// El encabezado lee el cookie del carrito, así que esta página se renderiza
-// en cada solicitud de todos modos. Declararlo explícitamente hace que la
-// compilación de la imagen Docker no necesite una base de datos, y garantiza
-// que el stock mostrado sea siempre el real.
+// El encabezado lee el cookie del carrito: estas páginas ya se renderizan por
+// solicitud. Declararlo permite compilar la imagen sin base de datos.
 export const dynamic = 'force-dynamic';
 
 

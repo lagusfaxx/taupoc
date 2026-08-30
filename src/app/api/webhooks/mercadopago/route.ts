@@ -33,7 +33,6 @@ export async function POST(request: NextRequest) {
     url.searchParams.get('data.id') ??
     url.searchParams.get('id');
 
-  // Solo interesan las notificaciones de pago.
   if (!type.includes('payment') || !dataId) {
     return NextResponse.json({ received: true, ignored: true }, { status: 200 });
   }

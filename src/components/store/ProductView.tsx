@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { addToCart, type CartActionState } from '@/actions/cart';
 import { formatCLP, installment } from '@/lib/money';
 import { cn, readableOn } from '@/lib/utils';
+import { colorLabel } from '@/lib/colors';
 import { Price } from '@/components/ui/Price';
 import { ProductGallery, type GalleryImage } from './ProductGallery';
 import { SizeChart, type SizeChartRowData } from './SizeChart';
@@ -18,15 +19,20 @@ export interface ViewVariant {
   sku: string;
   available: number;
   price: number;
-  lowStock: boolean;
 }
+
+/** A partir de acá la ficha muestra las unidades restantes como urgencia. */
+const SHOW_UNITS_LEFT = 3;
 
 export interface ViewColor {
   id: string;
   name: string;
+  code: string | null;
   slug: string;
   hex: string;
   accentHex: string;
+  stripCode: string | null;
+  stripHex: string | null;
   images: GalleryImage[];
   variants: ViewVariant[];
 }
@@ -112,7 +118,6 @@ export function ProductView({ product }: { product: ProductViewData }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colorId]);
 
-  // Tras agregar al carrito, refrescamos para actualizar el badge del header.
   useEffect(() => {
     if (state?.ok) router.refresh();
   }, [state, router]);
@@ -201,11 +206,29 @@ export function ProductView({ product }: { product: ProductViewData }) {
           {/* Selector de color */}
           {product.colors.length > 1 ? (
             <fieldset className="mb-7">
-              <legend className="mb-3 flex w-full items-baseline justify-between gap-3">
+              <legend className="mb-3 flex w-full flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span className="font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim">
                   Color
                 </span>
-                <span className="text-[13px] text-chalk">{color?.name}</span>
+                <span className="text-[13px] text-chalk">
+                  {color?.name}
+                  {color?.code ? (
+                    <span className="ml-1.5 font-mono text-[12px] text-chalk-faint">{color.code}</span>
+                  ) : null}
+                  {color?.stripCode ? (
+                    <span className="ml-2 text-chalk-faint">
+                      · Vivo{' '}
+                      {color.stripHex ? (
+                        <span
+                          className="mr-1 inline-block h-2.5 w-2.5 translate-y-[1px] border border-line-bright"
+                          style={{ background: color.stripHex }}
+                          aria-hidden
+                        />
+                      ) : null}
+                      <span className="font-mono text-[12px]">{color.stripCode}</span>
+                    </span>
+                  ) : null}
+                </span>
               </legend>
               <div className="flex flex-wrap gap-2">
                 {product.colors.map((c) => {
@@ -217,21 +240,19 @@ export function ProductView({ product }: { product: ProductViewData }) {
                       type="button"
                       onClick={() => setColorId(c.id)}
                       aria-pressed={selected}
-                      aria-label={`Color ${c.name}${stock === 0 ? ' (agotado)' : ''}`}
-                      title={c.name}
+                      aria-label={`Color ${colorLabel(c)}${stock === 0 ? ' (agotado)' : ''}`}
+                      title={`${colorLabel(c)}${c.stripCode ? ` · vivo ${c.stripCode}` : ''}`}
                       className={cn(
                         'relative h-10 w-10 border-2 transition-all duration-150',
                         selected ? 'border-chalk' : 'border-line hover:border-chalk-faint',
-                        stock === 0 && 'opacity-40',
                       )}
                       style={{ background: c.hex }}
                     >
                       {stock === 0 ? (
-                        <span
-                          className="absolute inset-0 flex items-center justify-center"
-                          aria-hidden
-                        >
-                          <span className="h-[1.5px] w-[130%] rotate-45 bg-chalk/70" />
+                        <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+                          {/* Sin bajar la opacidad: atenuar el swatch falsearía el
+                              colorway, y el código del fabricante es parte de la ficha. */}
+                          <span className="h-px w-[135%] rotate-45 bg-ink shadow-[0_0_0_1px_rgba(244,246,248,0.65)]" />
                         </span>
                       ) : null}
                     </button>
@@ -268,7 +289,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
                     disabled={out}
                     onClick={() => setVariantId(v.id)}
                     aria-pressed={selected}
-                    aria-label={`Talla ${v.size}${out ? ' agotada' : v.lowStock ? `, últimas ${v.available}` : ''}`}
+                    aria-label={`Talla ${v.size}${out ? ' agotada' : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
                     className={cn(
                       'relative flex h-12 items-center justify-center border font-display text-[15px] font-semibold tracking-wide transition-all duration-150',
                       selected
@@ -281,7 +302,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
                     {v.size}
                     {out ? (
                       <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 rotate-[-20deg] bg-line-bright" aria-hidden />
-                    ) : v.lowStock ? (
+                    ) : v.available <= SHOW_UNITS_LEFT ? (
                       <span className="absolute right-1 top-1 h-1.5 w-1.5 bg-signal-warn" aria-hidden />
                     ) : null}
                   </button>
@@ -292,9 +313,10 @@ export function ProductView({ product }: { product: ProductViewData }) {
             {/* Estado de stock en vivo */}
             <p ref={liveRef} aria-live="polite" className="mt-3 min-h-[20px] text-[13px]">
               {variant ? (
-                variant.lowStock ? (
+                variant.available <= SHOW_UNITS_LEFT ? (
                   <span className="text-signal-warn">
-                    Últimas {variant.available} unidades de la talla {variant.size} en {color?.name}.
+                    Quedan {variant.available} {variant.available === 1 ? 'unidad' : 'unidades'} de la talla{' '}
+                    {variant.size} en {color ? colorLabel(color) : ''} · SKU {variant.sku}
                   </span>
                 ) : (
                   <span className="text-signal-ok">

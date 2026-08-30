@@ -6,10 +6,8 @@ import { SectionHeading } from '@/components/store/SectionHeading';
 import { ButtonLink } from '@/components/ui/Button';
 import { IconShield, IconExternal } from '@/components/ui/Icons';
 
-// El encabezado lee el cookie del carrito, así que esta página se renderiza
-// en cada solicitud de todos modos. Declararlo explícitamente hace que la
-// compilación de la imagen Docker no necesite una base de datos, y garantiza
-// que el stock mostrado sea siempre el real.
+// El encabezado lee el cookie del carrito: estas páginas ya se renderizan por
+// solicitud. Declararlo permite compilar la imagen sin base de datos.
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = buildMetadata({
@@ -86,8 +84,8 @@ export default async function BrandPage() {
           </h1>
           <p className="mt-7 max-w-2xl text-pretty text-[16px] leading-relaxed text-chalk-dim">
             TAUPOC fabrica trajes de competición con tejido técnico italiano y construcción termosellada.
-            Nosotros somos su distribuidor oficial en Chile: importamos, mantenemos stock real de las nueve
-            tallas de competición y acompañamos a nadadores, clubes y entrenadores en todo el país.
+            Nosotros somos su distribuidor oficial en Chile: importamos, mantenemos disponibilidad de las
+            tallas más pedidas y acompañamos a nadadores, clubes y entrenadores en todo el país.
           </p>
         </div>
       </section>
@@ -112,7 +110,7 @@ export default async function BrandPage() {
                 </p>
                 <p>
                   Trajimos TAUPOC a Chile para cerrar esa brecha. Mismo estándar de homologación oficial,
-                  disponibilidad real y un precio que un club puede sostener a lo largo de una temporada.
+                  disponibilidad y un precio que un club puede sostener a lo largo de una temporada.
                 </p>
               </div>
             </div>
@@ -123,7 +121,7 @@ export default async function BrandPage() {
               </h2>
               <dl className="mt-6 divide-y divide-line border-y border-line">
                 {[
-                  ['Stock en Chile', 'Bodega propia en Santiago. Lo que aparece disponible se despacha el mismo día hábil.'],
+                  ['Bodega en Chile', 'Bodega propia en Santiago. Lo que aparece disponible se despacha el mismo día hábil.'],
                   ['Presencia en torneos', 'Stand con muestrario completo de tallas en las fechas del calendario nacional.'],
                   ['Asesoría de talla', 'Te ayudamos con las medidas antes de comprar. Es la principal causa de devolución del rubro.'],
                   ['Condiciones para clubes', 'Precio por volumen, facturación al club y entrega coordinada en sede o torneo.'],

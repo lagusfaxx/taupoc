@@ -58,8 +58,12 @@ export default async function EditProductPage({
   const colors = product.colors.map((color) => ({
     id: color.id,
     name: color.name,
+    code: color.code,
     hex: color.hex,
     accentHex: color.accentHex,
+    stripCode: color.stripCode,
+    stripHex: color.stripHex,
+    active: color.active,
     sortOrder: color.sortOrder,
     variantCount: color.variants.length,
     stock: color.variants.reduce((s, v) => s + Math.max(0, v.stock - v.reserved), 0),
@@ -118,7 +122,7 @@ export default async function EditProductPage({
             content: (
               <Card
                 title="Colores del producto"
-                description="Cada color genera su propio set de tallas y su propia galería de imágenes."
+                description="Cada colorway genera su propio set de tallas y su propia galería de imágenes."
               >
                 <ColorManager productId={product.id} colors={colors} />
               </Card>
@@ -136,7 +140,7 @@ export default async function EditProductPage({
                 ) : (
                   <VariantMatrix
                     productId={product.id}
-                    colors={colors.map((c) => ({ id: c.id, name: c.name, hex: c.hex }))}
+                    colors={colors.map((c) => ({ id: c.id, name: c.name, code: c.code, stripCode: c.stripCode, hex: c.hex }))}
                     sizes={sizes}
                     variants={product.variants.map((v) => ({
                       id: v.id,

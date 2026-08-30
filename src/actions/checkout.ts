@@ -169,7 +169,6 @@ export async function createCheckout(
     message: `Pedido creado por ${data.email}. Entrega: ${shipping.label}.`,
   });
 
-  // Guarda el RUT en el perfil si el usuario está autenticado.
   if (session && data.rut) {
     await prisma.user.update({ where: { id: session.id }, data: { rut: data.rut } }).catch(() => {});
   }

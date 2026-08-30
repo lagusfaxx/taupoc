@@ -6,10 +6,8 @@ import { formatCLP } from '@/lib/money';
 import { regionName } from '@/lib/chile';
 import { LegalPage } from '@/components/store/LegalPage';
 
-// El encabezado lee el cookie del carrito, así que esta página se renderiza
-// en cada solicitud de todos modos. Declararlo explícitamente hace que la
-// compilación de la imagen Docker no necesite una base de datos, y garantiza
-// que el stock mostrado sea siempre el real.
+// El encabezado lee el cookie del carrito: estas páginas ya se renderizan por
+// solicitud. Declararlo permite compilar la imagen sin base de datos.
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = buildMetadata({

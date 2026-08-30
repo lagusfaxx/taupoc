@@ -7,6 +7,8 @@ import {
   VELSKIN_COLORS,
   MEN_SIZE_CHART,
   WOMEN_SIZE_CHART,
+  INITIAL_STOCK,
+  UNITS_PER_SKU,
   type ColorSpec,
   type SizeRow,
 } from './catalog-data';
@@ -14,17 +16,10 @@ import { generateProductImages, generateWideImage } from './placeholder-images';
 
 const prisma = new PrismaClient();
 
-// Stock inicial verosímil: más profundo en tallas centrales, escaso en extremos.
-const STOCK_BY_SIZE: Record<string, number> = {
-  '20': 2, '22': 4, '24': 6, '26': 9, '28': 12, '30': 10, '32': 7, '34': 4, '36': 2,
-};
-
-function stockFor(size: string, colorIndex: number, comingSoon: boolean): number {
-  if (comingSoon) return 0;
-  const base = STOCK_BY_SIZE[size] ?? 5;
-  // Los colores principales tienen más profundidad que los de nicho.
-  const factor = colorIndex < 4 ? 1 : colorIndex < 9 ? 0.6 : 0.3;
-  return Math.max(0, Math.round(base * factor));
+function stockFor(modelCode: string, colorCode: string | null, size: string): number {
+  if (!colorCode) return 0;
+  const codes = INITIAL_STOCK[modelCode]?.[size];
+  return codes?.includes(colorCode) ? UNITS_PER_SKU : 0;
 }
 
 function chartRows(rows: SizeRow[]): Prisma.SizeChartRowCreateWithoutProductInput[] {
@@ -297,7 +292,7 @@ async function seedProducts() {
       seoTitle: `${p.name} ${p.modelCode} — Homologado World Aquatics ${p.approvalCode}`,
       seoDescription:
         `${p.name} de competición TAUPOC, homologación World Aquatics ${p.approvalCode}. ` +
-        `Tallas 20 a 36 con stock real en Chile. Despacho a todo el país.`,
+        `Tallas 20 a 36. Despacho a todo Chile y retiro sin costo en Santiago.`,
     };
 
     const product = await prisma.product.upsert({
@@ -306,37 +301,31 @@ async function seedProducts() {
       update: data,
     });
 
-    // Tabla de tallas del producto
     await prisma.sizeChartRow.deleteMany({ where: { productId: product.id } });
     await prisma.sizeChartRow.createMany({
       data: chartRows(p.chart).map((r) => ({ ...r, productId: product.id })),
     });
 
-    // Ficha técnica
     await prisma.productSpec.deleteMany({ where: { productId: product.id } });
     await prisma.productSpec.createMany({
       data: p.specs.map((s, i) => ({ ...s, productId: product.id, sortOrder: i })),
     });
 
-    // Colores, imágenes y variantes
     for (const [colorIndex, color] of p.colors.entries()) {
+      const colorData = {
+        name: color.name,
+        code: color.code,
+        hex: color.hex,
+        accentHex: color.accentHex,
+        stripCode: color.stripCode,
+        stripHex: color.stripHex,
+        active: color.active,
+        sortOrder: colorIndex,
+      };
       const productColor = await prisma.productColor.upsert({
         where: { productId_slug: { productId: product.id, slug: color.slug } },
-        create: {
-          productId: product.id,
-          name: color.name,
-          slug: color.slug,
-          hex: color.hex,
-          hexSecondary: color.hexSecondary ?? null,
-          accentHex: color.accentHex,
-          sortOrder: colorIndex,
-        },
-        update: {
-          name: color.name,
-          hex: color.hex,
-          accentHex: color.accentHex,
-          sortOrder: colorIndex,
-        },
+        create: { productId: product.id, slug: color.slug, ...colorData },
+        update: colorData,
       });
 
       const existingImages = await prisma.productImage.count({
@@ -365,7 +354,8 @@ async function seedProducts() {
       }
 
       for (const [sizeIndex, size] of SIZES.entries()) {
-        const sku = `${p.modelCode}-${color.slug.toUpperCase().slice(0, 3)}-${size}`;
+        const sku = `${p.modelCode}-${color.code ?? color.slug.toUpperCase().slice(0, 3)}-${size}`;
+        const stock = p.status === 'COMING_SOON' ? 0 : stockFor(p.modelCode, color.code, size);
         await prisma.variant.upsert({
           where: {
             productId_colorId_size: { productId: product.id, colorId: productColor.id, size },
@@ -375,15 +365,25 @@ async function seedProducts() {
             colorId: productColor.id,
             size,
             sku,
-            stock: stockFor(size, colorIndex, p.status === 'COMING_SOON'),
+            stock,
             sortOrder: sizeIndex,
-            active: true,
+            active: color.active,
           },
-          update: { sku, sortOrder: sizeIndex },
+          update: { sku, stock, sortOrder: sizeIndex, active: color.active },
         });
       }
     }
-    console.log(`  · ${p.name} (${p.modelCode}) — ${p.colors.length} colores × ${SIZES.length} tallas`);
+    const units = await prisma.variant.aggregate({
+      where: { productId: product.id },
+      _sum: { stock: true },
+    });
+    const withStock = await prisma.variant.count({
+      where: { productId: product.id, stock: { gt: 0 } },
+    });
+    console.log(
+      `  · ${p.name} (${p.modelCode}) — ${p.colors.length} colorways × ${SIZES.length} tallas · ` +
+        `${withStock} SKU con stock · ${units._sum.stock ?? 0} unidades`,
+    );
   }
 }
 
@@ -648,9 +648,9 @@ async function seedSettings() {
     instagram: 'taupoc.chile',
     addressLine: 'Providencia, Santiago',
     freeShippingOver: 150000,
-    lowStockThreshold: 3,
+    lowStockThreshold: 1,
     installmentsMax: 12,
-    announcementBar: 'Homologación World Aquatics verificable · Stock real de tallas · Despacho a todo Chile',
+    announcementBar: 'Homologación World Aquatics verificable · Despacho a todo Chile',
     announcementActive: true,
     gaMeasurementId: '',
     metaPixelId: '',
@@ -660,7 +660,7 @@ async function seedSettings() {
     notifyLowStock: true,
     heroTitle: 'NADA MÁS RÁPIDO.',
     heroSubtitle:
-      'Trajes de competición homologados por World Aquatics. Stock real de tallas en Chile, sin esperas de importación ni precios de importador.',
+      'Trajes de competición homologados por World Aquatics. Importación directa, sin precios de importador.',
     heroCtaLabel: 'Ver línea R-SKIN',
     heroCtaHref: '/catalogo?linea=r-skin',
     heroImageUrl: hero.url,
@@ -702,7 +702,9 @@ async function main() {
   await seedAdmin();
 
   const variants = await prisma.variant.count();
-  console.log(`\nListo. ${variants} SKU creados.`);
+  const inStock = await prisma.variant.count({ where: { stock: { gt: 0 } } });
+  const units = await prisma.variant.aggregate({ _sum: { stock: true } });
+  console.log(`\nListo. ${variants} SKU · ${inStock} con stock · ${units._sum.stock ?? 0} unidades.`);
 }
 
 main()

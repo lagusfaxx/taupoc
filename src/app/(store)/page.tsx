@@ -18,14 +18,12 @@ export const metadata: Metadata = buildMetadata({
   title: 'Trajes de competición homologados World Aquatics',
   description:
     'Distribuidor oficial TAUPOC en Chile. Jammers y knee suits de competición homologados por World Aquatics, ' +
-    'con stock real de tallas 20 a 36 y despacho a todo el país.',
+    'con despacho a todo el país y retiro sin costo en Santiago.',
   path: '/',
 });
 
-// El encabezado lee el cookie del carrito, así que esta página se renderiza
-// en cada solicitud de todos modos. Declararlo explícitamente hace que la
-// compilación de la imagen Docker no necesite una base de datos, y garantiza
-// que el stock mostrado sea siempre el real.
+// El encabezado lee el cookie del carrito: estas páginas ya se renderizan por
+// solicitud. Declararlo permite compilar la imagen sin base de datos.
 export const dynamic = 'force-dynamic';
 
 const PILLARS = [
@@ -36,8 +34,8 @@ const PILLARS = [
   },
   {
     icon: IconBox,
-    title: 'Stock real de tallas',
-    body: 'Nueve tallas de competición, de la 20 a la 36, en bodega en Chile. Sin esperas de importación ni "consultar disponibilidad".',
+    title: 'Disponibilidad inmediata',
+    body: 'Lo que aparece disponible está en bodega en Santiago y sale despachado el mismo día hábil. Sin "consultar disponibilidad".',
   },
   {
     icon: IconTruck,
@@ -140,7 +138,7 @@ export default async function HomePage() {
 
             <dl className="mt-12 flex flex-wrap gap-x-10 gap-y-5 border-t border-line-soft pt-7">
               {[
-                { k: `${skuCount}`, v: 'SKU en stock' },
+                { k: `${skuCount}`, v: 'SKU en catálogo' },
                 { k: '20 – 36', v: 'Tallas de competición' },
                 { k: 'World Aquatics', v: 'Homologación oficial' },
               ].map((stat) => (

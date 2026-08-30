@@ -31,7 +31,7 @@ export default async function CartPage() {
           <Empty
             icon={<IconCart className="h-10 w-10" />}
             title="Todavía no agregaste nada"
-            description="Revisa el catálogo de competición: nueve tallas, stock real y homologación World Aquatics verificable."
+            description="Revisa el catálogo de competición: homologación World Aquatics verificable y despacho a todo Chile."
             action={<ButtonLink href="/catalogo" size="lg">Ver catálogo</ButtonLink>}
           />
         </div>

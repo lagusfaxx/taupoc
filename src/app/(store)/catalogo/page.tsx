@@ -36,8 +36,8 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
   return buildMetadata({
     title: parts.join(' — '),
     description:
-      'Trajes de competición TAUPOC homologados por World Aquatics. Tallas 20 a 36 con stock real en Chile, ' +
-      'despacho a todo el país y retiro sin costo en Santiago.',
+      'Trajes de competición TAUPOC homologados por World Aquatics. Despacho a todo el país ' +
+      'y retiro sin costo en Santiago.',
     path: '/catalogo',
     // Las combinaciones de filtros no deben indexarse por separado.
     noIndex: Object.keys(params).length > 0,
@@ -101,8 +101,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
             {heading}
           </h1>
           <p className="mt-4 max-w-2xl text-pretty text-[15px] leading-relaxed text-chalk-dim">
-            Cada combinación de talla y color es un SKU con stock propio. Si aparece disponible,
-            está en bodega en Chile y sale despachado el mismo día hábil.
+            Cada combinación de talla y color es un SKU con stock propio. Lo que ves disponible
+            sale despachado el mismo día hábil.
           </p>
         </div>
       </div>

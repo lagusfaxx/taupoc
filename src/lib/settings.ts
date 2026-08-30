@@ -51,9 +51,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   addressLine: 'Santiago, Chile',
 
   freeShippingOver: 120000,
-  lowStockThreshold: 3,
+  lowStockThreshold: 1,
   installmentsMax: 12,
-  announcementBar: 'Homologación World Aquatics · Despacho a todo Chile · Stock real de tallas',
+  announcementBar: 'Homologación World Aquatics · Despacho a todo Chile',
   announcementActive: true,
 
   gaMeasurementId: '',
@@ -66,7 +66,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
 
   heroTitle: 'NADA MÁS RÁPIDO.',
   heroSubtitle:
-    'Trajes de competición homologados por World Aquatics. Stock real de tallas en Chile, sin esperas de importación.',
+    'Trajes de competición homologados por World Aquatics, con despacho a todo Chile.',
   heroCtaLabel: 'Ver R-SKIN',
   heroCtaHref: '/catalogo',
   heroImageUrl: '',

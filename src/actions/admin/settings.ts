@@ -48,7 +48,6 @@ export async function updateSettings(
   }
   const d = parsed.data;
 
-  // Imagen del hero: opcional, solo se reemplaza si suben una nueva.
   let heroImageUrl: string | undefined;
   const hero = formData.get('heroImage');
   if (hero instanceof File && hero.size > 0) {

@@ -49,7 +49,7 @@ export async function Footer() {
             <Logo />
             <p className="mt-5 max-w-xs text-[14px] leading-relaxed text-chalk-faint">
               Distribuidor oficial de TAUPOC Swimwear en Chile. Trajes de competición homologados por
-              World Aquatics, con stock real de tallas y despacho a todo el país.
+              World Aquatics, con despacho a todo el país.
             </p>
 
             <div className="mt-6 flex items-center gap-2">

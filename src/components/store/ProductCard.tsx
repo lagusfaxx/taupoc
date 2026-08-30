@@ -5,10 +5,12 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Price } from '@/components/ui/Price';
 import { cn } from '@/lib/utils';
+import { colorLabel } from '@/lib/colors';
 
 export interface ProductCardColor {
   id: string;
   name: string;
+  code: string | null;
   slug: string;
   hex: string;
   imageUrl: string | null;
@@ -62,7 +64,7 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
           {image ? (
             <Image
               src={image}
-              alt={`${product.name} — ${active?.name ?? ''}`}
+              alt={`${product.name} — ${active ? colorLabel(active) : ''}`}
               fill
               sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 24vw"
               priority={priority}
@@ -143,16 +145,21 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
                 onMouseEnter={() => setActiveId(color.id)}
                 onFocus={() => setActiveId(color.id)}
                 onClick={() => setActiveId(color.id)}
-                aria-label={`Ver en ${color.name}`}
+                aria-label={`Ver en ${colorLabel(color)}`}
                 aria-pressed={color.id === active?.id}
-                title={color.name}
+                title={colorLabel(color)}
                 className={cn(
                   'relative h-5 w-5 border transition-all duration-150',
                   color.id === active?.id ? 'border-chalk' : 'border-line-bright hover:border-chalk-faint',
-                  color.stock === 0 && 'opacity-35',
                 )}
                 style={{ background: color.hex }}
-              />
+              >
+                {color.stock === 0 ? (
+                  <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+                    <span className="h-px w-[135%] rotate-45 bg-ink shadow-[0_0_0_1px_rgba(244,246,248,0.6)]" />
+                  </span>
+                ) : null}
+              </button>
             ))}
             {product.colors.length > 9 ? (
               <span className="ml-0.5 font-display text-[11px] tracking-wide text-chalk-faint">

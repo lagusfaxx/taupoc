@@ -1,39 +1,71 @@
-/** Datos del catálogo inicial de TAUPOC Chile. */
-
 export const SIZES = ['20', '22', '24', '26', '28', '30', '32', '34', '36'] as const;
 
 export interface ColorSpec {
   name: string;
   slug: string;
+  /** Código de colorway del fabricante. */
+  code: string | null;
   hex: string;
-  hexSecondary?: string;
   accentHex: string;
+  /** Código del vivo. */
+  stripCode: string | null;
+  stripHex: string | null;
+  active: boolean;
 }
 
-/** Los ~15 colores de la línea R-SKIN. */
+/**
+ * Colorways de la línea R-SKIN.
+ *
+ * Los ocho primeros son los del primer pedido, con su código de colorway y de
+ * vivo. Los siete restantes quedan inactivos hasta tener sus códigos: existen
+ * en el sistema para que el panel pueda activarlos, pero no se muestran en la
+ * tienda mientras no estén confirmados.
+ */
 export const RSKIN_COLORS: ColorSpec[] = [
-  { name: 'Negro Competición', slug: 'negro', hex: '#0B0B0D', accentHex: '#00E0B8' },
-  { name: 'Blanco Ártico', slug: 'blanco', hex: '#F2F3F5', accentHex: '#0BB7E0' },
-  { name: 'Aqua TAUPOC', slug: 'aqua', hex: '#00E0B8', accentHex: '#00E0B8' },
-  { name: 'Púrpura Racing', slug: 'purpura', hex: '#6C2BD9', accentHex: '#A46BFF' },
-  { name: 'Azul Cobalto', slug: 'cobalto', hex: '#1B4FD8', accentHex: '#4B8BFF' },
-  { name: 'Rojo Carrera', slug: 'rojo', hex: '#D81E2E', accentHex: '#FF4A57' },
-  { name: 'Verde Lima', slug: 'lima', hex: '#B6E600', accentHex: '#C8F52C' },
-  { name: 'Naranja Flúor', slug: 'naranja', hex: '#FF5A1F', accentHex: '#FF7A48' },
-  { name: 'Rosa Neón', slug: 'rosa', hex: '#FF2E88', accentHex: '#FF5CA3' },
-  { name: 'Amarillo Solar', slug: 'amarillo', hex: '#FFC400', accentHex: '#FFD84D' },
-  { name: 'Azul Marino', slug: 'marino', hex: '#16224A', accentHex: '#5C7BE0' },
-  { name: 'Gris Grafito', slug: 'grafito', hex: '#4A5158', accentHex: '#8D98A5' },
-  { name: 'Turquesa Profundo', slug: 'turquesa', hex: '#0891A8', accentHex: '#2CC2DA' },
-  { name: 'Vino Tinto', slug: 'vino', hex: '#7A1030', accentHex: '#D64B72' },
-  { name: 'Plata Cromo', slug: 'plata', hex: '#C9CFD6', accentHex: '#9FB0C2' },
+  { name: 'Negro', slug: 'negro-9192', code: '9192', hex: '#101114', accentHex: '#00E0B8', stripCode: '1360', stripHex: null, active: true },
+  { name: 'Blanco', slug: 'blanco-0015-0028', code: '0015-0028', hex: '#F1F3F5', accentHex: '#0BB7E0', stripCode: '0443', stripHex: null, active: true },
+  { name: 'Azul Marino', slug: 'azul-marino-60289', code: '60289', hex: '#17285A', accentHex: '#5C7BE0', stripCode: '0524', stripHex: null, active: true },
+  { name: 'Púrpura', slug: 'purpura-50008', code: '50008', hex: '#5B2A8C', accentHex: '#A46BFF', stripCode: '0524', stripHex: null, active: true },
+  { name: 'Azul', slug: 'azul-60047', code: '60047', hex: '#1B62C4', accentHex: '#4B9BF0', stripCode: '0727', stripHex: null, active: true },
+  { name: 'Azul', slug: 'azul-6093', code: '6093', hex: '#0E3F86', accentHex: '#3F7BD6', stripCode: '0727', stripHex: null, active: true },
+  { name: 'Rojo', slug: 'rojo-4184', code: '4184', hex: '#C8102E', accentHex: '#FF4A57', stripCode: '0524', stripHex: null, active: true },
+  { name: 'Rosado', slug: 'rosado-30049', code: '30049', hex: '#E8467C', accentHex: '#FF5CA3', stripCode: '0443', stripHex: null, active: true },
+
+  { name: 'Aqua', slug: 'aqua', code: null, hex: '#00E0B8', accentHex: '#00E0B8', stripCode: null, stripHex: null, active: false },
+  { name: 'Verde Lima', slug: 'verde-lima', code: null, hex: '#B6E600', accentHex: '#C8F52C', stripCode: null, stripHex: null, active: false },
+  { name: 'Naranja', slug: 'naranja', code: null, hex: '#FF5A1F', accentHex: '#FF7A48', stripCode: null, stripHex: null, active: false },
+  { name: 'Amarillo', slug: 'amarillo', code: null, hex: '#FFC400', accentHex: '#FFD84D', stripCode: null, stripHex: null, active: false },
+  { name: 'Turquesa', slug: 'turquesa', code: null, hex: '#0891A8', accentHex: '#2CC2DA', stripCode: null, stripHex: null, active: false },
+  { name: 'Vino', slug: 'vino', code: null, hex: '#7A1030', accentHex: '#D64B72', stripCode: null, stripHex: null, active: false },
+  { name: 'Plata', slug: 'plata', code: null, hex: '#C9CFD6', accentHex: '#9FB0C2', stripCode: null, stripHex: null, active: false },
 ];
 
-/** VEL-SKIN se lanza solo en dos colores. */
+/** VEL-SKIN se lanza en dos colorways. */
 export const VELSKIN_COLORS: ColorSpec[] = [
-  { name: 'Púrpura Racing', slug: 'purpura', hex: '#6C2BD9', accentHex: '#A46BFF' },
-  { name: 'Negro Competición', slug: 'negro', hex: '#0B0B0D', accentHex: '#00E0B8' },
+  RSKIN_COLORS[3],
+  RSKIN_COLORS[0],
 ];
+
+/**
+ * Inventario inicial: 24 SKU con 2 unidades cada uno.
+ * Clave: talla → códigos de colorway.
+ */
+export const INITIAL_STOCK: Record<string, Record<string, string[]>> = {
+  TS703: {
+    '22': ['9192', '60289', '50008'],
+    '24': ['9192', '60047', '50008'],
+    '26': ['9192', '4184', '6093'],
+    '28': ['9192', '60289', '6093'],
+  },
+  TS704: {
+    '22': ['9192', '30049', '50008'],
+    '24': ['9192', '0015-0028', '50008'],
+    '26': ['9192', '4184', '6093'],
+    '28': ['9192', '60289', '60047'],
+  },
+};
+
+export const UNITS_PER_SKU = 2;
 
 export interface SizeRow {
   size: string;

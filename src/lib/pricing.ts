@@ -88,6 +88,5 @@ export async function evaluateCoupon(
     const pct = Math.min(100, Math.max(0, coupon.value));
     return { ok: true, coupon, discount: Math.round((base * pct) / 100), freeShipping: false };
   }
-  // FIXED
   return { ok: true, coupon, discount: Math.min(base, Math.max(0, coupon.value)), freeShipping: false };
 }

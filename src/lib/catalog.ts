@@ -28,6 +28,7 @@ export function toCardData(product: ProductWithCard): ProductCardData {
   const colors = product.colors.map((color) => ({
     id: color.id,
     name: color.name,
+    code: color.code,
     slug: color.slug,
     hex: color.hex,
     imageUrl: color.images[0]?.url ?? null,

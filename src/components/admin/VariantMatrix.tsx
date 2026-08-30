@@ -20,6 +20,8 @@ export interface MatrixVariant {
 export interface MatrixColor {
   id: string;
   name: string;
+  code: string | null;
+  stripCode: string | null;
   hex: string;
 }
 
@@ -208,6 +210,10 @@ export function VariantMatrix({
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13px] text-chalk">{color.name}</span>
+                        <span className="block truncate font-mono text-[10.5px] text-chalk-faint">
+                          {color.code ?? '—'}
+                          {color.stripCode ? ` · vivo ${color.stripCode}` : ''}
+                        </span>
                       </span>
                       <span className="flex shrink-0 gap-1">
                         <button
@@ -246,7 +252,7 @@ export function VariantMatrix({
                     const stock = value?.stock ?? 0;
                     const active = value?.active ?? variant.active;
                     const low = active && stock > 0 && stock <= variant.lowStockThreshold;
-                    const out = active && stock === 0;
+                    const empty = active && stock === 0;
 
                     return (
                       <td key={size} className="border-b border-line-soft px-1 py-1 text-center">
@@ -265,14 +271,19 @@ export function VariantMatrix({
                           onFocus={(e) => e.currentTarget.select()}
                           title={variant.sku}
                           className={cn(
-                            'h-9 w-full min-w-[52px] border bg-ink-900 text-center font-display text-[14px] font-semibold transition-colors focus:outline-none',
-                            !active && 'border-line-soft text-chalk-faint/40 line-through',
-                            active && out && 'border-signal-bad/50 bg-signal-bad/10 text-signal-bad',
+                            'h-9 w-full min-w-[52px] border bg-ink-900 text-center font-display text-[14px] font-semibold transition-colors focus:border-[var(--accent)] focus:outline-none',
+                            !active && 'border-line-soft text-chalk-faint/35',
+                            active && empty && 'border-line-soft text-chalk-faint/50',
                             active && low && 'border-signal-warn/50 bg-signal-warn/10 text-signal-warn',
-                            active && !low && !out && 'border-line text-chalk focus:border-[var(--accent)]',
+                            active && !low && !empty && 'border-line text-chalk',
                           )}
                         />
-                        <label className="mt-0.5 flex items-center justify-center gap-1 text-[9px] text-chalk-faint">
+                        {/* El rótulo aparece solo cuando el SKU está oculto: es la
+                            excepción, y repetir "a la venta" en 135 celdas es ruido. */}
+                        <label
+                          title={`${variant.sku} · ${active ? 'a la venta' : 'oculto en la tienda'}`}
+                          className="mt-0.5 flex items-center justify-center gap-1 text-[9px] text-chalk-faint"
+                        >
                           <input
                             type="checkbox"
                             name={`active:${variant.id}`}
@@ -280,10 +291,8 @@ export function VariantMatrix({
                             onChange={(e) => update(variant.id, { active: e.target.checked })}
                             className="h-2.5 w-2.5 cursor-pointer appearance-none border border-line-bright bg-ink-900 checked:border-[var(--accent)] checked:bg-[var(--accent)]"
                           />
-                          <span className="sr-only">
-                            SKU {variant.sku} activo
-                          </span>
-                          <span aria-hidden>{active ? 'a la venta' : 'oculto'}</span>
+                          <span className="sr-only">{variant.sku} a la venta</span>
+                          {!active ? <span aria-hidden>oculto</span> : null}
                         </label>
                       </td>
                     );
@@ -301,13 +310,13 @@ export function VariantMatrix({
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[12px] text-chalk-faint">
             <span className="mr-3 inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 border border-signal-bad/50 bg-signal-bad/20" aria-hidden /> Agotado
+              <span className="h-2.5 w-2.5 border border-line" aria-hidden /> Con stock
             </span>
             <span className="mr-3 inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 border border-signal-warn/50 bg-signal-warn/20" aria-hidden /> Stock bajo
+              <span className="h-2.5 w-2.5 border border-signal-warn/50 bg-signal-warn/20" aria-hidden /> Última unidad
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 border border-line-soft" aria-hidden /> SKU desactivado
+              <span className="h-2.5 w-2.5 border border-line-soft" aria-hidden /> Sin stock u oculto
             </span>
           </p>
           <Save dirty={dirty} />

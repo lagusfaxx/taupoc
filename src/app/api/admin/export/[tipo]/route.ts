@@ -140,7 +140,7 @@ async function exportInventory() {
   const variants = await prisma.variant.findMany({
     include: {
       product: { select: { name: true, modelCode: true, status: true } },
-      color: { select: { name: true, hex: true } },
+      color: { select: { name: true, code: true, hex: true, stripCode: true } },
     },
     orderBy: [{ product: { name: 'asc' } }, { color: { sortOrder: 'asc' } }, { size: 'asc' }],
   });
@@ -151,7 +151,9 @@ async function exportInventory() {
     variant.product.name,
     variant.product.status,
     variant.color.name,
+    variant.color.code ?? '',
     variant.color.hex,
+    variant.color.stripCode ?? '',
     variant.size,
     variant.stock,
     variant.reserved,
@@ -164,8 +166,8 @@ async function exportInventory() {
     'taupoc-inventario',
     toCsv(
       [
-        'SKU', 'Código modelo', 'Producto', 'Estado producto', 'Color', 'Hex',
-        'Talla', 'Stock', 'Reservado', 'Disponible', 'Umbral', 'Activo',
+        'SKU', 'Código modelo', 'Producto', 'Estado producto', 'Color', 'Colorway', 'Hex',
+        'Vivo', 'Talla', 'Stock', 'Reservado', 'Disponible', 'Umbral', 'Activo',
       ],
       rows,
     ),

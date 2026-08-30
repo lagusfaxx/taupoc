@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import { prisma } from './db';
 import { evaluateCoupon } from './pricing';
 import { getSession } from './auth';
+import { colorLabel } from './colors';
 
 const CART_COOKIE = 'taupoc_cart';
 const CART_MAX_AGE = 60 * 60 * 24 * 45;
@@ -129,7 +130,7 @@ export async function getCart(): Promise<CartSummary> {
       slug: p.slug,
       productName: p.name,
       modelCode: p.modelCode,
-      colorName: v.color.name,
+      colorName: colorLabel(v.color),
       colorHex: v.color.hex,
       size: v.size,
       sku: v.sku,

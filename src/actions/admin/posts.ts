@@ -43,7 +43,6 @@ export async function savePost(_prev: AdminState | null, formData: FormData): Pr
   });
   if (clash) return { ok: false, message: 'Ya existe otra nota con esa URL.' };
 
-  // La portada es opcional: si no se sube una nueva, se conserva la actual.
   let coverUrl: string | undefined;
   const cover = formData.get('cover');
   if (cover instanceof File && cover.size > 0) {
@@ -68,8 +67,7 @@ export async function savePost(_prev: AdminState | null, formData: FormData): Pr
     seoTitle: d.seoTitle?.trim() || null,
     seoDescription: d.seoDescription?.trim() || null,
     ...(coverUrl ? { coverUrl } : {}),
-    // Se fija la fecha de publicación la primera vez que pasa a publicada.
-    ...(d.status === 'PUBLISHED' && !existing?.publishedAt ? { publishedAt: new Date() } : {}),
+      ...(d.status === 'PUBLISHED' && !existing?.publishedAt ? { publishedAt: new Date() } : {}),
   };
 
   if (d.id) {
