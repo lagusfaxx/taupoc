@@ -14,62 +14,14 @@ export async function nextOrderNumber(): Promise<string> {
   return `TP-${counter.value}`;
 }
 
-export const ORDER_STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Pendiente de pago',
-  PAID: 'Pagado',
-  PROCESSING: 'En preparación',
-  SHIPPED: 'Despachado',
-  DELIVERED: 'Entregado',
-  CANCELLED: 'Cancelado',
-  REFUNDED: 'Reembolsado',
-};
-
-export const PAYMENT_STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Pendiente',
-  IN_PROCESS: 'En revisión',
-  APPROVED: 'Aprobado',
-  REJECTED: 'Rechazado',
-  REFUNDED: 'Reembolsado',
-  CHARGED_BACK: 'Contracargo',
-  CANCELLED: 'Cancelado',
-};
-
-/** Color semántico para los badges de estado. */
-export function orderStatusTone(status: string): 'ok' | 'warn' | 'bad' | 'info' | 'muted' {
-  switch (status) {
-    case 'PAID':
-    case 'DELIVERED':
-      return 'ok';
-    case 'PROCESSING':
-    case 'SHIPPED':
-      return 'info';
-    case 'PENDING':
-      return 'warn';
-    case 'CANCELLED':
-    case 'REFUNDED':
-      return 'bad';
-    default:
-      return 'muted';
-  }
-}
-
-export function paymentStatusTone(status: string): 'ok' | 'warn' | 'bad' | 'info' | 'muted' {
-  switch (status) {
-    case 'APPROVED':
-      return 'ok';
-    case 'IN_PROCESS':
-      return 'info';
-    case 'PENDING':
-      return 'warn';
-    case 'REJECTED':
-    case 'CHARGED_BACK':
-    case 'REFUNDED':
-    case 'CANCELLED':
-      return 'bad';
-    default:
-      return 'muted';
-  }
-}
+// Las etiquetas y tonos viven en order-labels.ts para poder importarse
+// también desde componentes de cliente.
+export {
+  ORDER_STATUS_LABEL,
+  PAYMENT_STATUS_LABEL,
+  orderStatusTone,
+  paymentStatusTone,
+} from './order-labels';
 
 export async function logOrderEvent(params: {
   orderId: string;
