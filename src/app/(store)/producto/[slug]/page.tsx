@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { prisma } from '@/lib/db';
 import { getProductDetail, getRelated, GENDER_LABEL } from '@/lib/catalog';
 import { getSettings } from '@/lib/settings';
 import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
