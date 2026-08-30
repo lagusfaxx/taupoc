@@ -123,6 +123,29 @@ npm run db:studio    # explorador visual de la base
 
 La sonda de salud está en `/api/health` y verifica también la conexión a la base.
 
+### Si el despliegue falla
+
+**`port is already allocated`** — otra aplicación del servidor ya usa ese puerto.
+El compose no publica ninguno; si lo agregaste, quítalo o usa uno libre.
+
+**`P1000: Authentication failed`** con `Skipping initialization` en el log de la
+base — `POSTGRES_PASSWORD` solo se aplica cuando el volumen se crea por primera
+vez. Si la cambiaste después, el rol conserva la contraseña anterior. Se
+resuelve de dos formas:
+
+```bash
+# Opción A: empezar de cero. Con RUN_SEED=true el catálogo se vuelve a cargar.
+docker volume rm <proyecto>_taupoc-db
+
+# Opción B: conservar los datos y cambiar la contraseña del rol.
+docker exec -it <contenedor-db> \
+  psql -U taupoc -d taupoc -c "ALTER USER taupoc WITH PASSWORD 'la-nueva';"
+```
+
+Revisa además que el secreto no lleve un `$` sin escapar: Compose lo interpreta
+como variable y guarda un valor distinto del que definiste, que es la causa más
+frecuente de que la contraseña "correcta" no funcione.
+
 La imagen se construye sin acceso a la base de datos: todas las páginas que leen
 datos se renderizan en cada solicitud, lo que además garantiza que el stock que ve
 el cliente sea siempre el real. El contenedor aplica sus propias migraciones al
