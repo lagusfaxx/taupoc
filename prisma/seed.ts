@@ -42,6 +42,7 @@ interface ProductSeed {
   gender: 'MALE' | 'FEMALE';
   lineSlug: 'r-skin' | 'vel-skin';
   approvalCode: string;
+  approvalYear: number;
   status: 'ACTIVE' | 'COMING_SOON';
   basePrice: number;
   weightGrams: number;
@@ -71,6 +72,7 @@ const PRODUCTS: ProductSeed[] = [
     slug: 'r-skin-jammer-ts703',
     name: 'R-SKIN Jammer',
     modelCode: 'TS703',
+    approvalYear: 2025,
     subtitle: 'Jammer de competición masculino',
     gender: 'MALE',
     lineSlug: 'r-skin',
@@ -106,6 +108,7 @@ const PRODUCTS: ProductSeed[] = [
     slug: 'r-skin-knee-suit-ts704',
     name: 'R-SKIN Knee Suit',
     modelCode: 'TS704',
+    approvalYear: 2025,
     subtitle: 'Traje de competición femenino hasta la rodilla',
     gender: 'FEMALE',
     lineSlug: 'r-skin',
@@ -140,6 +143,7 @@ const PRODUCTS: ProductSeed[] = [
     slug: 'vel-skin-jammer-ts705',
     name: 'VEL-SKIN Jammer',
     modelCode: 'TS705',
+    approvalYear: 2026,
     subtitle: 'Jammer de competición masculino — nueva generación',
     gender: 'MALE',
     lineSlug: 'vel-skin',
@@ -172,6 +176,7 @@ const PRODUCTS: ProductSeed[] = [
     slug: 'vel-skin-knee-suit-ts706',
     name: 'VEL-SKIN Knee Suit',
     modelCode: 'TS706',
+    approvalYear: 2026,
     subtitle: 'Traje de competición femenino — nueva generación',
     gender: 'FEMALE',
     lineSlug: 'vel-skin',
@@ -269,7 +274,7 @@ async function seedProducts() {
       lineId: line?.id ?? null,
       approvalCode: p.approvalCode,
       approvalBody: 'World Aquatics',
-      approvalYear: 2024,
+      approvalYear: p.approvalYear,
       approvalVerifyUrl: 'https://www.worldaquatics.com/swimming/approved-swimwear',
       basePrice: p.basePrice,
       weightGrams: p.weightGrams,

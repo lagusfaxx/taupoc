@@ -10,7 +10,7 @@ export interface Facets {
   lines: { slug: string; name: string }[];
   categories: { slug: string; name: string }[];
   colors: { slug: string; name: string; hex: string }[];
-  sizes: string[];
+  sizes: { size: string; inStock: boolean }[];
   minPrice: number;
   maxPrice: number;
 }
@@ -159,22 +159,33 @@ export function CatalogShell({
 
       <Group title="Talla">
         <div className="grid grid-cols-5 gap-1.5">
-          {facets.sizes.map((size) => {
+          {facets.sizes.map(({ size, inStock }) => {
             const active = has('tallas', size);
+            // Una talla sin stock solo se puede tocar si ya está filtrando,
+            // para poder quitarla.
+            const disabled = !inStock && !active;
             return (
               <button
                 key={size}
                 type="button"
+                disabled={disabled}
                 onClick={() => toggleMulti('tallas', size)}
                 aria-pressed={active}
+                title={inStock ? undefined : `Talla ${size} sin stock`}
                 className={cn(
-                  'border py-2 font-display text-[12px] font-semibold tracking-wide transition-colors',
-                  active
-                    ? 'accent-border accent-text bg-ink-800'
-                    : 'border-line text-chalk-dim hover:border-line-bright hover:text-chalk',
+                  'relative border py-2 font-display text-[12px] font-semibold tracking-wide transition-colors',
+                  active && 'accent-border accent-text bg-ink-800',
+                  !active && inStock && 'border-line text-chalk-dim hover:border-line-bright hover:text-chalk',
+                  disabled && 'cursor-not-allowed border-line-soft text-chalk-faint/40',
                 )}
               >
                 {size}
+                {disabled ? (
+                  <span
+                    className="absolute inset-x-1.5 top-1/2 h-px -translate-y-1/2 rotate-[-18deg] bg-line-bright"
+                    aria-hidden
+                  />
+                ) : null}
               </button>
             );
           })}

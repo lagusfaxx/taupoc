@@ -166,16 +166,12 @@ export function ProductView({ product }: { product: ProductViewData }) {
                 <p className="mt-2 break-all font-mono text-[22px] font-medium leading-none tracking-wider text-chalk sm:text-[26px]">
                   {product.approvalCode}
                 </p>
-                <p className="mt-2.5 text-[13px] leading-relaxed text-chalk-faint">
-                  Apto para competencia oficial en todas las categorías. Tu entrenador puede verificar
-                  este código en el registro público de World Aquatics.
-                </p>
                 {product.approvalVerifyUrl ? (
                   <a
                     href={product.approvalVerifyUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-widest accent-text underline underline-offset-4"
+                    className="mt-2.5 inline-flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-widest accent-text underline underline-offset-4"
                   >
                     Verificar en el registro oficial
                     <IconExternal className="h-3.5 w-3.5" />

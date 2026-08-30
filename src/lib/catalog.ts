@@ -162,10 +162,10 @@ export async function getCatalogFacets() {
       where: { active: true, product: { status: { in: VISIBLE } } },
       select: { slug: true, name: true, hex: true },
     }),
-    prisma.variant.findMany({
+    prisma.variant.groupBy({
+      by: ['size'],
       where: { active: true, product: { status: { in: VISIBLE } } },
-      select: { size: true },
-      distinct: ['size'],
+      _sum: { stock: true },
     }),
     prisma.product.aggregate({
       where: { status: { in: VISIBLE } },
@@ -182,7 +182,11 @@ export async function getCatalogFacets() {
     lines,
     categories,
     colors: [...colorMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'es')),
-    sizes: variants.map((v) => v.size).sort((a, b) => Number(a) - Number(b)),
+    // Se informa qué tallas tienen stock para poder deshabilitar el resto en
+    // el filtro: una talla sin unidades solo produce búsquedas vacías.
+    sizes: variants
+      .map((v) => ({ size: v.size, inStock: (v._sum.stock ?? 0) > 0 }))
+      .sort((a, b) => Number(a.size) - Number(b.size)),
     minPrice: priceRange._min.basePrice ?? 0,
     maxPrice: priceRange._max.basePrice ?? 0,
   };
