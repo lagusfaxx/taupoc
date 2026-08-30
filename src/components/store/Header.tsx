@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getSettings } from '@/lib/settings';
+import { formatCLP } from '@/lib/money';
 import { getCartCount } from '@/lib/cart';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
@@ -50,12 +51,19 @@ export async function Header() {
     buildNav(),
   ]);
 
+  // El umbral de envío gratis se edita en Ajustes; el banner lo toma de ahí
+  // para no quedar desfasado.
+  const announcement = settings.announcementBar.replace(
+    '{envio_gratis}',
+    settings.freeShippingOver ? formatCLP(settings.freeShippingOver) : '',
+  );
+
   return (
     <>
-      {settings.announcementActive && settings.announcementBar ? (
+      {settings.announcementActive && announcement ? (
         <div className="relative overflow-hidden border-b border-line-soft bg-ink-900">
-          <p className="container flex min-h-9 items-center justify-center gap-2 py-1.5 text-center font-display text-[10.5px] font-medium uppercase tracking-widest text-chalk-dim sm:text-[11px]">
-            {settings.announcementBar}
+          <p className="container flex min-h-8 items-center justify-center py-1.5 text-center font-display text-[10.5px] font-medium uppercase tracking-widest text-chalk-dim">
+            {announcement}
           </p>
         </div>
       ) : null}

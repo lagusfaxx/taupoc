@@ -29,7 +29,7 @@ export default async function NewProductPage() {
           name: '', slug: '', modelCode: '', subtitle: '', description: '',
           status: 'DRAFT', gender: 'MALE', lineId: '', categoryId: '',
           approvalCode: '', approvalBody: 'World Aquatics', approvalYear: '', approvalVerifyUrl: 'https://www.worldaquatics.com/swimming/approved-swimwear',
-          basePrice: '', compareAtPrice: '', weightGrams: '180',
+          basePrice: '', weightGrams: '180',
           composition: '', construction: '', finish: '', countryOrigin: '',
           careNotes: '', fitNotes: '', fitOffset: '1',
           featured: false, sortOrder: '0', seoTitle: '', seoDescription: '',

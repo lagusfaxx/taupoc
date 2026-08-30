@@ -37,26 +37,15 @@ export function toCardData(product: ProductWithCard): ProductCardData {
 
   const allVariants = product.colors.flatMap((c) => c.variants);
   const totalStock = allVariants.reduce((s, v) => s + Math.max(0, v.stock - v.reserved), 0);
-  const sizes = new Set(allVariants.map((v) => v.size));
-  const sizesInStock = new Set(
-    allVariants.filter((v) => v.stock - v.reserved > 0).map((v) => v.size),
-  );
-
   return {
     id: product.id,
     slug: product.slug,
     name: product.name,
     modelCode: product.modelCode,
-    subtitle: product.subtitle,
-    lineName: product.line?.name ?? null,
-    genderLabel: GENDER_LABEL[product.gender],
     approvalCode: product.approvalCode,
     basePrice: product.basePrice,
-    compareAtPrice: product.compareAtPrice,
     comingSoon: product.status === 'COMING_SOON',
     totalStock,
-    sizesInStock: sizesInStock.size,
-    totalSizes: sizes.size,
     colors,
     fallbackImage: product.images[0]?.url ?? colors.find((c) => c.imageUrl)?.imageUrl ?? null,
     accentHex: product.line?.accentHex ?? '#00E0B8',

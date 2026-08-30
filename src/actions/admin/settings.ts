@@ -5,7 +5,6 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { saveSettings } from '@/lib/settings';
 import { parseCLP } from '@/lib/money';
-import { storeImage } from '@/lib/uploads';
 import type { AdminState } from './products';
 
 const schema = z.object({
@@ -31,10 +30,6 @@ const schema = z.object({
   notifyAdminNewOrder: z.string().optional(),
   notifyLowStock: z.string().optional(),
 
-  heroTitle: z.string().optional(),
-  heroSubtitle: z.string().optional(),
-  heroCtaLabel: z.string().optional(),
-  heroCtaHref: z.string().optional(),
 });
 
 export async function updateSettings(
@@ -47,17 +42,6 @@ export async function updateSettings(
     return { ok: false, message: parsed.error.issues[0]?.message ?? 'Revisa los datos.' };
   }
   const d = parsed.data;
-
-  let heroImageUrl: string | undefined;
-  const hero = formData.get('heroImage');
-  if (hero instanceof File && hero.size > 0) {
-    try {
-      const stored = await storeImage(hero);
-      heroImageUrl = stored.url;
-    } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : 'No se pudo subir la imagen.' };
-    }
-  }
 
   const freeShipping = (d.freeShippingOver ?? '').trim();
 
@@ -83,12 +67,6 @@ export async function updateSettings(
     notifyOrderEmail: d.notifyOrderEmail === 'on',
     notifyAdminNewOrder: d.notifyAdminNewOrder === 'on',
     notifyLowStock: d.notifyLowStock === 'on',
-
-    heroTitle: d.heroTitle?.trim() ?? '',
-    heroSubtitle: d.heroSubtitle?.trim() ?? '',
-    heroCtaLabel: d.heroCtaLabel?.trim() ?? '',
-    heroCtaHref: d.heroCtaHref?.trim() ?? '/catalogo',
-    ...(heroImageUrl ? { heroImageUrl } : {}),
   });
 
   revalidatePath('/', 'layout');

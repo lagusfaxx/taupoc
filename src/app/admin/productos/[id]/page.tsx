@@ -220,7 +220,7 @@ function toFormData(product: {
   id: string; name: string; slug: string; modelCode: string; subtitle: string | null;
   description: string; status: string; gender: string; lineId: string | null; categoryId: string | null;
   approvalCode: string | null; approvalBody: string; approvalYear: number | null; approvalVerifyUrl: string | null;
-  basePrice: number; compareAtPrice: number | null; weightGrams: number;
+  basePrice: number; weightGrams: number;
   composition: string | null; construction: string | null; finish: string | null; countryOrigin: string | null;
   careNotes: string | null; fitNotes: string | null; fitOffset: number; featured: boolean; sortOrder: number;
   seoTitle: string | null; seoDescription: string | null;
@@ -241,7 +241,6 @@ function toFormData(product: {
     approvalYear: product.approvalYear ? String(product.approvalYear) : '',
     approvalVerifyUrl: product.approvalVerifyUrl ?? '',
     basePrice: String(product.basePrice),
-    compareAtPrice: product.compareAtPrice ? String(product.compareAtPrice) : '',
     weightGrams: String(product.weightGrams),
     composition: product.composition ?? '',
     construction: product.construction ?? '',

@@ -28,11 +28,6 @@ export function parseCLP(input: string | number | null | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-export function percentOff(price: number, compareAt?: number | null): number | null {
-  if (!compareAt || compareAt <= price) return null;
-  return Math.round(((compareAt - price) / compareAt) * 100);
-}
-
 /** Cuotas sin interés estimadas, para mostrar en la ficha de producto. */
 export function installment(total: number, n: number): number {
   return Math.round(total / n);

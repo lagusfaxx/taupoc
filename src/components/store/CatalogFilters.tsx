@@ -179,12 +179,12 @@ export function CatalogShell({
             );
           })}
         </div>
-        <p className="mt-3 text-[12px] leading-relaxed text-chalk-faint">
-          ¿No sabes tu talla? Los trajes de competición se usan 1 a 2 tallas por debajo.{' '}
-          <a href="/guia-de-tallas" className="underline underline-offset-2 hover:text-chalk">
-            Ver guía
-          </a>
-        </p>
+        <a
+          href="/guia-de-tallas"
+          className="mt-3 inline-block text-[12px] text-chalk-faint underline underline-offset-2 hover:text-chalk"
+        >
+          Guía de tallas
+        </a>
       </Group>
 
       <Group title="Color">

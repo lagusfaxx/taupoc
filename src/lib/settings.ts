@@ -32,13 +32,6 @@ export interface SiteSettings {
   notifyOrderEmail: boolean;
   notifyAdminNewOrder: boolean;
   notifyLowStock: boolean;
-
-  // Home editable
-  heroTitle: string;
-  heroSubtitle: string;
-  heroCtaLabel: string;
-  heroCtaHref: string;
-  heroImageUrl: string;
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -53,7 +46,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   freeShippingOver: 120000,
   lowStockThreshold: 1,
   installmentsMax: 12,
-  announcementBar: 'Homologación World Aquatics · Despacho a todo Chile',
+  // {envio_gratis} se reemplaza por el umbral vigente al renderizar.
+  announcementBar: 'Despacho a todo Chile · Envío gratis sobre {envio_gratis}',
   announcementActive: true,
 
   gaMeasurementId: '',
@@ -63,13 +57,6 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   notifyOrderEmail: true,
   notifyAdminNewOrder: true,
   notifyLowStock: true,
-
-  heroTitle: 'NADA MÁS RÁPIDO.',
-  heroSubtitle:
-    'Trajes de competición homologados por World Aquatics, con despacho a todo Chile.',
-  heroCtaLabel: 'Ver R-SKIN',
-  heroCtaHref: '/catalogo',
-  heroImageUrl: '',
 };
 
 const SETTINGS_KEY = 'site';

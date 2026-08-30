@@ -25,7 +25,6 @@ export interface ProductFormData {
   approvalYear: string;
   approvalVerifyUrl: string;
   basePrice: string;
-  compareAtPrice: string;
   weightGrams: string;
   composition: string;
   construction: string;
@@ -250,14 +249,6 @@ export function ProductForm({
                 placeholder="139.900"
                 error={e.basePrice}
                 help="En pesos chilenos, sin decimales."
-              />
-              <Input
-                label="Precio de referencia"
-                hint="opcional"
-                name="compareAtPrice"
-                defaultValue={product.compareAtPrice ? formatNumber(Number(product.compareAtPrice)) : ''}
-                placeholder="219.900"
-                help="Se muestra tachado, junto al porcentaje de descuento."
               />
             </div>
           </Card>

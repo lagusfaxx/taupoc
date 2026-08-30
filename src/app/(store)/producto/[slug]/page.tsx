@@ -72,7 +72,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     genderLabel: GENDER_LABEL[product.gender],
     gender: product.gender,
     basePrice: product.basePrice,
-    compareAtPrice: product.compareAtPrice,
     approvalCode: product.approvalCode,
     approvalBody: product.approvalBody,
     approvalYear: product.approvalYear,
@@ -126,7 +125,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       '@type': 'AggregateOffer',
       priceCurrency: 'CLP',
       lowPrice: product.basePrice,
-      highPrice: product.compareAtPrice ?? product.basePrice,
+      highPrice: product.basePrice,
       offerCount: colors.reduce((s, c) => s + c.variants.length, 0),
       availability:
         product.status === 'COMING_SOON'

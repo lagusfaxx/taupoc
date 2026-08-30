@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { getSettings } from '@/lib/settings';
 import { Logo } from '@/components/ui/Logo';
 import { IconInstagram, IconWhatsapp } from '@/components/ui/Icons';
-import { NewsletterForm } from './NewsletterForm';
 
 const COLUMNS = [
   {
@@ -42,8 +41,8 @@ export async function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="mt-24 border-t border-line bg-ink-900">
-      <div className="container py-14 lg:py-20">
+    <footer className="border-t border-line bg-ink-900">
+      <div className="container py-12 lg:py-16">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(3,1fr)] lg:gap-10">
           <div>
             <Logo />
@@ -113,20 +112,6 @@ export async function Footer() {
           ))}
         </div>
 
-        <div className="mt-14 border-t border-line pt-10">
-          <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr] lg:items-center">
-            <div>
-              <h2 className="font-display text-lg tracking-tight text-chalk">
-                Resultados, stock y torneos
-              </h2>
-              <p className="mt-2 max-w-md text-[14px] text-chalk-faint">
-                Avisos de reposición de tallas, fechas de stand en torneos y contenido técnico.
-                Sin spam.
-              </p>
-            </div>
-            <NewsletterForm />
-          </div>
-        </div>
       </div>
 
       <div className="border-t border-line-soft">

@@ -44,7 +44,6 @@ interface ProductSeed {
   approvalCode: string;
   status: 'ACTIVE' | 'COMING_SOON';
   basePrice: number;
-  compareAtPrice: number;
   weightGrams: number;
   colors: ColorSpec[];
   chart: SizeRow[];
@@ -78,7 +77,6 @@ const PRODUCTS: ProductSeed[] = [
     approvalCode: 'TA146514',
     status: 'ACTIVE',
     basePrice: 139900,
-    compareAtPrice: 219900,
     weightGrams: 170,
     colors: RSKIN_COLORS,
     chart: MEN_SIZE_CHART,
@@ -114,7 +112,6 @@ const PRODUCTS: ProductSeed[] = [
     approvalCode: 'TA224135',
     status: 'ACTIVE',
     basePrice: 189900,
-    compareAtPrice: 299900,
     weightGrams: 215,
     colors: RSKIN_COLORS,
     chart: WOMEN_SIZE_CHART,
@@ -149,7 +146,6 @@ const PRODUCTS: ProductSeed[] = [
     approvalCode: 'TA148911',
     status: 'COMING_SOON',
     basePrice: 179900,
-    compareAtPrice: 279900,
     weightGrams: 165,
     colors: VELSKIN_COLORS,
     chart: MEN_SIZE_CHART,
@@ -182,7 +178,6 @@ const PRODUCTS: ProductSeed[] = [
     approvalCode: 'TA228496',
     status: 'COMING_SOON',
     basePrice: 229900,
-    compareAtPrice: 349900,
     weightGrams: 205,
     colors: VELSKIN_COLORS,
     chart: WOMEN_SIZE_CHART,
@@ -277,7 +272,6 @@ async function seedProducts() {
       approvalYear: 2024,
       approvalVerifyUrl: 'https://www.worldaquatics.com/swimming/approved-swimwear',
       basePrice: p.basePrice,
-      compareAtPrice: p.compareAtPrice,
       weightGrams: p.weightGrams,
       composition: p.composition,
       construction: p.construction,
@@ -630,15 +624,6 @@ Si representas a un club y quieres que llevemos un muestrario específico a tu s
 }
 
 async function seedSettings() {
-  const hero = await generateWideImage({
-    name: 'Nada más rápido',
-    hex: '#00E0B8',
-    caption: 'World Aquatics Approved · TAUPOC Chile',
-    width: 2400,
-    height: 1400,
-    folder: 'editorial',
-  });
-
   const settings = {
     storeName: 'TAUPOC Chile',
     tagline: 'Distribuidor oficial en Chile',
@@ -650,7 +635,7 @@ async function seedSettings() {
     freeShippingOver: 150000,
     lowStockThreshold: 1,
     installmentsMax: 12,
-    announcementBar: 'Homologación World Aquatics verificable · Despacho a todo Chile',
+    announcementBar: 'Despacho a todo Chile · Envío gratis sobre {envio_gratis}',
     announcementActive: true,
     gaMeasurementId: '',
     metaPixelId: '',
@@ -658,12 +643,6 @@ async function seedSettings() {
     notifyOrderEmail: true,
     notifyAdminNewOrder: true,
     notifyLowStock: true,
-    heroTitle: 'NADA MÁS RÁPIDO.',
-    heroSubtitle:
-      'Trajes de competición homologados por World Aquatics. Importación directa, sin precios de importador.',
-    heroCtaLabel: 'Ver línea R-SKIN',
-    heroCtaHref: '/catalogo?linea=r-skin',
-    heroImageUrl: hero.url,
   };
 
   await prisma.setting.upsert({

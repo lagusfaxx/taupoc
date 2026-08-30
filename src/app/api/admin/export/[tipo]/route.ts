@@ -114,7 +114,6 @@ async function exportProducts() {
     product.approvalCode ?? '',
     product.approvalBody,
     product.basePrice,
-    product.compareAtPrice ?? '',
     product.weightGrams,
     product.colors.length,
     product.variants.length,
@@ -128,7 +127,7 @@ async function exportProducts() {
     toCsv(
       [
         'Código', 'Nombre', 'URL', 'Estado', 'Género', 'Línea', 'Categoría',
-        'Homologación', 'Entidad', 'Precio', 'Precio referencia', 'Peso (g)',
+        'Homologación', 'Entidad', 'Precio', 'Peso (g)',
         'Colores', 'SKU', 'Stock total', 'Destacado', 'Creado',
       ],
       rows,

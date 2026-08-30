@@ -47,7 +47,6 @@ export interface ProductViewData {
   genderLabel: string;
   gender: 'MALE' | 'FEMALE' | 'UNISEX';
   basePrice: number;
-  compareAtPrice: number | null;
   approvalCode: string | null;
   approvalBody: string;
   approvalYear: number | null;
@@ -189,7 +188,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
 
         {/* Precio */}
         <div className="mt-7">
-          <Price amount={price} compareAt={product.compareAtPrice} size="lg" />
+          <Price amount={price} size="lg" />
           {product.installmentsMax > 1 ? (
             <p className="mt-2 text-[13.5px] text-chalk-dim">
               Hasta {product.installmentsMax} cuotas de{' '}

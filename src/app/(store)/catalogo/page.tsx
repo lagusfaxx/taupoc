@@ -94,20 +94,15 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(itemList)} />
 
-      <div className="border-b border-line bg-ink-900">
-        <div className="container py-12 lg:py-16">
-          <p className="eyebrow-accent mb-3">TAUPOC Chile</p>
-          <h1 className="text-balance font-display text-[32px] leading-none tracking-tightest text-chalk sm:text-[44px]">
+      <div className="border-b border-line">
+        <div className="container py-7">
+          <h1 className="font-display text-[24px] leading-none tracking-tight text-chalk sm:text-[30px]">
             {heading}
           </h1>
-          <p className="mt-4 max-w-2xl text-pretty text-[15px] leading-relaxed text-chalk-dim">
-            Cada combinación de talla y color es un SKU con stock propio. Lo que ves disponible
-            sale despachado el mismo día hábil.
-          </p>
         </div>
       </div>
 
-      <div className="container py-10 lg:py-14">
+      <div className="container py-8 lg:py-10">
         <CatalogShell facets={facets} resultCount={products.length}>
           {products.length === 0 ? (
             <Empty

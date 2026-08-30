@@ -1,7 +1,6 @@
 'use client';
 
-import Image from 'next/image';
-import { useActionState, useState } from 'react';
+import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { updateSettings } from '@/actions/admin/settings';
 import type { AdminState } from '@/actions/admin/products';
@@ -27,7 +26,6 @@ function Submit() {
 
 export function SettingsForm({ settings }: { settings: SiteSettings }) {
   const [state, action] = useActionState<AdminState | null, FormData>(updateSettings, null);
-  const [heroPreview, setHeroPreview] = useState<string | null>(null);
 
   return (
     <form action={action}>
@@ -108,55 +106,6 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                   </div>
                 </Card>
               </div>
-            ),
-          },
-          {
-            id: 'portada',
-            label: 'Portada',
-            content: (
-              <Card title="Bloque principal de la portada" description="Lo primero que ve quien llega al sitio.">
-                <div className="grid gap-5 lg:grid-cols-2">
-                  <div className="space-y-4">
-                    <Input label="Título" name="heroTitle" defaultValue={settings.heroTitle} />
-                    <Textarea label="Bajada" name="heroSubtitle" rows={4} defaultValue={settings.heroSubtitle} />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <Input label="Texto del botón" name="heroCtaLabel" defaultValue={settings.heroCtaLabel} />
-                      <Input label="Enlace del botón" name="heroCtaHref" defaultValue={settings.heroCtaHref} placeholder="/catalogo" />
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="mb-2 font-display text-[10px] uppercase tracking-widest text-chalk-dim">
-                      Imagen de fondo
-                    </p>
-                    {heroPreview || settings.heroImageUrl ? (
-                      <div className="relative mb-3 aspect-[16/9] w-full overflow-hidden border border-line bg-ink-800">
-                        <Image
-                          src={heroPreview ?? settings.heroImageUrl}
-                          alt=""
-                          fill
-                          sizes="480px"
-                          className="object-cover"
-                        />
-                      </div>
-                    ) : null}
-                    <input
-                      type="file"
-                      name="heroImage"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        setHeroPreview(file ? URL.createObjectURL(file) : null);
-                      }}
-                      className="w-full text-[13px] text-chalk-dim file:mr-3 file:border file:border-line-bright file:bg-ink-800 file:px-3 file:py-2 file:font-display file:text-[10.5px] file:uppercase file:tracking-widest file:text-chalk"
-                    />
-                    <p className="mt-2 text-[12px] leading-relaxed text-chalk-faint">
-                      Ideal horizontal, mínimo 2000 px de ancho. El texto se sobrepone al lado izquierdo,
-                      así que deja el sujeto hacia la derecha.
-                    </p>
-                  </div>
-                </div>
-              </Card>
             ),
           },
           {

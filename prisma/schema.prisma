@@ -140,10 +140,9 @@ model Product {
   approvalYear      Int?
   approvalVerifyUrl String?
 
-  basePrice      Int
-  compareAtPrice Int?
+  basePrice   Int
   /// Peso unitario en gramos, para el cálculo de envío.
-  weightGrams    Int  @default(180)
+  weightGrams Int @default(180)
 
   // Ficha técnica
   composition   String?
