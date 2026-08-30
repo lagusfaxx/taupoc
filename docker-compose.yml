@@ -1,8 +1,11 @@
 # Despliegue de TAUPOC Chile.
 #
 # En Coolify: crea un recurso "Docker Compose" apuntando a este archivo y
-# define las variables de entorno en el panel del proyecto. Coolify se encarga
-# del dominio, el certificado TLS y el proxy inverso.
+# define las variables de entorno en el panel del proyecto. El dominio se asigna
+# al servicio "app"; Coolify se encarga del TLS y del proxy inverso.
+#
+# Los valores de entorno no deben contener el signo $ sin escapar: Docker Compose
+# lo interpreta como una variable. Si un secreto lo lleva, escríbelo como $$.
 services:
   app:
     build:
@@ -34,8 +37,11 @@ services:
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
       RUN_SEED: ${RUN_SEED:-false}
-    ports:
-      - '3000:3000'
+    # Sin publicar el puerto en el host: el proxy de Coolify llega al contenedor
+    # por la red interna de Docker. Publicarlo choca con las demás aplicaciones
+    # del servidor, que ya ocupan el 3000.
+    expose:
+      - '3000'
     volumes:
       # Volumen persistente: acá viven las fotos de producto subidas
       # desde el panel. Sin esto se pierden en cada despliegue.
