@@ -10,15 +10,12 @@ import { ProductCard } from '@/components/store/ProductCard';
 import { SectionHeading } from '@/components/store/SectionHeading';
 import { Accordion } from '@/components/store/Accordion';
 
-export const revalidate = 120;
+// El encabezado lee el cookie del carrito, así que esta página se renderiza
+// en cada solicitud de todos modos. Declararlo explícitamente hace que la
+// compilación de la imagen Docker no necesite una base de datos, y garantiza
+// que el stock mostrado sea siempre el real.
+export const dynamic = 'force-dynamic';
 
-export async function generateStaticParams() {
-  const products = await prisma.product.findMany({
-    where: { status: { in: ['ACTIVE', 'COMING_SOON'] } },
-    select: { slug: true },
-  });
-  return products.map((p) => ({ slug: p.slug }));
-}
 
 export async function generateMetadata({
   params,

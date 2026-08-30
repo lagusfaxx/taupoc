@@ -1,4 +1,4 @@
-# ── Etapa 1: dependencias ────────────────────────────────────
+# ── Etapa 1: dependencias completas (incluye las de desarrollo) ──
 FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -7,7 +7,19 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 RUN npm ci
 
-# ── Etapa 2: build ───────────────────────────────────────────
+# ── Etapa 2: dependencias de producción ──────────────────────────
+# Se instalan por separado para que la imagen final no arrastre las
+# herramientas de desarrollo. Incluye la CLI de Prisma y el cliente
+# generado, porque el contenedor aplica sus propias migraciones.
+FROM node:22-alpine AS prod-deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+COPY prisma ./prisma
+RUN npm ci --omit=dev && npx prisma generate
+
+# ── Etapa 3: compilación ─────────────────────────────────────────
 FROM node:22-alpine AS builder
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
@@ -16,23 +28,23 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Next incrusta las variables NEXT_PUBLIC_* en el bundle del cliente,
-# así que deben estar presentes en tiempo de compilación.
+# así que deben estar presentes en tiempo de compilación. Si cambian,
+# hay que reconstruir la imagen, no basta con reiniciar el contenedor.
 ARG NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 ARG NEXT_PUBLIC_MP_PUBLIC_KEY=""
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_MP_PUBLIC_KEY=$NEXT_PUBLIC_MP_PUBLIC_KEY
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# El build no necesita una base real: los datos se leen en tiempo de ejecución.
+# La compilación no consulta la base de datos: todas las páginas que leen
+# datos se renderizan en cada solicitud.
 ENV DATABASE_URL="postgresql://build:build@localhost:5432/build?schema=public"
-ENV AUTH_SECRET="build-time-placeholder-secret-value-32ch"
 
-RUN npx prisma generate
-RUN npm run build
+RUN npx prisma generate && npm run build
 
-# ── Etapa 3: runtime ─────────────────────────────────────────
+# ── Etapa 4: ejecución ───────────────────────────────────────────
 FROM node:22-alpine AS runner
-RUN apk add --no-cache libc6-compat curl
+RUN apk add --no-cache libc6-compat curl fontconfig font-dejavu
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -44,24 +56,15 @@ ENV UPLOAD_DIR=/app/public/uploads
 RUN addgroup --system --gid 1001 nodejs \
  && adduser --system --uid 1001 nextjs
 
-COPY --from=builder /app/public ./public
+# Dependencias de producción y esquema, para migrar y poblar al arrancar.
+COPY --from=prod-deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+
+# Salida standalone de Next: servidor y assets.
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Prisma CLI y el esquema, necesarios para migrar y poblar al arrancar.
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
-COPY --from=builder /app/node_modules/tsx ./node_modules/tsx
-COPY --from=builder /app/node_modules/esbuild ./node_modules/esbuild
-COPY --from=builder /app/node_modules/get-tsconfig ./node_modules/get-tsconfig
-COPY --from=builder /app/node_modules/resolve-pkg-maps ./node_modules/resolve-pkg-maps
-COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
-COPY --from=builder /app/node_modules/dotenv ./node_modules/dotenv
-COPY --from=builder /app/node_modules/sharp ./node_modules/sharp
-COPY --from=builder /app/node_modules/@img ./node_modules/@img
 
 COPY --chown=nextjs:nodejs docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh \

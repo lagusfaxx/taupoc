@@ -5,7 +5,11 @@ import { buildMetadata, jsonLd } from '@/lib/seo';
 import { SizeGuideTables } from '@/components/store/SizeGuideTables';
 import { ButtonLink } from '@/components/ui/Button';
 
-export const revalidate = 3600;
+// El encabezado lee el cookie del carrito, así que esta página se renderiza
+// en cada solicitud de todos modos. Declararlo explícitamente hace que la
+// compilación de la imagen Docker no necesite una base de datos, y garantiza
+// que el stock mostrado sea siempre el real.
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = buildMetadata({
   title: 'Guía de tallas de trajes de competición',

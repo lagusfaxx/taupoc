@@ -8,12 +8,12 @@ import { formatDate } from '@/lib/utils';
 import { readingMinutes, renderMarkdown } from '@/lib/markdown';
 import { NewsletterForm } from '@/components/store/NewsletterForm';
 
-export const revalidate = 600;
+// El encabezado lee el cookie del carrito, así que esta página se renderiza
+// en cada solicitud de todos modos. Declararlo explícitamente hace que la
+// compilación de la imagen Docker no necesite una base de datos, y garantiza
+// que el stock mostrado sea siempre el real.
+export const dynamic = 'force-dynamic';
 
-export async function generateStaticParams() {
-  const posts = await prisma.post.findMany({ where: { status: 'PUBLISHED' }, select: { slug: true } });
-  return posts.map((p) => ({ slug: p.slug }));
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

@@ -22,7 +22,11 @@ export const metadata: Metadata = buildMetadata({
   path: '/',
 });
 
-export const revalidate = 300;
+// El encabezado lee el cookie del carrito, así que esta página se renderiza
+// en cada solicitud de todos modos. Declararlo explícitamente hace que la
+// compilación de la imagen Docker no necesite una base de datos, y garantiza
+// que el stock mostrado sea siempre el real.
+export const dynamic = 'force-dynamic';
 
 const PILLARS = [
   {

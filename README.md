@@ -44,6 +44,10 @@ por zona geográfica de Chile, tres cupones de ejemplo y tres notas de blog. Tam
 genera imágenes de producto provisionales con la identidad de marca, para que la
 tienda nunca se vea rota antes de cargar la fotografía real.
 
+Es idempotente: puede volver a ejecutarse sin duplicar datos, y **no regenera las
+imágenes de un producto que ya tiene alguna**, así que nunca pisa las fotografías
+reales cargadas desde el panel.
+
 **Acceso al panel:** `/admin/ingresar`
 Usuario y clave por defecto: `admin@taupoc.cl` / `taupoc2024`
 (configurables con `SEED_ADMIN_EMAIL` y `SEED_ADMIN_PASSWORD`).
@@ -107,6 +111,11 @@ npm run db:studio    # explorador visual de la base
    copia la firma secreta a `MP_WEBHOOK_SECRET`.
 
 La sonda de salud está en `/api/health` y verifica también la conexión a la base.
+
+La imagen se construye sin acceso a la base de datos: todas las páginas que leen
+datos se renderizan en cada solicitud, lo que además garantiza que el stock que ve
+el cliente sea siempre el real. El contenedor aplica sus propias migraciones al
+arrancar, de modo que un despliegue nuevo no requiere ningún paso manual.
 
 ### Ambiente de pruebas de Mercado Pago
 
