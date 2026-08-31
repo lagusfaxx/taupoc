@@ -86,6 +86,86 @@ function AddButton({
   );
 }
 
+/**
+ * Fila de colores con el nombre del colorway y su vivo.
+ *
+ * Se monta dos veces —una por punto de quiebre— porque en el teléfono tiene
+ * que quedar junto a la galería y en el escritorio junto a la talla, y son
+ * columnas distintas de la grilla. Solo una está visible a la vez.
+ */
+function ColorPicker({
+  colors,
+  activeId,
+  onPick,
+  className,
+}: {
+  colors: ViewColor[];
+  activeId: string | undefined;
+  onPick: (id: string) => void;
+  className?: string;
+}) {
+  if (colors.length <= 1) return null;
+  const color = colors.find((c) => c.id === activeId) ?? colors[0];
+
+  return (
+    <fieldset className={className}>
+      <legend className="mb-3 flex w-full flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className="font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim">
+          Color
+        </span>
+        <span className="text-[13px] text-chalk">
+          {color?.name}
+          {color?.code ? (
+            <span className="ml-1.5 font-mono text-[12px] text-chalk-faint">{color.code}</span>
+          ) : null}
+          {color?.stripCode ? (
+            <span className="ml-2 text-chalk-faint">
+              · Vivo{' '}
+              {color.stripHex ? (
+                <span
+                  className="mr-1 inline-block h-2.5 w-2.5 translate-y-[1px] border border-line-bright"
+                  style={{ background: color.stripHex }}
+                  aria-hidden
+                />
+              ) : null}
+              <span className="font-mono text-[12px]">{color.stripCode}</span>
+            </span>
+          ) : null}
+        </span>
+      </legend>
+      <div className="flex flex-wrap gap-2">
+        {colors.map((c) => {
+          const stock = c.variants.reduce((s, v) => s + v.available, 0);
+          const selected = c.id === color?.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onPick(c.id)}
+              aria-pressed={selected}
+              aria-label={`Color ${colorLabel(c)}${stock === 0 ? ' (agotado)' : ''}`}
+              title={`${colorLabel(c)}${c.stripCode ? ` · vivo ${c.stripCode}` : ''}`}
+              className={cn(
+                'relative h-10 w-10 border-2 transition-all duration-150',
+                selected ? 'border-chalk' : 'border-line hover:border-chalk-faint',
+              )}
+              style={{ background: c.hex }}
+            >
+              {stock === 0 ? (
+                <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+                  {/* Sin bajar la opacidad: atenuar el swatch falsearía el
+                      colorway, y el código del fabricante es parte de la ficha. */}
+                  <span className="h-px w-[135%] rotate-45 bg-ink shadow-[0_0_0_1px_rgba(244,246,248,0.65)]" />
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
 export function ProductView({ product }: { product: ProductViewData }) {
   const router = useRouter();
   const [colorId, setColorId] = useState(product.colors[0]?.id ?? '');
@@ -196,6 +276,14 @@ export function ProductView({ product }: { product: ProductViewData }) {
     >
       <div className="lg:sticky lg:top-24 lg:self-start">
         <ProductGallery images={images} colorName={color?.name ?? ''} productName={product.name} />
+
+        {/* En el teléfono el color va aquí, a la vista de la foto que cambia. */}
+        <ColorPicker
+          colors={product.colors}
+          activeId={color?.id}
+          onPick={setColorId}
+          className="mt-5 lg:hidden"
+        />
       </div>
 
       {/* El relleno de abajo deja libre lo que tapa la barra de compra. Es
@@ -236,64 +324,15 @@ export function ProductView({ product }: { product: ProductViewData }) {
           <input type="hidden" name="variantId" value={variant?.id ?? ''} />
           <input type="hidden" name="quantity" value="1" />
 
-          {/* Selector de color */}
-          {product.colors.length > 1 ? (
-            <fieldset className="mb-7">
-              <legend className="mb-3 flex w-full flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <span className="font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim">
-                  Color
-                </span>
-                <span className="text-[13px] text-chalk">
-                  {color?.name}
-                  {color?.code ? (
-                    <span className="ml-1.5 font-mono text-[12px] text-chalk-faint">{color.code}</span>
-                  ) : null}
-                  {color?.stripCode ? (
-                    <span className="ml-2 text-chalk-faint">
-                      · Vivo{' '}
-                      {color.stripHex ? (
-                        <span
-                          className="mr-1 inline-block h-2.5 w-2.5 translate-y-[1px] border border-line-bright"
-                          style={{ background: color.stripHex }}
-                          aria-hidden
-                        />
-                      ) : null}
-                      <span className="font-mono text-[12px]">{color.stripCode}</span>
-                    </span>
-                  ) : null}
-                </span>
-              </legend>
-              <div className="flex flex-wrap gap-2">
-                {product.colors.map((c) => {
-                  const stock = c.variants.reduce((s, v) => s + v.available, 0);
-                  const selected = c.id === color?.id;
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => setColorId(c.id)}
-                      aria-pressed={selected}
-                      aria-label={`Color ${colorLabel(c)}${stock === 0 ? ' (agotado)' : ''}`}
-                      title={`${colorLabel(c)}${c.stripCode ? ` · vivo ${c.stripCode}` : ''}`}
-                      className={cn(
-                        'relative h-10 w-10 border-2 transition-all duration-150',
-                        selected ? 'border-chalk' : 'border-line hover:border-chalk-faint',
-                      )}
-                      style={{ background: c.hex }}
-                    >
-                      {stock === 0 ? (
-                        <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
-                          {/* Sin bajar la opacidad: atenuar el swatch falsearía el
-                              colorway, y el código del fabricante es parte de la ficha. */}
-                          <span className="h-px w-[135%] rotate-45 bg-ink shadow-[0_0_0_1px_rgba(244,246,248,0.65)]" />
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
-          ) : null}
+          {/* Selector de color — en pantalla ancha vive junto a la talla. En el
+              teléfono se muestra pegado a la foto (más arriba): acá abajo el
+              visitante cambiaba de color sin ver la imagen que cambiaba. */}
+          <ColorPicker
+            colors={product.colors}
+            activeId={color?.id}
+            onPick={setColorId}
+            className="mb-7 hidden lg:block"
+          />
 
           {/* Selector de talla — el punto de mayor fricción del rubro */}
           <fieldset id="tallas" className="scroll-mt-24">
