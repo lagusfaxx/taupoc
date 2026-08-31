@@ -98,30 +98,40 @@ npm run db:studio    # explorador visual de la base
    del navegador durante la compilación, así que deben estar definidas **antes**
    de construir la imagen. Si las cambias, hay que reconstruir, no solo reiniciar.
 
-3. **Configura el volumen persistente.** El compose ya declara
+3. **Qué se guarda y dónde.** Dos volúmenes, y ninguno depende del seed:
+
+   | Volumen | Qué guarda |
+   | --- | --- |
+   | `taupoc-db` | Base de datos: catálogo, stock, pedidos, blog, ajustes y **las fotos y videos que se suben desde el panel**. |
+   | `taupoc-uploads` | Las imágenes de relleno que generó el seed la primera vez. |
+
+   Apagar el seed no borra nada: solo evita que vuelva a escribir encima. Lo
+   único que borra fotos es eliminar un volumen.
+
+4. **Configura el volumen persistente.** El compose ya declara
    `taupoc-uploads` montado en `/app/public/uploads`. Ahí viven las fotos de
    producto que se suben desde el panel: sin ese volumen se pierden en cada
    despliegue.
 
-4. **Dominio y TLS.** Asigna el dominio en Coolify al servicio `app`; el proxy y
+5. **Dominio y TLS.** Asigna el dominio en Coolify al servicio `app`; el proxy y
    el certificado los gestiona él. El contenedor escucha en el `3000` y no
    publica ningún puerto en el host: el proxy llega por la red interna de Docker.
    Publicarlo choca con las demás aplicaciones del servidor. Si alguna vez
    necesitas acceso directo desde el host, agrega un `ports` con un puerto libre.
 
-5. **Primer arranque.** Deja `RUN_SEED=true` en el primer despliegue para cargar
+6. **Primer arranque.** Deja `RUN_SEED=true` en el primer despliegue para cargar
    el catálogo. Con catálogo ya cargado el seed no hace nada, así que dejarlo
    puesto no borra lo que edites desde el panel; para volver a sembrar hay que
    pedirlo con `FORCE_SEED=true`. El entrypoint aplica las migraciones
    automáticamente en cada arranque, así que los despliegues siguientes no
    requieren pasos manuales.
 
-6. **Secretos sin `$`.** Docker Compose interpreta el signo `$` de los valores
+7. **Secretos sin `$`.** Docker Compose interpreta el signo `$` de los valores
    como una variable. Si una contraseña generada lo incluye, el despliegue avisa
    `The "xxx" variable is not set` y usa un valor distinto del que definiste.
    Genera los secretos sin `$` o escríbelo duplicado (`$$`).
 
-7. **Webhook de Mercado Pago.** En el panel de Mercado Pago registra la URL
+8. **Webhook de Mercado Pago.** En el panel de Mercado Pago registra la URL
    `https://tu-dominio.cl/api/webhooks/mercadopago` para el evento de pagos, y
    copia la firma secreta a `MP_WEBHOOK_SECRET`.
 
