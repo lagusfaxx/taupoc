@@ -624,7 +624,10 @@ Si representas a un club y quieres que llevemos un muestrario específico a tu s
       seoTitle: p.title,
       seoDescription: p.excerpt,
     };
-    await prisma.post.upsert({ where: { slug: p.slug }, create: data, update: data });
+    // Se crea si falta y no se toca si ya está: el dueño edita estas notas
+    // desde el panel y volver a sembrarlas le borraría el trabajo.
+    const existe = await prisma.post.findUnique({ where: { slug: p.slug }, select: { id: true } });
+    if (!existe) await prisma.post.create({ data });
   }
 }
 
@@ -650,11 +653,10 @@ async function seedSettings() {
     notifyLowStock: true,
   };
 
-  await prisma.setting.upsert({
-    where: { key: 'site' },
-    create: { key: 'site', value: settings },
-    update: { value: settings },
-  });
+  // Solo se crean si no hay nada guardado. Sobrescribirlos borraría el logo,
+  // la imagen para compartir y todo lo que el panel haya configurado.
+  const guardados = await prisma.setting.findUnique({ where: { key: 'site' } });
+  if (!guardados) await prisma.setting.create({ data: { key: 'site', value: settings } });
 }
 
 async function seedAdmin() {
@@ -674,6 +676,19 @@ async function seedAdmin() {
 }
 
 async function main() {
+  // El seed es una carga inicial, no una migración de contenido: vuelve a
+  // escribir textos de producto, tablas de tallas, stock y tarifas. Correrlo
+  // sobre una tienda en uso pisa lo que el dueño haya editado, así que con
+  // catálogo ya cargado no hace nada salvo que se pida explícitamente.
+  const yaHayCatalogo = await prisma.product.count().catch(() => 0);
+  if (yaHayCatalogo > 0 && process.env.FORCE_SEED !== 'true') {
+    console.log(
+      `El catálogo ya tiene ${yaHayCatalogo} productos: no se siembra nada.\n` +
+        '  Para volver a cargarlo y sobrescribir lo editado: FORCE_SEED=true.',
+    );
+    return;
+  }
+
   console.log('Poblando TAUPOC Chile...');
   await seedLines();
   await seedCategories();

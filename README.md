@@ -91,7 +91,8 @@ npm run db:studio    # explorador visual de la base
    | `MAIL_FROM` | Remitente, ej. `TAUPOC Chile <pedidos@taupoc.cl>`. |
    | `ADMIN_ALERT_EMAIL` | Destino de alertas de pedidos y stock bajo. |
    | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Credenciales del admin inicial. |
-   | `RUN_SEED` | `true` solo en el primer despliegue. |
+   | `RUN_SEED` | `true` en el primer despliegue para cargar el catálogo. |
+   | `FORCE_SEED` | `true` vuelve a sembrar aunque ya haya catálogo, pisando lo editado. |
 
    `NEXT_PUBLIC_SITE_URL` y `NEXT_PUBLIC_MP_PUBLIC_KEY` se incrustan en el bundle
    del navegador durante la compilación, así que deben estar definidas **antes**
@@ -108,9 +109,12 @@ npm run db:studio    # explorador visual de la base
    Publicarlo choca con las demás aplicaciones del servidor. Si alguna vez
    necesitas acceso directo desde el host, agrega un `ports` con un puerto libre.
 
-5. **Primer arranque.** Deja `RUN_SEED=true` en el primer despliegue y ponlo en
-   `false` después. El entrypoint aplica las migraciones automáticamente en cada
-   arranque, así que los despliegues siguientes no requieren pasos manuales.
+5. **Primer arranque.** Deja `RUN_SEED=true` en el primer despliegue para cargar
+   el catálogo. Con catálogo ya cargado el seed no hace nada, así que dejarlo
+   puesto no borra lo que edites desde el panel; para volver a sembrar hay que
+   pedirlo con `FORCE_SEED=true`. El entrypoint aplica las migraciones
+   automáticamente en cada arranque, así que los despliegues siguientes no
+   requieren pasos manuales.
 
 6. **Secretos sin `$`.** Docker Compose interpreta el signo `$` de los valores
    como una variable. Si una contraseña generada lo incluye, el despliegue avisa
@@ -156,6 +160,21 @@ arrancar, de modo que un despliegue nuevo no requiere ningún paso manual.
 Con `MP_MODE=test` y credenciales `TEST-…` no se realizan cobros reales y el
 checkout muestra un aviso visible. Usa las tarjetas de prueba de Mercado Pago
 para simular pagos aprobados, pendientes y rechazados.
+
+Para cobrar de verdad hacen falta tres cambios juntos, en el panel de Mercado
+Pago → *Tus integraciones → Credenciales de producción*:
+
+| Variable | Valor |
+| --- | --- |
+| `MP_MODE` | `live` |
+| `MP_ACCESS_TOKEN` | El access token de producción (empieza con `APP_USR-`). |
+| `NEXT_PUBLIC_MP_PUBLIC_KEY` | La public key de producción (`APP_USR-`). |
+| `MP_WEBHOOK_SECRET` | La firma del webhook de producción. |
+
+`NEXT_PUBLIC_MP_PUBLIC_KEY` viaja al navegador y se incrusta al compilar, así
+que hay que **reconstruir la imagen**, no solo reiniciar el contenedor. El
+webhook de producción se registra aparte del de pruebas: son dos URLs iguales
+pero con firmas distintas.
 
 ---
 

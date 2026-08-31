@@ -37,6 +37,8 @@ services:
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
       RUN_SEED: ${RUN_SEED:-false}
+      # Vuelve a escribir el catálogo aunque ya exista, pisando lo editado.
+      FORCE_SEED: ${FORCE_SEED:-false}
     # Sin publicar el puerto en el host: el proxy de Coolify llega al contenedor
     # por la red interna de Docker. Publicarlo choca con las demás aplicaciones
     # del servidor, que ya ocupan el 3000.

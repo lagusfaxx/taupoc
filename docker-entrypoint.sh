@@ -40,8 +40,8 @@ else
   exit 1
 fi
 
-# El seed usa upserts, así que puede repetirse sin duplicar datos.
-# Actívalo con RUN_SEED=true en el primer despliegue.
+# El seed es una carga inicial. Si ya hay catálogo no toca nada, así que
+# dejar RUN_SEED=true puesto no borra lo que se edite desde el panel.
 if [ "${RUN_SEED}" = "true" ]; then
   echo "→ Ejecutando seed inicial…"
   npx tsx prisma/seed.ts || echo "⚠ El seed no se completó; la aplicación arranca igual."
