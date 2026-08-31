@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import type { Gender, Prisma, ProductStatus } from '@prisma/client';
 import { prisma } from './db';
 import type { ProductCardData } from '@/components/store/ProductCard';
@@ -208,8 +209,15 @@ export async function getCatalogFacets() {
   };
 }
 
-/** Producto completo para la ficha, con colores, tallas, imágenes y tabla de tallas. */
-export async function getProductDetail(slug: string) {
+/**
+ * Producto completo para la ficha, con colores, tallas, imágenes y tabla de
+ * tallas.
+ *
+ * Memorizado por solicitud: `generateMetadata` y la página piden el mismo
+ * producto, y sin esto la consulta —la más pesada del sitio— se ejecutaba dos
+ * veces antes de mostrar nada.
+ */
+export const getProductDetail = cache(async function getProductDetail(slug: string) {
   return prisma.product.findFirst({
     where: { slug, status: { in: VISIBLE } },
     include: {
@@ -228,7 +236,7 @@ export async function getProductDetail(slug: string) {
       images: { orderBy: { sortOrder: 'asc' } },
     },
   });
-}
+});
 
 export async function getRelated(productId: string, lineId: string | null, limit = 4) {
   const products = await prisma.product.findMany({
