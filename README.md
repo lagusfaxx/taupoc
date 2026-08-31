@@ -108,10 +108,11 @@ npm run db:studio    # explorador visual de la base
    Apagar el seed no borra nada: solo evita que vuelva a escribir encima. Lo
    único que borra fotos es eliminar un volumen.
 
-4. **Configura el volumen persistente.** El compose ya declara
-   `taupoc-uploads` montado en `/app/public/uploads`. Ahí viven las fotos de
-   producto que se suben desde el panel: sin ese volumen se pierden en cada
-   despliegue.
+4. **Configura los volúmenes.** El compose ya declara los dos: `taupoc-db`
+   para la base y `taupoc-uploads` montado en `/app/public/uploads` para las
+   imágenes de relleno del seed. Sin este último, esas imágenes se pierden en
+   cada despliegue y el catálogo queda con los huecos hasta que se reemplacen
+   por fotos reales.
 
 5. **Dominio y TLS.** Asigna el dominio en Coolify al servicio `app`; el proxy y
    el certificado los gestiona él. El contenedor escucha en el `3000` y no
