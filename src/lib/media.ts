@@ -2,6 +2,7 @@ import 'server-only';
 import { Prisma } from '@prisma/client';
 import { prisma } from './db';
 import { MEDIA_WIDTHS } from './media-url';
+import { TYPE_NAMES, sniffImageType, sniffVideoType } from './file-type';
 
 /**
  * Archivos subidos desde el panel.
@@ -16,7 +17,7 @@ import { MEDIA_WIDTHS } from './media-url';
  * `serverActions.bodySizeLimit` en next.config.mjs para las que viajan por
  * Server Actions.
  */
-export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
 export const ALLOWED_IMAGE_TYPES = [
   'image/png',
@@ -24,7 +25,21 @@ export const ALLOWED_IMAGE_TYPES = [
   'image/webp',
   'image/avif',
   'image/svg+xml',
+  'image/gif',
+  'image/bmp',
 ];
+
+/**
+ * Formatos que hay que convertir antes de guardar.
+ *
+ * Un HEIC —lo que graba un iPhone salvo que se le pida "más compatible"— se
+ * sube sin problemas y después no se ve en ningún navegador. Se convierte a
+ * JPEG al entrar, que es lo que el dueño de la tienda esperaba.
+ */
+const CONVERT_ON_UPLOAD = ['image/heic'];
+
+/** Lado máximo de una foto convertida, para no guardar un original enorme. */
+const CONVERT_MAX_SIDE = 2560;
 
 /**
  * Tope de un video. No lo pone el servidor —se sirve por tramos acotados— sino
@@ -167,9 +182,6 @@ export async function storeMediaImage(
   const entrada = await toBytes(file);
   if (!entrada) return { error: 'No se recibió ningún archivo.' };
 
-  if (!ALLOWED_IMAGE_TYPES.includes(entrada.type)) {
-    return { error: 'Formato no admitido. Usa JPG, PNG, WEBP, AVIF o SVG.' };
-  }
   if (entrada.bytes.length > MAX_IMAGE_BYTES) {
     return {
       error: `La imagen pesa ${mb(entrada.bytes.length)} MB y el máximo son ${
@@ -177,16 +189,45 @@ export async function storeMediaImage(
       } MB.`,
     };
   }
-  if (entrada.type === 'image/svg+xml' && !svgIsSafe(entrada.bytes)) {
+
+  // El tipo sale de los bytes, no de lo que declara el navegador: manda
+  // `image/jpg`, cadena vacía o `application/octet-stream` según el sistema, y
+  // rechazar por ese dato deja fuera fotos que están perfectas.
+  const tipo = sniffImageType(entrada.bytes);
+  if (!tipo) {
+    return { error: 'El archivo no parece una imagen. Usa JPG, PNG, WEBP, AVIF o SVG.' };
+  }
+
+  if (tipo === 'image/svg+xml' && !svgIsSafe(entrada.bytes)) {
     return { error: 'El SVG contiene código ejecutable y no se puede usar.' };
+  }
+
+  let bytes = entrada.bytes;
+  let mimeType = tipo;
+  let filename = entrada.name;
+
+  if (CONVERT_ON_UPLOAD.includes(tipo)) {
+    const convertida = await convertToJpeg(entrada.bytes);
+    if (!convertida) {
+      return {
+        error:
+          `No se pudo convertir el archivo ${TYPE_NAMES[tipo] ?? tipo}. ` +
+          'Exportalo como JPG y vuelve a subirlo.',
+      };
+    }
+    bytes = convertida;
+    mimeType = 'image/jpeg';
+    filename = filename.replace(/\.[^.]+$/, '') + '.jpg';
+  } else if (!ALLOWED_IMAGE_TYPES.includes(tipo)) {
+    return { error: 'Formato no admitido. Usa JPG, PNG, WEBP, AVIF o SVG.' };
   }
 
   const asset = await prisma.mediaAsset.create({
     data: {
-      filename: entrada.name.slice(0, 200) || 'imagen',
-      mimeType: entrada.type,
-      size: entrada.bytes.length,
-      bytes: entrada.bytes,
+      filename: filename.slice(0, 200) || 'imagen',
+      mimeType,
+      size: bytes.length,
+      bytes,
       alt: alt.slice(0, 200),
     },
     select: { id: true },
@@ -194,7 +235,7 @@ export async function storeMediaImage(
 
   // Las versiones se preparan mientras el panel sigue abierto, para que ningún
   // visitante las espere.
-  warmVariants(asset.id, entrada.type);
+  warmVariants(asset.id, mimeType);
 
   return { id: asset.id, url: `/api/media/${asset.id}` };
 }
@@ -209,8 +250,14 @@ export async function storeMediaVideo(
   const entrada = await toBytes(file);
   if (!entrada) return { error: 'No se recibió ningún archivo.' };
 
-  if (!ALLOWED_VIDEO_TYPES.includes(entrada.type)) {
-    return { error: 'Formato no admitido. Usa un archivo .mp4 o .webm.' };
+  const tipo = sniffVideoType(entrada.bytes);
+  if (!tipo || !ALLOWED_VIDEO_TYPES.includes(tipo)) {
+    const nombre = tipo ? TYPE_NAMES[tipo] : null;
+    return {
+      error: nombre
+        ? `Ese archivo es un ${nombre} y los navegadores no lo reproducen. Expórtalo como MP4.`
+        : 'Formato no admitido. Usa un archivo .mp4 o .webm.',
+    };
   }
   if (entrada.bytes.length > MAX_VIDEO_BYTES) {
     return {
@@ -222,7 +269,7 @@ export async function storeMediaVideo(
 
   const avisos: string[] = [];
 
-  if (entrada.type === 'video/mp4') {
+  if (tipo === 'video/mp4') {
     const problema = unplayableMp4Reason(entrada.bytes);
     if (problema) return { error: problema };
 
@@ -244,7 +291,7 @@ export async function storeMediaVideo(
   const asset = await prisma.mediaAsset.create({
     data: {
       filename: entrada.name.slice(0, 200) || 'video',
-      mimeType: entrada.type,
+      mimeType: tipo,
       size: entrada.bytes.length,
       bytes: entrada.bytes,
       alt: '',
@@ -269,6 +316,24 @@ async function toBytes(
   const plain = file as { name: string; type: string; bytes: Buffer };
   if (!plain?.bytes?.length) return null;
   return plain;
+}
+
+/**
+ * Convierte a JPEG lo que el navegador no sabe mostrar. Devuelve null si sharp
+ * no puede leerlo, para poder decirlo en vez de guardar algo que no se ve.
+ */
+async function convertToJpeg(bytes: Buffer): Promise<Buffer | null> {
+  try {
+    const sharp = (await import('sharp')).default;
+    sharp.concurrency(1);
+    return await sharp(bytes, { failOn: 'none' })
+      .rotate()
+      .resize({ width: CONVERT_MAX_SIDE, height: CONVERT_MAX_SIDE, fit: 'inside', withoutEnlargement: true })
+      .jpeg({ quality: 90, mozjpeg: true })
+      .toBuffer();
+  } catch {
+    return null;
+  }
 }
 
 /** Cuánto se espera a un servidor ajeno antes de darlo por perdido. */
@@ -409,7 +474,7 @@ const MODERN_FORMATS = ['avif', 'webp'] as const;
 export type MediaFormat = (typeof MODERN_FORMATS)[number];
 
 /** Un SVG ya escala solo y un video no pasa por sharp. */
-const NOT_OPTIMIZABLE = ['image/svg+xml', 'video/mp4', 'video/webm'];
+const NOT_OPTIMIZABLE = ['image/svg+xml', 'image/gif', 'video/mp4', 'video/webm'];
 
 /**
  * La lista de anchos es cerrada: uno libre en la URL dejaría que cualquiera

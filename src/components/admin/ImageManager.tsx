@@ -43,7 +43,13 @@ export function ImageManager({
   for (const image of images) if (!order.includes(image.id)) ordered.push(image);
 
   async function upload(files: FileList | File[]) {
-    const list = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    // No se filtra por `f.type`: el navegador manda cadena vacía o
+    // `application/octet-stream` según el sistema, y con eso el archivo se
+    // descartaba en silencio, sin subida y sin mensaje. El servidor decide
+    // mirando los bytes.
+    const list = Array.from(files).filter(
+      (f) => f.type.startsWith('image/') || /\.(jpe?g|png|webp|avif|gif|bmp|heic|heif)$/i.test(f.name),
+    );
     if (list.length === 0) return;
 
     setUploading(true);
@@ -119,7 +125,7 @@ export function ImageManager({
           {uploading ? 'Subiendo…' : 'Arrastra las imágenes acá'}
         </p>
         <p className="mt-2 text-[12.5px] text-chalk-faint">
-          JPG, PNG, WEBP o AVIF · hasta 10 MB cada una
+          JPG, PNG, WEBP, AVIF o HEIC · hasta 20 MB cada una
         </p>
         <button
           type="button"
@@ -132,7 +138,7 @@ export function ImageManager({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.heic,.heif"
           multiple
           className="hidden"
           onChange={(e) => e.target.files && upload(e.target.files)}

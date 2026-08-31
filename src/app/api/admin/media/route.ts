@@ -34,6 +34,13 @@ export async function POST(request: Request) {
   const result =
     kind === 'video' ? await storeMediaVideo(file as File) : await storeMediaImage(file as File, alt);
 
-  if ('error' in result) return NextResponse.json(result, { status: 400 });
+  if ('error' in result) {
+    // El motivo también queda en el registro del servidor: en un despliegue
+    // remoto es lo único que se puede mirar cuando alguien reporta que "no
+    // sube" sin más detalle.
+    const info = file instanceof File ? `${file.name} · ${file.type || 'sin tipo'} · ${file.size} B` : 'sin archivo';
+    console.warn(`[media:rechazado] ${result.error} — ${info}`);
+    return NextResponse.json(result, { status: 400 });
+  }
   return NextResponse.json(result);
 }

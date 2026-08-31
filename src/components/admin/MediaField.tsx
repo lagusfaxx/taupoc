@@ -148,7 +148,7 @@ export function MediaField({
           <input
             ref={inputRef}
             type="file"
-            accept={kind === 'video' ? 'video/mp4,video/webm' : 'image/*'}
+            accept={kind === 'video' ? 'video/mp4,video/webm' : 'image/*,.heic,.heif'}
             className="hidden"
             onChange={(event) => void upload(event.target.files?.[0])}
           />

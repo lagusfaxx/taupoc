@@ -8,7 +8,9 @@ const nextConfig = {
     remotePatterns: [{ protocol: 'https', hostname: '**' }],
   },
   experimental: {
-    serverActions: { bodySizeLimit: '12mb' },
+    // Las imágenes de producto viajan por Server Action y pueden pesar hasta
+    // 20 MB cada una; el margen cubre varias en la misma tanda.
+    serverActions: { bodySizeLimit: '48mb' },
   },
   async headers() {
     return [

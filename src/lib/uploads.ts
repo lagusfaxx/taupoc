@@ -3,6 +3,7 @@ import { mkdir, writeFile, unlink } from 'fs/promises';
 import path from 'path';
 import { randomUUID } from 'crypto';
 import sharp from 'sharp';
+import { TYPE_NAMES, sniffImageType } from './file-type';
 
 /**
  * Almacenamiento de imágenes en disco. En Coolify, UPLOAD_DIR debe apuntar a un
@@ -12,8 +13,17 @@ import sharp from 'sharp';
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), 'public', 'uploads');
 const PUBLIC_PREFIX = '/uploads';
 
-const MAX_BYTES = 10 * 1024 * 1024;
-const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+const MAX_BYTES = 20 * 1024 * 1024;
+// Todo pasa por sharp y sale en WEBP, así que basta con que sharp sepa leerlo.
+const ALLOWED = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/avif',
+  'image/gif',
+  'image/bmp',
+  'image/heic',
+]);
 
 export interface StoredImage {
   url: string;
@@ -22,14 +32,23 @@ export interface StoredImage {
 }
 
 export async function storeImage(file: File): Promise<StoredImage> {
-  if (!ALLOWED.has(file.type)) {
-    throw new Error('Formato no soportado. Usa JPG, PNG, WEBP o AVIF.');
-  }
   if (file.size > MAX_BYTES) {
-    throw new Error('La imagen supera los 10 MB.');
+    throw new Error(`La imagen supera los ${MAX_BYTES / 1024 / 1024} MB.`);
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
+
+  // El tipo se lee de los bytes: el navegador manda `image/jpg`, cadena vacía
+  // o `application/octet-stream` según el sistema, y rechazar por ese dato deja
+  // fuera fotos que están perfectas.
+  const tipo = sniffImageType(buffer);
+  if (!tipo || !ALLOWED.has(tipo)) {
+    throw new Error(
+      tipo && TYPE_NAMES[tipo]
+        ? `No se puede usar un archivo ${TYPE_NAMES[tipo]}. Expórtalo como JPG.`
+        : 'El archivo no parece una imagen. Usa JPG, PNG, WEBP o AVIF.',
+    );
+  }
   const id = randomUUID();
   const folder = path.join(UPLOAD_DIR, id.slice(0, 2));
   await mkdir(folder, { recursive: true });
