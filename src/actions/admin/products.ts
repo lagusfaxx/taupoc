@@ -8,7 +8,7 @@ import { requireAdmin } from '@/lib/auth';
 import { slugify } from '@/lib/utils';
 import { setStock } from '@/lib/inventory';
 import { deleteImage } from '@/lib/uploads';
-import { storeMediaImage } from '@/lib/media';
+import { importMediaFromUrl, storeMediaImage } from '@/lib/media';
 import { parseCLP } from '@/lib/money';
 
 export interface AdminState {
@@ -518,6 +518,77 @@ export async function replaceProductImage(formData: FormData): Promise<AdminStat
 
   revalidateCatalog(current.product.slug);
   return { ok: true, message: 'Imagen reemplazada.' };
+}
+
+/**
+ * Lo mismo, pero trayendo la foto de una dirección.
+ *
+ * Se descarga y se guarda en la tienda en vez de dejar el enlace apuntando
+ * afuera: así se optimiza igual que una subida y la ficha no se queda sin
+ * foto el día que ese servidor cambie.
+ */
+export async function replaceProductImageFromUrl(
+  imageId: string,
+  url: string,
+): Promise<AdminState> {
+  await requireAdmin();
+  if (!imageId || !url.trim()) return { ok: false, message: 'Pega la dirección de una imagen.' };
+
+  const current = await prisma.productImage.findUnique({
+    where: { id: imageId },
+    include: { product: { select: { slug: true } } },
+  });
+  if (!current) return { ok: false, message: 'La imagen ya no existe.' };
+
+  const stored = await importMediaFromUrl(url, 'image');
+  if ('error' in stored) return { ok: false, message: stored.error };
+
+  await prisma.productImage.update({
+    where: { id: imageId },
+    data: { url: stored.url, width: stored.width ?? 0, height: stored.height ?? 0 },
+  });
+
+  await deleteImage(current.url);
+
+  revalidateCatalog(current.product.slug);
+  return { ok: true, message: 'Imagen reemplazada.' };
+}
+
+/** Agrega una imagen al producto desde una dirección. */
+export async function addProductImageFromUrl(
+  productId: string,
+  colorId: string | null,
+  url: string,
+): Promise<AdminState> {
+  await requireAdmin();
+  if (!url.trim()) return { ok: false, message: 'Pega la dirección de una imagen.' };
+
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { name: true, slug: true },
+  });
+  if (!product) return { ok: false, message: 'Producto no encontrado.' };
+
+  const stored = await importMediaFromUrl(url, 'image');
+  if ('error' in stored) return { ok: false, message: stored.error };
+
+  const existing = await prisma.productImage.count({ where: { productId } });
+
+  await prisma.productImage.create({
+    data: {
+      productId,
+      colorId,
+      url: stored.url,
+      width: stored.width ?? 0,
+      height: stored.height ?? 0,
+      alt: product.name,
+      sortOrder: existing,
+      isPrimary: existing === 0,
+    },
+  });
+
+  revalidateCatalog(product.slug);
+  return { ok: true, message: 'Imagen agregada.' };
 }
 
 export async function assignImageColor(imageId: string, colorId: string | null) {

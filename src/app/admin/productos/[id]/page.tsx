@@ -166,7 +166,7 @@ export default async function EditProductPage({
                   images={product.images.map((i) => ({
                     id: i.id, url: i.url, alt: i.alt, colorId: i.colorId, isPrimary: i.isPrimary,
                   }))}
-                  colors={colors.map((c) => ({ id: c.id, name: c.name, hex: c.hex }))}
+                  colors={colors.map((c) => ({ id: c.id, name: c.name, code: c.code, hex: c.hex }))}
                 />
               </Card>
             ),
