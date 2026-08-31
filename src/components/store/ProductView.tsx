@@ -1,14 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
-import { useFormStatus } from 'react-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addToCart, type CartActionState } from '@/actions/cart';
 import { formatCLP, installment } from '@/lib/money';
 import { cn, readableOn } from '@/lib/utils';
 import { colorLabel } from '@/lib/colors';
 import { Price } from '@/components/ui/Price';
+import { announceCart } from './CartLink';
 import { ProductGallery, type GalleryImage } from './ProductGallery';
 import { SizeChart, type SizeChartRowData } from './SizeChart';
 import { IconCheck, IconExternal, IconShield, IconTruck } from '@/components/ui/Icons';
@@ -61,8 +61,15 @@ export interface ProductViewData {
   freeShippingOver: number | null;
 }
 
-function AddButton({ disabled, comingSoon }: { disabled: boolean; comingSoon: boolean }) {
-  const { pending } = useFormStatus();
+function AddButton({
+  disabled,
+  comingSoon,
+  pending,
+}: {
+  disabled: boolean;
+  comingSoon: boolean;
+  pending: boolean;
+}) {
   return (
     <button
       type="submit"
@@ -83,7 +90,36 @@ export function ProductView({ product }: { product: ProductViewData }) {
   const router = useRouter();
   const [colorId, setColorId] = useState(product.colors[0]?.id ?? '');
   const [variantId, setVariantId] = useState<string | null>(null);
-  const [state, action] = useActionState<CartActionState | null, FormData>(addToCart, null);
+  const [state, setState] = useState<CartActionState | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  /**
+   * La acción se llama a mano en vez de pasarla como `action` del formulario.
+   *
+   * Con `useActionState` el botón se quedaba en "Agregando…" y el mensaje no
+   * aparecía nunca, aunque el producto sí entrara al carrito: la respuesta de
+   * la acción arrastra el árbol revalidado del servidor y, hasta que ese
+   * árbol termina de aplicarse, la transición sigue pendiente. Llamándola
+   * así, la respuesta se usa apenas llega y el refresco del servidor va por
+   * su cuenta.
+   */
+  async function enviar(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (enviando) return;
+
+    const datos = new FormData(event.currentTarget);
+    setEnviando(true);
+    try {
+      const resultado = await addToCart(null, datos);
+      setState(resultado);
+      if (resultado.ok && typeof resultado.count === 'number') announceCart(resultado.count);
+      if (resultado.ok) router.refresh();
+    } catch {
+      setState({ ok: false, message: 'No se pudo agregar. Inténtalo de nuevo.' });
+    } finally {
+      setEnviando(false);
+    }
+  }
   const liveRef = useRef<HTMLParagraphElement>(null);
   const compraRef = useRef<HTMLDivElement>(null);
   const [barraVisible, setBarraVisible] = useState(false);
@@ -119,10 +155,6 @@ export function ProductView({ product }: { product: ProductViewData }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [colorId]);
 
-  useEffect(() => {
-    if (state?.ok) router.refresh();
-  }, [state, router]);
-
   // En el teléfono la foto ocupa casi toda la primera pantalla, así que el
   // botón de compra queda lejos. Mientras no se vea, una barra fija lo
   // reemplaza abajo.
@@ -151,8 +183,11 @@ export function ProductView({ product }: { product: ProductViewData }) {
         <ProductGallery images={images} colorName={color?.name ?? ''} productName={product.name} />
       </div>
 
-      {/* El relleno de abajo deja libre lo que tapa la barra de compra. */}
-      <div className={cn(barraVisible && 'pb-24 lg:pb-0')}>
+      {/* El relleno de abajo deja libre lo que tapa la barra de compra. Es
+          fijo a propósito: si dependiera de si la barra se ve, aparecer
+          movería el botón que el observador vigila, eso la escondería, y el
+          movimiento volvería a mostrarla. */}
+      <div className="pb-24 lg:pb-0">
         {/* Encabezado */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {product.lineName ? (
@@ -182,7 +217,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
           ) : null}
         </div>
 
-        <form id="compra" action={action} className="mt-8">
+        <form id="compra" onSubmit={enviar} className="mt-8">
           <input type="hidden" name="variantId" value={variant?.id ?? ''} />
           <input type="hidden" name="quantity" value="1" />
 
@@ -319,7 +354,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
           </fieldset>
 
           <div ref={compraRef} className="mt-6 space-y-3">
-            <AddButton disabled={!variant} comingSoon={product.comingSoon} />
+            <AddButton disabled={!variant} comingSoon={product.comingSoon} pending={enviando} />
 
             {state ? (
               <p
@@ -374,8 +409,15 @@ export function ProductView({ product }: { product: ProductViewData }) {
         ) : null}
 
         {/* Barra de compra del teléfono */}
-        {barraVisible && !product.comingSoon ? (
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/95 backdrop-blur lg:hidden">
+        {!product.comingSoon ? (
+          <div
+            aria-hidden={!barraVisible}
+            className={cn(
+              'fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/95 backdrop-blur',
+              'transition-transform duration-300 ease-tech lg:hidden',
+              barraVisible ? 'translate-y-0' : 'pointer-events-none translate-y-full',
+            )}
+          >
             <div className="container flex items-center gap-3 py-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-display text-[17px] leading-none text-chalk">

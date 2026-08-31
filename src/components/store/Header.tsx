@@ -5,7 +5,8 @@ import { getCartCount } from '@/lib/cart';
 import { getSession } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { Logo } from '@/components/ui/Logo';
-import { IconCart, IconUser } from '@/components/ui/Icons';
+import { IconUser } from '@/components/ui/Icons';
+import { CartLink } from './CartLink';
 import { MobileNav } from './MobileNav';
 import { SearchTrigger } from './SearchTrigger';
 
@@ -118,18 +119,7 @@ export async function Header() {
               <IconUser className="h-[19px] w-[19px]" />
             </Link>
 
-            <Link
-              href="/carrito"
-              aria-label={`Carrito, ${cartCount} ${cartCount === 1 ? 'producto' : 'productos'}`}
-              className="relative flex h-10 w-10 items-center justify-center text-chalk-dim transition-colors hover:text-chalk"
-            >
-              <IconCart className="h-[19px] w-[19px]" />
-              {cartCount > 0 ? (
-                <span className="absolute right-0.5 top-0.5 flex h-[17px] min-w-[17px] items-center justify-center accent-bg px-1 font-display text-[10px] font-bold leading-none">
-                  {cartCount > 99 ? '99+' : cartCount}
-                </span>
-              ) : null}
-            </Link>
+            <CartLink initial={cartCount} />
           </div>
         </div>
       </header>

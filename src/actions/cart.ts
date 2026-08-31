@@ -12,6 +12,12 @@ export interface CartActionState {
   message: string;
   /** Se usa para animar el ícono del carrito tras agregar. */
   added?: boolean;
+  /**
+   * Unidades que quedaron en el carrito. Viaja en la respuesta para que el
+   * contador del encabezado se actualice con este número y no dependa de que
+   * el refresco del servidor llegue a tiempo.
+   */
+  count?: number;
 }
 
 const MAX_PER_LINE = 10;
@@ -68,14 +74,27 @@ export async function addToCart(
     update: { quantity },
   });
 
+  // Solo la página del carrito. Invalidar el layout entero volvía a montar la
+  // ficha del producto, y con ella se perdía el estado de la acción: el
+  // producto entraba al carrito pero en pantalla no pasaba nada hasta
+  // recargar. El contador del encabezado se actualiza con `count`.
   revalidatePath('/carrito');
-  revalidatePath('/', 'layout');
 
   return {
     ok: true,
     added: true,
+    count: await countUnits(cart.id),
     message: `${variant.product.name} · ${variant.color.name} · Talla ${variant.size} agregado.`,
   };
+}
+
+/** Unidades en un carrito, para devolverlas junto con la acción. */
+async function countUnits(cartId: string): Promise<number> {
+  const total = await prisma.cartItem.aggregate({
+    where: { cartId },
+    _sum: { quantity: true },
+  });
+  return total._sum.quantity ?? 0;
 }
 
 export async function updateCartItem(itemId: string, quantity: number): Promise<CartActionState> {
