@@ -2,6 +2,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { randomUUID } from 'crypto';
 import { prisma } from './db';
+import { cookieSecure } from './cookies';
 import { evaluateCoupon } from './pricing';
 import { getSession } from './auth';
 import { colorLabel } from './colors';
@@ -72,7 +73,7 @@ export async function ensureCartToken(): Promise<string> {
   store.set(CART_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: await cookieSecure(),
     path: '/',
     maxAge: CART_MAX_AGE,
   });

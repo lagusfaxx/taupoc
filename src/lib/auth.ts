@@ -5,6 +5,7 @@ import bcrypt from 'bcryptjs';
 import { redirect } from 'next/navigation';
 import type { Role } from '@prisma/client';
 import { prisma } from './db';
+import { cookieSecure } from './cookies';
 
 const COOKIE = 'taupoc_session';
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 días
@@ -44,7 +45,7 @@ export async function createSession(user: SessionUser): Promise<void> {
   store.set(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: await cookieSecure(),
     path: '/',
     maxAge: MAX_AGE,
   });
