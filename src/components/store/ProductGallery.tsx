@@ -79,6 +79,7 @@ export function ProductGallery({
         type="button"
         onClick={() => setZoom(true)}
         aria-label="Ampliar imagen"
+        data-fly-source
         className="group relative aspect-[4/5] w-full cursor-zoom-in overflow-hidden border border-line bg-ink-800"
       >
         <Image

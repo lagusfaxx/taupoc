@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getProductDetail, getRelated, GENDER_LABEL } from '@/lib/catalog';
@@ -37,8 +38,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const [product, settings] = await Promise.all([getProductDetail(slug), getSettings()]);
   if (!product) notFound();
-
-  const related = await getRelated(product.id, product.lineId, 4);
 
   const colors = product.colors.map((color) => ({
     id: color.id,
@@ -303,22 +302,56 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </section>
 
-      {related.length > 0 ? (
-        <section className="border-t border-line">
-          <div className="container py-14 lg:py-20">
-            <SectionHeading
-              eyebrow="También te puede servir"
-              title="Completa tu equipamiento"
-              link={{ href: '/catalogo', label: 'Ver catálogo' }}
-            />
-            <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4 lg:gap-x-6">
-              {related.map((item) => (
-                <ProductCard key={item.id} product={item} />
-              ))}
-            </div>
-          </div>
-        </section>
-      ) : null}
+      {/* Los relacionados van en streaming: son una consulta más y quedan
+          fuera de la primera pantalla, así que esperarlos solo retrasaba la
+          compra. */}
+      <Suspense fallback={<RelatedSkeleton />}>
+        <Related productId={product.id} lineId={product.lineId} />
+      </Suspense>
     </>
+  );
+}
+
+function RelatedShell({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="border-t border-line">
+      <div className="container py-14 lg:py-20">
+        <SectionHeading
+          eyebrow="También te puede servir"
+          title="Completa tu equipamiento"
+          link={{ href: '/catalogo', label: 'Ver catálogo' }}
+        />
+        <div className="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4 lg:gap-x-6">
+          {children}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function RelatedSkeleton() {
+  return (
+    <RelatedShell>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i}>
+          <div className="skeleton aspect-[4/5] w-full" />
+          <div className="mt-3.5 skeleton h-4 w-3/4" />
+          <div className="mt-3.5 skeleton h-4 w-24" />
+        </div>
+      ))}
+    </RelatedShell>
+  );
+}
+
+async function Related({ productId, lineId }: { productId: string; lineId: string | null }) {
+  const related = await getRelated(productId, lineId, 4);
+  if (related.length === 0) return null;
+
+  return (
+    <RelatedShell>
+      {related.map((item) => (
+        <ProductCard key={item.id} product={item} />
+      ))}
+    </RelatedShell>
   );
 }

@@ -8,7 +8,7 @@ import { formatCLP, installment } from '@/lib/money';
 import { cn, readableOn } from '@/lib/utils';
 import { colorLabel } from '@/lib/colors';
 import { Price } from '@/components/ui/Price';
-import { announceCart } from './CartLink';
+import { announceCart, flyToCart } from './CartLink';
 import { ProductGallery, type GalleryImage } from './ProductGallery';
 import { SizeChart, type SizeChartRowData } from './SizeChart';
 import { IconCheck, IconExternal, IconShield, IconTruck } from '@/components/ui/Icons';
@@ -108,11 +108,26 @@ export function ProductView({ product }: { product: ProductViewData }) {
     if (enviando) return;
 
     const datos = new FormData(event.currentTarget);
+
+    // La medida se toma antes de esperar al servidor: mientras la acción
+    // viaja, el visitante puede desplazarse y el vuelo saldría de otro lugar.
+    const fuente = document.querySelector<HTMLElement>('[data-fly-source]');
+    const caja = fuente?.getBoundingClientRect();
+    const origen = caja
+      ? { x: caja.x, y: caja.y, width: caja.width, height: caja.height }
+      : undefined;
+    const imagen = fuente?.querySelector('img')?.currentSrc ?? images[0]?.url ?? null;
+
     setEnviando(true);
     try {
       const resultado = await addToCart(null, datos);
       setState(resultado);
-      if (resultado.ok && typeof resultado.count === 'number') announceCart(resultado.count);
+      if (resultado.ok) {
+        if (origen) flyToCart({ origin: origen, imageUrl: imagen });
+        if (typeof resultado.count === 'number') {
+          announceCart(resultado.count, { origin: origen, imageUrl: imagen });
+        }
+      }
       if (resultado.ok) router.refresh();
     } catch {
       setState({ ok: false, message: 'No se pudo agregar. Inténtalo de nuevo.' });
@@ -360,7 +375,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
               <p
                 role="status"
                 className={cn(
-                  'flex items-start gap-2 border px-3.5 py-3 text-[13.5px]',
+                  'flex items-start gap-2 border px-3.5 py-3 text-[13.5px] animate-rise-in',
                   state.ok
                     ? 'border-signal-ok/40 bg-signal-ok/10 text-signal-ok'
                     : 'border-signal-bad/40 bg-signal-bad/10 text-signal-bad',
