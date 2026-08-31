@@ -45,7 +45,7 @@ export async function Footer() {
       <div className="container py-12 lg:py-16">
         <div className="grid gap-12 lg:grid-cols-[1.4fr_repeat(3,1fr)] lg:gap-10">
           <div>
-            <Logo src={settings.logoUrl} height={settings.logoHeight} />
+            <Logo src={settings.logoUrl} height={settings.logoHeight} withName={!settings.logoHasName} />
             <p className="mt-5 max-w-xs text-[14px] leading-relaxed text-chalk-faint">
               Distribuidor oficial de TAUPOC Swimwear en Chile. Trajes de competición homologados por
               World Aquatics, con despacho a todo el país.

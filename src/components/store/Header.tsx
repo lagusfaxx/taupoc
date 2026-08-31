@@ -73,7 +73,7 @@ export async function Header() {
           <MobileNav nav={nav} />
 
           <Link href="/" aria-label="TAUPOC Chile — inicio" className="shrink-0">
-            <Logo src={settings.logoUrl} height={settings.logoHeight} />
+            <Logo src={settings.logoUrl} height={settings.logoHeight} withName={!settings.logoHasName} />
           </Link>
 
           <nav aria-label="Principal" className="ml-6 hidden flex-1 items-center gap-1 lg:flex">

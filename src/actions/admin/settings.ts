@@ -18,6 +18,7 @@ const schema = z.object({
   logoUrl: z.string().optional(),
   logoHeight: z.string().optional(),
   shareImageUrl: z.string().optional(),
+  logoHasName: z.string().optional(),
 
   freeShippingOver: z.string().optional(),
   lowStockThreshold: z.string().optional(),
@@ -59,6 +60,7 @@ export async function updateSettings(
     logoUrl: d.logoUrl?.trim() ?? '',
     logoHeight: Math.min(80, Math.max(16, Number(d.logoHeight ?? 28) || 28)),
     shareImageUrl: d.shareImageUrl?.trim() ?? '',
+    logoHasName: d.logoHasName === 'on',
 
     freeShippingOver: freeShipping ? parseCLP(freeShipping) : null,
     lowStockThreshold: Math.max(0, Number(d.lowStockThreshold ?? 3) || 3),

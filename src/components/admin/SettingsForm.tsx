@@ -65,6 +65,11 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                       hint="1200 × 630 px"
                       defaultValue={settings.shareImageUrl}
                     />
+                    <Checkbox
+                      name="logoHasName"
+                      label="El archivo del logo ya trae el nombre escrito"
+                      defaultChecked={settings.logoHasName}
+                    />
                     <Input
                       label="Alto del logo"
                       name="logoHeight"

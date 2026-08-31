@@ -82,11 +82,9 @@ export function AdminShell({
           <LogoMark className="h-6 w-auto accent-text" />
         )}
         <div className="leading-none">
-          {logoUrl ? null : (
-            <p className="font-display text-[13px] font-extrabold tracking-[0.2em] text-chalk">
-              TAUPOC
-            </p>
-          )}
+          <p className="font-display text-[13px] font-extrabold tracking-[0.2em] text-chalk">
+            TAUPOC
+          </p>
           <p className="mt-[3px] font-display text-[8px] font-semibold tracking-[0.3em] text-chalk-faint">
             PANEL
           </p>

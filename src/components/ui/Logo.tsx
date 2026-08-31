@@ -24,34 +24,48 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Marca completa: el símbolo más el nombre.
+ *
+ * Con un logo subido desde el panel se usa esa imagen en lugar del símbolo
+ * dibujado, pero el nombre se mantiene al lado: casi siempre lo que se sube es
+ * el isotipo suelto. Si el archivo ya trae el nombre dentro, `withName={false}`
+ * lo deja solo, para no repetirlo.
+ */
 export function Logo({
   className,
   compact,
   src,
   height = 28,
+  withName = true,
 }: {
   className?: string;
   compact?: boolean;
   src?: string | null;
   height?: number;
+  withName?: boolean;
 }) {
-  if (src) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        srcSet={mediaSrcSet(src)}
-        sizes={`${height * 6}px`}
-        alt="TAUPOC Chile"
-        style={{ height }}
-        className={cn('w-auto max-w-[240px] object-contain', className)}
-      />
-    );
+  const marca = src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      srcSet={mediaSrcSet(src)}
+      sizes={`${height * 6}px`}
+      alt={withName ? '' : 'TAUPOC Chile'}
+      style={{ height }}
+      className="w-auto max-w-[240px] object-contain"
+    />
+  ) : (
+    <LogoMark className="h-7 w-auto" />
+  );
+
+  if (!withName) {
+    return <span className={cn('inline-flex items-center text-chalk', className)}>{marca}</span>;
   }
 
   return (
     <span className={cn('inline-flex items-center gap-2.5 text-chalk', className)}>
-      <LogoMark className="h-7 w-auto" />
+      {marca}
       <span className="flex flex-col leading-none">
         <span className="font-display text-lg font-extrabold tracking-[0.24em]">TAUPOC</span>
         {!compact ? (
