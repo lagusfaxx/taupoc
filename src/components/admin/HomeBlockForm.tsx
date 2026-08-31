@@ -45,6 +45,7 @@ export interface SlideData {
   ctaLabel: string;
   href: string;
   imageUrl: string;
+  imageMobileUrl: string;
   videoUrl: string;
   posterUrl: string;
 }
@@ -56,8 +57,26 @@ const SLIDE_VACIA: SlideData = {
   ctaLabel: '',
   href: '',
   imageUrl: '',
+  imageMobileUrl: '',
   videoUrl: '',
   posterUrl: '',
+};
+
+/**
+ * Medidas recomendadas según el alto elegido.
+ *
+ * El banner ocupa todo el ancho de la pantalla y su alto es fijo, así que la
+ * proporción visible cambia con cada pantalla: son las de un notebook de 1440
+ * y un teléfono de 390, que es donde mira casi todo el mundo. En un monitor
+ * más ancho la misma foto pierde algo arriba y abajo, de ahí que convenga
+ * dejar al sujeto al centro.
+ */
+const MEDIDAS: Record<string, { escritorio: string; celular: string }> = {
+  COMPACTA: { escritorio: '2400 × 500', celular: '1080 × 660' },
+  MEDIA: { escritorio: '2400 × 800', celular: '1080 × 1050' },
+  ALTA: { escritorio: '2400 × 1100', celular: '1080 × 1440' },
+  PANTALLA: { escritorio: '2400 × 1290', celular: '1080 × 2010' },
+  AUTO: { escritorio: '2400 × 800', celular: '1080 × 1050' },
 };
 
 export interface PickableProduct {
@@ -82,6 +101,9 @@ export function HomeBlockForm({
 
   // Un banner que todavía guarda su foto y su texto en el bloque se muestra
   // como una lámina ya llena: así se le pueden agregar más sin rehacerlo.
+  const [height, setHeight] = useState(block.height);
+  const medidas = MEDIDAS[height] ?? MEDIDAS.MEDIA;
+
   const [cards, setCards] = useState<SlideData[]>(() => {
     if (block.cards.length > 0) return block.cards;
     if (!esBanner) return [SLIDE_VACIA];
@@ -94,6 +116,7 @@ export function HomeBlockForm({
         ctaLabel: block.ctaLabel ?? '',
         href: block.ctaHref ?? '',
         imageUrl: block.imageUrl ?? '',
+        imageMobileUrl: block.imageMobileUrl ?? '',
         videoUrl: block.videoUrl ?? '',
         posterUrl: block.posterUrl ?? '',
       },
@@ -356,6 +379,7 @@ export function HomeBlockForm({
                   <input type="hidden" name="cardCta" value={card.ctaLabel} />
                   <input type="hidden" name="cardHref" value={card.href} />
                   <input type="hidden" name="cardImage" value={card.imageUrl} />
+                  <input type="hidden" name="cardMobile" value={card.imageMobileUrl} />
                   <input type="hidden" name="cardVideo" value={card.videoUrl} />
                   <input type="hidden" name="cardPoster" value={card.posterUrl} />
 
@@ -398,12 +422,19 @@ export function HomeBlockForm({
 
                   <MediaField
                     label={esBanner ? 'Imagen' : 'Foto'}
+                    hint={esBanner ? `${medidas.escritorio} px` : undefined}
                     value={card.imageUrl}
                     onChange={(imageUrl) => updateCard(index, { imageUrl })}
                   />
 
                   {esBanner ? (
                     <>
+                      <MediaField
+                        label="Imagen para celular"
+                        hint={`${medidas.celular} px · opcional`}
+                        value={card.imageMobileUrl}
+                        onChange={(imageMobileUrl) => updateCard(index, { imageMobileUrl })}
+                      />
                       <MediaField
                         label="Video"
                         hint="mp4 o webm"
@@ -443,7 +474,13 @@ export function HomeBlockForm({
 
             {conMedio || esBanner ? (
               <>
-                <Select name="height" label="Alto" defaultValue={block.height}>
+                <Select
+                  name="height"
+                  label="Alto"
+                  defaultValue={block.height}
+                  onChange={(event) => setHeight(event.target.value)}
+                  help={`Fotos de ${medidas.escritorio} px para escritorio y ${medidas.celular} px para celular. Con "Mostrar completa" en Encuadre se ve toda la foto, sin recorte.`}
+                >
                   <option value="COMPACTA">Compacto</option>
                   <option value="MEDIA">Medio</option>
                   <option value="ALTA">Alto</option>

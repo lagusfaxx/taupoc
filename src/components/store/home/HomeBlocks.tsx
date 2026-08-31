@@ -118,6 +118,7 @@ function Banner({
           ctaLabel: card.ctaLabel,
           ctaHref: card.href,
           imageUrl: card.imageUrl,
+          imageMobileUrl: card.imageMobileUrl,
           videoUrl: card.videoUrl,
           posterUrl: card.posterUrl,
         }))

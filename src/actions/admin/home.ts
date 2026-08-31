@@ -138,6 +138,7 @@ export async function saveBlock(
   const cardCtas = formData.getAll('cardCta').map(String);
   const cardHrefs = formData.getAll('cardHref').map(String);
   const cardImages = formData.getAll('cardImage').map(String);
+  const cardMobiles = formData.getAll('cardMobile').map(String);
   const cardVideos = formData.getAll('cardVideo').map(String);
   const cardPosters = formData.getAll('cardPoster').map(String);
 
@@ -159,6 +160,7 @@ export async function saveBlock(
           ctaLabel: text(cardCtas[index]),
           href: text(cardHrefs[index]),
           imageUrl,
+          imageMobileUrl: mediaHref(cardMobiles[index]),
           videoUrl,
           posterUrl: mediaHref(cardPosters[index]),
         },

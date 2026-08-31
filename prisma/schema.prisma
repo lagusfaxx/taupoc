@@ -774,6 +774,8 @@ model HomeBlockItem {
   ctaLabel String?
   href     String?
   imageUrl String?
+  /// Versión para pantallas angostas; si falta se usa la principal.
+  imageMobileUrl String?
   videoUrl String?
   posterUrl String?
 

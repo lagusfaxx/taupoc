@@ -7,7 +7,8 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { slugify } from '@/lib/utils';
 import { setStock } from '@/lib/inventory';
-import { storeImage, deleteImage } from '@/lib/uploads';
+import { deleteImage } from '@/lib/uploads';
+import { storeMediaImage } from '@/lib/media';
 import { parseCLP } from '@/lib/money';
 
 export interface AdminState {
@@ -460,27 +461,63 @@ export async function uploadProductImages(formData: FormData): Promise<AdminStat
   let index = existing;
 
   for (const file of files) {
-    try {
-      const stored = await storeImage(file);
-      await prisma.productImage.create({
-        data: {
-          productId,
-          colorId,
-          url: stored.url,
-          width: stored.width,
-          height: stored.height,
-          alt: product.name,
-          sortOrder: index++,
-          isPrimary: existing === 0 && index === 1,
-        },
-      });
-    } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : 'No se pudo subir la imagen.' };
-    }
+    const stored = await storeMediaImage(file, product.name);
+    if ('error' in stored) return { ok: false, message: stored.error };
+
+    await prisma.productImage.create({
+      data: {
+        productId,
+        colorId,
+        url: stored.url,
+        width: stored.width ?? 0,
+        height: stored.height ?? 0,
+        alt: product.name,
+        sortOrder: index++,
+        isPrimary: existing === 0 && index === 1,
+      },
+    });
   }
 
   revalidateCatalog(product.slug);
   return { ok: true, message: `${files.length} ${files.length === 1 ? 'imagen subida' : 'imágenes subidas'}.` };
+}
+
+/**
+ * Cambia el archivo de una imagen sin tocar su sitio.
+ *
+ * Reemplazar una foto de relleno por la real no debería obligar a subir una
+ * nueva, asignarle el color, arrastrarla hasta su posición y borrar la vieja:
+ * la fila se queda como está y solo cambia a qué archivo apunta.
+ */
+export async function replaceProductImage(formData: FormData): Promise<AdminState> {
+  await requireAdmin();
+  const imageId = String(formData.get('imageId') ?? '');
+  const file = formData.get('file');
+
+  if (!imageId || !(file instanceof File) || file.size === 0) {
+    return { ok: false, message: 'Selecciona una imagen.' };
+  }
+
+  const current = await prisma.productImage.findUnique({
+    where: { id: imageId },
+    include: { product: { select: { slug: true } } },
+  });
+  if (!current) return { ok: false, message: 'La imagen ya no existe.' };
+
+  const stored = await storeMediaImage(file, current.alt);
+  if ('error' in stored) return { ok: false, message: stored.error };
+
+  await prisma.productImage.update({
+    where: { id: imageId },
+    data: { url: stored.url, width: stored.width ?? 0, height: stored.height ?? 0 },
+  });
+
+  // El archivo anterior se borra después de guardar el nuevo: si algo falla
+  // antes, la ficha sigue mostrando la foto que ya tenía.
+  await deleteImage(current.url);
+
+  revalidateCatalog(current.product.slug);
+  return { ok: true, message: 'Imagen reemplazada.' };
 }
 
 export async function assignImageColor(imageId: string, colorId: string | null) {

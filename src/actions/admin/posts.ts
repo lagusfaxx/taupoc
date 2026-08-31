@@ -6,7 +6,8 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { slugify } from '@/lib/utils';
-import { storeImage, deleteImage } from '@/lib/uploads';
+import { deleteImage } from '@/lib/uploads';
+import { storeMediaImage } from '@/lib/media';
 import type { AdminState } from './products';
 
 const schema = z.object({
@@ -46,12 +47,9 @@ export async function savePost(_prev: AdminState | null, formData: FormData): Pr
   let coverUrl: string | undefined;
   const cover = formData.get('cover');
   if (cover instanceof File && cover.size > 0) {
-    try {
-      const stored = await storeImage(cover);
-      coverUrl = stored.url;
-    } catch (error) {
-      return { ok: false, message: error instanceof Error ? error.message : 'No se pudo subir la portada.' };
-    }
+    const stored = await storeMediaImage(cover, d.title.trim());
+    if ('error' in stored) return { ok: false, message: stored.error };
+    coverUrl = stored.url;
   }
 
   const existing = d.id ? await prisma.post.findUnique({ where: { id: d.id } }) : null;

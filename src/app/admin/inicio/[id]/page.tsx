@@ -74,6 +74,7 @@ export default async function EditarBloquePage({ params }: { params: Promise<{ i
               ctaLabel: item.ctaLabel ?? '',
               href: item.href ?? '',
               imageUrl: item.imageUrl ?? '',
+              imageMobileUrl: item.imageMobileUrl ?? '',
               videoUrl: item.videoUrl ?? '',
               posterUrl: item.posterUrl ?? '',
             })),

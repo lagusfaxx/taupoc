@@ -51,6 +51,7 @@ export async function getHomeBlocks() {
         ctaLabel: item.ctaLabel ?? '',
         href: item.href ?? '',
         imageUrl: item.imageUrl,
+        imageMobileUrl: item.imageMobileUrl,
         videoUrl: item.videoUrl,
         posterUrl: item.posterUrl,
       })),

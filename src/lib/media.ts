@@ -163,7 +163,13 @@ export function unplayableMp4Reason(bytes: Buffer): string | null {
 }
 
 export type MediaError = { error: string };
-export type MediaResult = { url: string; id: string; warning?: string };
+export type MediaResult = {
+  url: string;
+  id: string;
+  width?: number;
+  height?: number;
+  warning?: string;
+};
 
 /** Un SVG puede traer scripts; se rechaza en lugar de guardarlo. */
 function svgIsSafe(buffer: Buffer): boolean {
@@ -237,7 +243,8 @@ export async function storeMediaImage(
   // visitante las espere.
   warmVariants(asset.id, mimeType);
 
-  return { id: asset.id, url: `/api/media/${asset.id}` };
+  const medidas = await imageSize(bytes);
+  return { id: asset.id, url: `/api/media/${asset.id}`, ...medidas };
 }
 
 /**
@@ -316,6 +323,17 @@ async function toBytes(
   const plain = file as { name: string; type: string; bytes: Buffer };
   if (!plain?.bytes?.length) return null;
   return plain;
+}
+
+/** Alto y ancho, para las fichas que los guardan. Un fallo no es fatal. */
+async function imageSize(bytes: Buffer): Promise<{ width?: number; height?: number }> {
+  try {
+    const sharp = (await import('sharp')).default;
+    const meta = await sharp(bytes, { failOn: 'none' }).metadata();
+    return { width: meta.width, height: meta.height };
+  } catch {
+    return {};
+  }
 }
 
 /**
@@ -705,6 +723,13 @@ async function usedMediaIds(): Promise<Set<string>> {
 
   const filas = await prisma.$queryRawUnsafe<{ id: string }[]>(consultas.join(' UNION '));
   return new Set(filas.map((fila) => fila.id));
+}
+
+/** Borra un archivo del panel a partir de su URL. Ignora cualquier otra ruta. */
+export async function deleteMediaByUrl(url: string): Promise<void> {
+  const match = /^\/api\/media\/([A-Za-z0-9_-]{1,40})$/.exec(url.trim());
+  if (!match) return;
+  await prisma.mediaAsset.deleteMany({ where: { id: match[1] } });
 }
 
 /** Cuánto se le respeta a un archivo recién subido antes de darlo por huérfano. */

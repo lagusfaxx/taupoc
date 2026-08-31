@@ -132,12 +132,12 @@ export function BannerCarousel({
                 if (index === current) setDuracion(event.currentTarget.duration || 0);
               }}
               onEnded={() => varias && go(current + 1)}
-              className={cn('h-full w-full', object)}
+              className={cn('absolute inset-0 h-full w-full', object)}
             >
               <source src={slide.videoUrl} />
             </video>
           ) : slide.imageUrl ? (
-            <picture>
+            <picture className="absolute inset-0">
               {slide.imageMobileUrl ? (
                 <source
                   media="(max-width: 640px)"
@@ -164,7 +164,16 @@ export function BannerCarousel({
             style={{ opacity: Math.min(90, Math.max(0, overlay)) / 100 }}
           />
 
-          <div className={cn('container relative flex h-full flex-col justify-center', alineacion)}>
+          {/* El medio va posicionado encima del fondo; este es el único hijo
+              en el flujo, así que ocupa el alto de la lámina y centra el texto. */}
+          <div
+            className={cn(
+              'container relative flex h-full flex-col justify-center',
+              alineacion,
+              // Deja libre la franja de los controles de abajo.
+              varias && 'pb-12',
+            )}
+          >
             <div className="max-w-xl">
               {slide.eyebrow ? (
                 <p className="font-display text-[10px] font-semibold uppercase tracking-mega text-chalk-faint">
@@ -204,25 +213,19 @@ export function BannerCarousel({
       ))}
 
       {varias ? (
-        <>
+        // Los controles van juntos abajo y no a los costados: con el texto
+        // alineado a la izquierda, una flecha al costado le queda encima.
+        <div className="absolute inset-x-0 bottom-5 flex items-center justify-center gap-3">
           <button
             type="button"
             onClick={() => go(current - 1)}
             aria-label="Lámina anterior"
-            className="absolute left-2 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center border border-line-bright/40 bg-ink/40 text-chalk backdrop-blur transition-colors hover:bg-ink/70 lg:flex"
+            className="flex h-8 w-8 items-center justify-center border border-line-bright/40 bg-ink/50 text-chalk backdrop-blur transition-colors hover:bg-ink/80"
           >
             ‹
           </button>
-          <button
-            type="button"
-            onClick={() => go(current + 1)}
-            aria-label="Lámina siguiente"
-            className="absolute right-2 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center border border-line-bright/40 bg-ink/40 text-chalk backdrop-blur transition-colors hover:bg-ink/70 lg:flex"
-          >
-            ›
-          </button>
 
-          <div className="absolute inset-x-0 bottom-5 flex justify-center gap-2">
+          <div className="flex gap-2">
             {slides.map((slide, index) => (
               <button
                 key={slide.id}
@@ -237,7 +240,16 @@ export function BannerCarousel({
               />
             ))}
           </div>
-        </>
+
+          <button
+            type="button"
+            onClick={() => go(current + 1)}
+            aria-label="Lámina siguiente"
+            className="flex h-8 w-8 items-center justify-center border border-line-bright/40 bg-ink/50 text-chalk backdrop-blur transition-colors hover:bg-ink/80"
+          >
+            ›
+          </button>
+        </div>
       ) : null}
     </div>
   );

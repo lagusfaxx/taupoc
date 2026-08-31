@@ -4,7 +4,8 @@ import Image from 'next/image';
 import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  assignImageColor, deleteProductImage, reorderImages, setPrimaryImage, uploadProductImages,
+  assignImageColor, deleteProductImage, reorderImages, replaceProductImage, setPrimaryImage,
+  uploadProductImages,
 } from '@/actions/admin/products';
 import { cn } from '@/lib/utils';
 import { IconCheck, IconTrash } from '@/components/ui/Icons';
@@ -35,6 +36,7 @@ export function ImageManager({
   const [targetColor, setTargetColor] = useState<string>('');
   const [dragId, setDragId] = useState<string | null>(null);
   const [order, setOrder] = useState<string[]>(images.map((i) => i.id));
+  const [replacing, setReplacing] = useState<string | null>(null);
 
   const ordered = order
     .map((id) => images.find((i) => i.id === id))
@@ -61,6 +63,21 @@ export function ImageManager({
 
     const result = await uploadProductImages(formData);
     setUploading(false);
+    setMessage({ ok: result.ok, text: result.message });
+    if (result.ok) router.refresh();
+  }
+
+  async function replace(imageId: string, file: File | undefined) {
+    if (!file) return;
+    setReplacing(imageId);
+    setMessage(null);
+
+    const formData = new FormData();
+    formData.set('imageId', imageId);
+    formData.set('file', file);
+
+    const result = await replaceProductImage(formData);
+    setReplacing(null);
     setMessage({ ok: result.ok, text: result.message });
     if (result.ok) router.refresh();
   }
@@ -186,6 +203,18 @@ export function ImageManager({
                       Principal
                     </span>
                   ) : null}
+
+                  {/* Cambiar el archivo de esta imagen conserva su color, su
+                      posición y si es la principal. */}
+                  <label className="absolute inset-x-0 bottom-0 cursor-pointer bg-ink/80 py-1.5 text-center font-display text-[10px] font-semibold uppercase tracking-widest text-chalk opacity-0 backdrop-blur transition-opacity hover:bg-ink/95 focus-within:opacity-100 group-hover:opacity-100">
+                    {replacing === image.id ? 'Reemplazando…' : 'Reemplazar foto'}
+                    <input
+                      type="file"
+                      accept="image/*,.heic,.heif"
+                      className="sr-only"
+                      onChange={(event) => void replace(image.id, event.target.files?.[0])}
+                    />
+                  </label>
                 </div>
 
                 <div className="space-y-1.5 p-2">
