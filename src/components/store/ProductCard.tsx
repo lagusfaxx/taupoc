@@ -22,7 +22,6 @@ export interface ProductCardData {
   slug: string;
   name: string;
   modelCode: string;
-  approvalCode: string | null;
   basePrice: number;
   comingSoon: boolean;
   totalStock: number;
@@ -62,14 +61,6 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
             <div className="absolute inset-0 bg-ink-700" />
           )}
 
-          {product.approvalCode ? (
-            <span className="absolute left-3 top-3 bg-ink/85 px-2 py-1 font-mono text-[10px] tracking-wide text-chalk-dim backdrop-blur">
-              {product.approvalCode}
-            </span>
-          ) : null}
-
-          {/* Abajo y no arriba a la derecha: en tarjetas angostas chocaba con
-              el código de homologación. */}
           {unavailable ? (
             <span className="absolute bottom-3 left-3 bg-ink/85 px-2 py-1 font-display text-[10px] font-semibold uppercase tracking-widest text-chalk-dim backdrop-blur">
               {product.comingSoon ? 'Próximamente' : 'Agotado'}

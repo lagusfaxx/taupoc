@@ -85,6 +85,8 @@ export function ProductView({ product }: { product: ProductViewData }) {
   const [variantId, setVariantId] = useState<string | null>(null);
   const [state, action] = useActionState<CartActionState | null, FormData>(addToCart, null);
   const liveRef = useRef<HTMLParagraphElement>(null);
+  const compraRef = useRef<HTMLDivElement>(null);
+  const [barraVisible, setBarraVisible] = useState(false);
 
   const color = useMemo(
     () => product.colors.find((c) => c.id === colorId) ?? product.colors[0],
@@ -121,6 +123,20 @@ export function ProductView({ product }: { product: ProductViewData }) {
     if (state?.ok) router.refresh();
   }, [state, router]);
 
+  // En el teléfono la foto ocupa casi toda la primera pantalla, así que el
+  // botón de compra queda lejos. Mientras no se vea, una barra fija lo
+  // reemplaza abajo.
+  useEffect(() => {
+    const objetivo = compraRef.current;
+    if (!objetivo || typeof IntersectionObserver === 'undefined') return;
+    const observador = new IntersectionObserver(
+      ([entrada]) => setBarraVisible(!entrada.isIntersecting),
+      { threshold: 0 },
+    );
+    observador.observe(objetivo);
+    return () => observador.disconnect();
+  }, []);
+
   function selectSize(size: string) {
     const match = color?.variants.find((v) => v.size === size);
     if (match && match.available > 0) setVariantId(match.id);
@@ -135,7 +151,8 @@ export function ProductView({ product }: { product: ProductViewData }) {
         <ProductGallery images={images} colorName={color?.name ?? ''} productName={product.name} />
       </div>
 
-      <div>
+      {/* El relleno de abajo deja libre lo que tapa la barra de compra. */}
+      <div className={cn(barraVisible && 'pb-24 lg:pb-0')}>
         {/* Encabezado */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {product.lineName ? (
@@ -153,35 +170,6 @@ export function ProductView({ product }: { product: ProductViewData }) {
           <p className="mt-2.5 text-[15px] text-chalk-dim">{product.subtitle}</p>
         ) : null}
 
-        {/* Homologación: el bloque más importante de la página */}
-        {product.approvalCode ? (
-          <div className="mt-6 border accent-border bg-ink-900">
-            <div className="flex items-start gap-4 p-4 sm:p-5">
-              <IconShield className="mt-0.5 h-7 w-7 shrink-0 accent-text" />
-              <div className="min-w-0 flex-1">
-                <p className="font-display text-[10px] font-semibold uppercase tracking-mega accent-text">
-                  Homologado {product.approvalBody}
-                  {product.approvalYear ? ` · ${product.approvalYear}` : ''}
-                </p>
-                <p className="mt-2 break-all font-mono text-[22px] font-medium leading-none tracking-wider text-chalk sm:text-[26px]">
-                  {product.approvalCode}
-                </p>
-                {product.approvalVerifyUrl ? (
-                  <a
-                    href={product.approvalVerifyUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2.5 inline-flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-widest accent-text underline underline-offset-4"
-                  >
-                    Verificar en el registro oficial
-                    <IconExternal className="h-3.5 w-3.5" />
-                  </a>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        ) : null}
-
         {/* Precio */}
         <div className="mt-7">
           <Price amount={price} size="lg" />
@@ -194,7 +182,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
           ) : null}
         </div>
 
-        <form action={action} className="mt-8">
+        <form id="compra" action={action} className="mt-8">
           <input type="hidden" name="variantId" value={variant?.id ?? ''} />
           <input type="hidden" name="quantity" value="1" />
 
@@ -258,7 +246,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
           ) : null}
 
           {/* Selector de talla — el punto de mayor fricción del rubro */}
-          <fieldset>
+          <fieldset id="tallas" className="scroll-mt-24">
             <legend className="mb-3 flex w-full items-center justify-between gap-3">
               <span className="font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim">
                 Talla {variant ? <span className="text-chalk">· {variant.size}</span> : null}
@@ -330,7 +318,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
             </p>
           </fieldset>
 
-          <div className="mt-6 space-y-3">
+          <div ref={compraRef} className="mt-6 space-y-3">
             <AddButton disabled={!variant} comingSoon={product.comingSoon} />
 
             {state ? (
@@ -354,6 +342,72 @@ export function ProductView({ product }: { product: ProductViewData }) {
             ) : null}
           </div>
         </form>
+
+        {/* Homologación: va después de la compra. Es el argumento que cierra
+            la decisión, pero quien entra busca primero precio, color y talla. */}
+        {product.approvalCode ? (
+          <div className="mt-8 border accent-border bg-ink-900">
+            <div className="flex items-start gap-3.5 p-4">
+              <IconShield className="mt-0.5 h-6 w-6 shrink-0 accent-text" />
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-[10px] font-semibold uppercase tracking-mega accent-text">
+                  Homologado {product.approvalBody}
+                  {product.approvalYear ? ` · ${product.approvalYear}` : ''}
+                </p>
+                <p className="mt-1.5 break-all font-mono text-[17px] font-medium leading-none tracking-wider text-chalk">
+                  {product.approvalCode}
+                </p>
+                {product.approvalVerifyUrl ? (
+                  <a
+                    href={product.approvalVerifyUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 font-display text-[11px] font-semibold uppercase tracking-widest accent-text underline underline-offset-4"
+                  >
+                    Verificar en el registro oficial
+                    <IconExternal className="h-3.5 w-3.5" />
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Barra de compra del teléfono */}
+        {barraVisible && !product.comingSoon ? (
+          <div className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/95 backdrop-blur lg:hidden">
+            <div className="container flex items-center gap-3 py-3">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-display text-[17px] leading-none text-chalk">
+                  {formatCLP(price)}
+                </p>
+                <p className="mt-1 truncate text-[12px] text-chalk-faint">
+                  {variant ? `Talla ${variant.size} · ${color ? colorLabel(color) : ''}` : 'Elige tu talla'}
+                </p>
+              </div>
+
+              {variant ? (
+                <button
+                  type="submit"
+                  form="compra"
+                  className="h-12 shrink-0 accent-bg px-6 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm"
+                >
+                  Agregar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    document.getElementById('tallas')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }
+                  className="h-12 shrink-0 border border-line-bright px-6 font-display text-[12px] font-bold uppercase tracking-widest text-chalk clip-notch-sm"
+                >
+                  Ver tallas
+                </button>
+              )}
+            </div>
+          </div>
+        ) : null}
 
         {/* Garantías de compra */}
         <ul className="mt-8 divide-y divide-line border-y border-line">

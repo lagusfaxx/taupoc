@@ -42,7 +42,6 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     slug: product.slug,
     name: product.name,
     modelCode: product.modelCode,
-    approvalCode: product.approvalCode,
     basePrice: product.basePrice,
     comingSoon: product.status === 'COMING_SOON',
     totalStock,

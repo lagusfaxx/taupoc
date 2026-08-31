@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
 import type { NavItem } from './Header';
 import { IconClose, IconMenu } from '@/components/ui/Icons';
@@ -9,7 +10,11 @@ import { Logo } from '@/components/ui/Logo';
 
 export function MobileNav({ nav }: { nav: NavItem[] }) {
   const [open, setOpen] = useState(false);
+  const [montado, setMontado] = useState(false);
   const pathname = usePathname();
+
+  // El portal necesita el document, que en el servidor no existe.
+  useEffect(() => setMontado(true), []);
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -39,7 +44,13 @@ export function MobileNav({ nav }: { nav: NavItem[] }) {
         <IconMenu className="h-5 w-5" />
       </button>
 
-      {open ? (
+      {open && montado ? (
+        // El menú se monta colgando de <body>. El encabezado lleva
+        // backdrop-blur, y un elemento con filtro de fondo pasa a ser el
+        // bloque contenedor de sus hijos fijos: dentro de él, `fixed
+        // inset-0` no era la pantalla sino la franja del encabezado, y el
+        // menú aparecía aplastado en 64 píxeles de alto.
+        createPortal(
         <div className="fixed inset-0 z-[60] lg:hidden">
           <div
             className="absolute inset-0 bg-ink/80 backdrop-blur-sm"
@@ -97,7 +108,9 @@ export function MobileNav({ nav }: { nav: NavItem[] }) {
               </Link>
             </div>
           </nav>
-        </div>
+        </div>,
+        document.body,
+        )
       ) : null}
     </>
   );
