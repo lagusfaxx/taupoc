@@ -2,36 +2,28 @@ import { cn } from '@/lib/utils';
 import { mediaSrcSet } from '@/lib/media-url';
 
 /**
- * Marca TAUPOC: dos arcos cruzados sobre el wordmark.
- * Se dibuja en SVG para que escale sin pérdida y herede el color del contexto.
+ * Marca TAUPOC: dos cuernos cruzados, cada uno con su hoja fina por dentro,
+ * que al cruzarse dibujan el rombo del centro. Se dibuja en SVG para que
+ * escale sin pérdida y herede el color del contexto.
  */
 export function LogoMark({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 140 150"
+      viewBox="0 0 272 340"
       aria-hidden
       className={cn('h-6 w-auto', className)}
       fill="none"
       stroke="currentColor"
-      strokeWidth={11}
-      strokeLinecap="square"
+      strokeLinecap="butt"
     >
-      <path d="M18 8 C 30 62, 48 100, 70 130" />
-      <path d="M122 8 C 110 62, 92 100, 70 130" />
-      <path d="M40 76 L 104 122" />
-      <path d="M100 76 L 36 122" />
+      <path d="M33 18 C 38 156, 96 250, 224 320" strokeWidth={20} />
+      <path d="M51 26 C 64 148, 136 210, 196 320" strokeWidth={8} />
+      <path d="M239 18 C 234 156, 176 250, 48 320" strokeWidth={20} />
+      <path d="M221 26 C 208 148, 136 210, 76 320" strokeWidth={8} />
     </svg>
   );
 }
 
-/**
- * Marca del sitio.
- *
- * Con un logo subido desde el panel se muestra ese archivo; sin él, la marca
- * dibujada. La URL de una imagen subida lleva su propio identificador, así que
- * al reemplazarla cambia la dirección y el navegador no puede seguir mostrando
- * la anterior desde su caché.
- */
 export function Logo({
   className,
   compact,

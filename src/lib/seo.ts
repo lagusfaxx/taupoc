@@ -22,7 +22,11 @@ export function buildMetadata(params: {
   publishedTime?: string;
 }): Metadata {
   const url = absoluteUrl(params.path ?? '/');
-  const image = params.image ? absoluteUrl(params.image) : absoluteUrl('/og-default.png');
+  // Sin imagen propia se apunta a /api/og, que devuelve la que esté
+  // configurada en el panel. La dirección es fija a propósito: las redes
+  // guardan la vista previa por URL, y una que cambiara con cada ajuste
+  // dejaría enlaces viejos apuntando a nada.
+  const image = absoluteUrl(params.image ?? '/api/og');
   const description = params.description ?? SITE_DESCRIPTION;
 
   return {

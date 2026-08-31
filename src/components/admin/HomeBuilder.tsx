@@ -59,9 +59,11 @@ export function HomeBuilder({ blocks }: { blocks: BlockRow[] }) {
       >
         {blocks.length === 0 ? (
           <div className="px-5 py-8">
-            <p className="text-[13.5px] text-chalk-faint">
+            <p className="text-[13.5px] leading-relaxed text-chalk-faint">
               Sin bloques, el inicio muestra el catálogo, los accesos por género y línea, y el
-              bloque de clubes. Al crear el primero, esta lista pasa a mandar.
+              bloque de clubes. Esa portada se arma sola con fotos sacadas del catálogo, así que
+              no hay dónde cambiarlas. Con el botón de abajo se convierte en bloques editables:
+              en el de accesos eliges la foto de cada tarjeta.
             </p>
             <Button
               type="button"

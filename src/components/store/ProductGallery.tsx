@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { IconClose } from '@/components/ui/Icons';
 
@@ -22,6 +23,10 @@ export function ProductGallery({
 }) {
   const [index, setIndex] = useState(0);
   const [zoom, setZoom] = useState(false);
+  const [montado, setMontado] = useState(false);
+
+  // El portal necesita el document, que en el servidor no existe.
+  useEffect(() => setMontado(true), []);
 
   // Al cambiar de color cambia el set de imágenes: siempre volver a la primera.
   useEffect(() => setIndex(0), [colorName]);
@@ -90,7 +95,12 @@ export function ProductGallery({
         </span>
       </button>
 
-      {zoom ? (
+      {zoom && montado ? (
+        // La ampliación se monta colgando de <body>: la columna de la galería
+        // es sticky, y eso abre un contexto de apilamiento propio del que el
+        // z-index no sale. Dentro de él la imagen quedaba por debajo de los
+        // botones de talla de la columna siguiente.
+        createPortal(
         <div
           className="fixed inset-0 z-[90] flex items-center justify-center bg-ink/95"
           role="dialog"
@@ -130,7 +140,9 @@ export function ProductGallery({
               ))}
             </div>
           ) : null}
-        </div>
+        </div>,
+        document.body,
+        )
       ) : null}
     </div>
   );

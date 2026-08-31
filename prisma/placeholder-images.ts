@@ -15,13 +15,13 @@ function escapeXml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/** Marca TAUPOC simplificada: dos arcos cruzados. */
+/** Marca TAUPOC: dos cuernos cruzados, centrada en el origen. */
 function mark(cx: number, cy: number, scale: number, color: string, opacity: number) {
-  return `<g transform="translate(${cx} ${cy}) scale(${scale})" fill="none" stroke="${color}" stroke-width="9" opacity="${opacity}" stroke-linecap="square">
-    <path d="M -62 -70 C -46 -6 -20 34 6 66" />
-    <path d="M 62 -70 C 46 -6 20 34 -6 66" />
-    <path d="M -34 12 L 40 62" />
-    <path d="M 34 12 L -40 62" />
+  return `<g transform="translate(${cx} ${cy}) scale(${scale}) translate(-136 -170)" fill="none" stroke="${color}" opacity="${opacity}" stroke-linecap="butt">
+    <path d="M33 18 C 38 156, 96 250, 224 320" stroke-width="20" />
+    <path d="M51 26 C 64 148, 136 210, 196 320" stroke-width="8" />
+    <path d="M239 18 C 234 156, 176 250, 48 320" stroke-width="20" />
+    <path d="M221 26 C 208 148, 136 210, 76 320" stroke-width="8" />
   </g>`;
 }
 
@@ -107,7 +107,7 @@ function svgFor(opts: {
     <rect width="${w}" height="${h}" fill="url(#bg)"/>
     <rect width="${w}" height="${h}" fill="url(#grid)"/>
     ${suit}
-    ${mark(w * 0.5, h * 0.5, w / 620, '#FFFFFF', 0.07)}
+    ${mark(w * 0.5, h * 0.5, w / 1360, '#FFFFFF', 0.07)}
     <text x="${w * 0.5}" y="${h - h * 0.085}" text-anchor="middle"
           font-family="Arial,Helvetica,sans-serif" font-size="${Math.round(w * 0.032)}"
           font-weight="700" letter-spacing="${w * 0.012}" fill="rgba(255,255,255,0.82)">TAUPOC</text>
@@ -199,7 +199,7 @@ export async function generateWideImage(params: {
       <path d="M ${width * 0.68} ${height} C ${width * 0.74} ${height * 0.58}, ${width * 0.86} ${height * 0.4}, ${width} ${height * 0.06}"
             stroke="${params.hex}" stroke-opacity="0.22" stroke-width="2" fill="none"/>
     </g>
-    ${mark(width * 0.74, height * 0.46, width / 820, params.hex, 0.14)}
+    ${mark(width * 0.74, height * 0.46, width / 1800, params.hex, 0.14)}
   </svg>`;
 
   const slug = params.name

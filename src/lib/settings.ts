@@ -19,6 +19,8 @@ export interface SiteSettings {
   logoUrl: string;
   // Alto del logo en el encabezado, en píxeles.
   logoHeight: number;
+  // Imagen que se ve al compartir un enlace del sitio.
+  shareImageUrl: string;
 
   // Comercial
   freeShippingOver: number | null;
@@ -48,6 +50,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   addressLine: 'Santiago, Chile',
   logoUrl: '',
   logoHeight: 28,
+  shareImageUrl: '',
 
   freeShippingOver: 120000,
   lowStockThreshold: 1,

@@ -59,6 +59,12 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                       hint="PNG o SVG con fondo transparente"
                       defaultValue={settings.logoUrl}
                     />
+                    <MediaField
+                      name="shareImageUrl"
+                      label="Imagen al compartir"
+                      hint="1200 × 630 px"
+                      defaultValue={settings.shareImageUrl}
+                    />
                     <Input
                       label="Alto del logo"
                       name="logoHeight"
