@@ -747,6 +747,9 @@ model HomeBlock {
   /// Cuántas columnas usa una grilla de productos o de mosaico.
   columns Int @default(4)
 
+  /// Segundos que dura cada lámina de un banner con varias.
+  intervalSec Int @default(6)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -765,11 +768,14 @@ model HomeBlockItem {
   product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   position Int     @default(0)
+  eyebrow  String?
   label    String?
   caption  String?
+  ctaLabel String?
   href     String?
   imageUrl String?
   videoUrl String?
+  posterUrl String?
 
   @@index([blockId, position])
 }

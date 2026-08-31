@@ -6,6 +6,7 @@ import { ProductCard } from '@/components/store/ProductCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
 import { BlockMedia } from './BlockMedia';
+import { BannerCarousel, type BannerSlide } from './BannerCarousel';
 
 /** Alto del bloque según lo elegido en el panel. */
 const HEIGHTS: Record<string, string> = {
@@ -16,11 +17,6 @@ const HEIGHTS: Record<string, string> = {
   PANTALLA: 'min-h-[86svh]',
 };
 
-const ALIGN: Record<string, string> = {
-  IZQUIERDA: 'items-start text-left',
-  CENTRO: 'items-center text-center',
-  DERECHA: 'items-end text-right',
-};
 
 const BACKGROUNDS: Record<string, string> = {
   ink: 'bg-ink',
@@ -110,75 +106,59 @@ function Banner({
   priority: boolean;
   first: boolean;
 }) {
-  const media = block.imageUrl || block.videoUrl;
-  const texto = block.title || block.subtitle || block.eyebrow || block.ctaLabel;
+  // Las láminas del bloque mandan; sin ellas, el banner es la foto o el video
+  // del propio bloque, que es como se creaban antes.
+  const slides: BannerSlide[] =
+    block.cards.length > 0
+      ? block.cards.map((card) => ({
+          id: card.id,
+          eyebrow: card.eyebrow,
+          title: card.label,
+          subtitle: card.caption,
+          ctaLabel: card.ctaLabel,
+          ctaHref: card.href,
+          imageUrl: card.imageUrl,
+          videoUrl: card.videoUrl,
+          posterUrl: card.posterUrl,
+        }))
+      : [
+          {
+            id: block.id,
+            eyebrow: block.eyebrow ?? '',
+            title: block.title ?? '',
+            subtitle: block.subtitle ?? '',
+            ctaLabel: block.ctaLabel ?? '',
+            ctaHref: block.ctaHref ?? '',
+            ctaAltLabel: block.ctaAltLabel ?? '',
+            ctaAltHref: block.ctaAltHref ?? '',
+            imageUrl: block.imageUrl,
+            imageMobileUrl: block.imageMobileUrl,
+            videoUrl: block.videoUrl,
+            posterUrl: block.posterUrl,
+          },
+        ];
+
+  const conMedio = slides.some((slide) => slide.imageUrl || slide.videoUrl);
 
   return (
-    <section className={cn('relative', borde(first), !media && BACKGROUNDS[block.background])}>
-      {media ? (
-        <div className="absolute inset-0 overflow-hidden">
-          <BlockMedia
-            imageUrl={block.imageUrl}
-            imageMobileUrl={block.imageMobileUrl}
-            videoUrl={block.videoUrl}
-            posterUrl={block.posterUrl}
-            alt={block.title ?? ''}
-            fit={block.fit}
-            priority={priority}
-          />
-          {/* El oscurecido es lo que hace legible el texto sobre la foto. */}
-          <span
-            aria-hidden
-            className="absolute inset-0 bg-ink"
-            style={{ opacity: Math.min(90, Math.max(0, block.overlay)) / 100 }}
-          />
-        </div>
-      ) : null}
-
-      <div
-        className={cn(
-          'container relative flex flex-col justify-center py-14 lg:py-16',
-          HEIGHTS[block.height] ?? HEIGHTS.MEDIA,
-          ALIGN[block.align] ?? ALIGN.IZQUIERDA,
-        )}
-      >
-        {texto ? (
-          <div className="max-w-xl">
-            {block.eyebrow ? (
-              <p className="font-display text-[10px] font-semibold uppercase tracking-mega text-chalk-faint">
-                {block.eyebrow}
-              </p>
-            ) : null}
-            {block.title ? (
-              <h2 className="mt-3 text-[32px] leading-[0.95] text-chalk lg:text-[46px]">
-                {block.title}
-              </h2>
-            ) : null}
-            {block.subtitle ? (
-              <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">{block.subtitle}</p>
-            ) : null}
-
-            {block.ctaLabel && block.ctaHref ? (
-              <div
-                className={cn(
-                  'mt-7 flex flex-wrap gap-3',
-                  block.align === 'CENTRO' && 'justify-center',
-                  block.align === 'DERECHA' && 'justify-end',
-                )}
-              >
-                <ButtonLink href={block.ctaHref} size="lg">
-                  {block.ctaLabel}
-                </ButtonLink>
-                {block.ctaAltLabel && block.ctaAltHref ? (
-                  <ButtonLink href={block.ctaAltHref} size="lg" variant="outline">
-                    {block.ctaAltLabel}
-                  </ButtonLink>
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+    <section
+      className={cn(
+        'relative',
+        // Un banner sin alto definido no se vería: las láminas van
+        // posicionadas encima y no empujan la sección.
+        HEIGHTS[block.height] === HEIGHTS.AUTO ? HEIGHTS.MEDIA : HEIGHTS[block.height] ?? HEIGHTS.MEDIA,
+        borde(first),
+        !conMedio && BACKGROUNDS[block.background],
+      )}
+    >
+      <BannerCarousel
+        slides={slides}
+        intervalSec={block.intervalSec}
+        overlay={conMedio ? block.overlay : 0}
+        fit={block.fit}
+        align={block.align}
+        priority={priority}
+      />
     </section>
   );
 }

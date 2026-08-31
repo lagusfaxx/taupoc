@@ -63,14 +63,19 @@ export default async function EditarBloquePage({ params }: { params: Promise<{ i
           align: block.align,
           background: block.background,
           columns: block.columns,
+          intervalSec: block.intervalSec,
           productIds: block.items.flatMap((item) => (item.productId ? [item.productId] : [])),
           cards: block.items
             .filter((item) => !item.productId)
             .map((item) => ({
+              eyebrow: item.eyebrow ?? '',
               label: item.label ?? '',
               caption: item.caption ?? '',
+              ctaLabel: item.ctaLabel ?? '',
               href: item.href ?? '',
               imageUrl: item.imageUrl ?? '',
+              videoUrl: item.videoUrl ?? '',
+              posterUrl: item.posterUrl ?? '',
             })),
         }}
       />

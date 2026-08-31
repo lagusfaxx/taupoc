@@ -76,6 +76,7 @@ const blockSchema = z.object({
   align: z.string().optional(),
   background: z.string().optional(),
   columns: z.string().optional(),
+  intervalSec: z.string().optional(),
   active: z.string().optional(),
 });
 
@@ -124,6 +125,7 @@ export async function saveBlock(
       align: aligns.includes(d.align as BlockAlign) ? (d.align as BlockAlign) : 'IZQUIERDA',
       background: (d.background ?? 'ink').trim() || 'ink',
       columns: Math.min(5, Math.max(2, Number(d.columns) || 4)),
+      intervalSec: Math.min(30, Math.max(2, Number(d.intervalSec) || 6)),
       active: d.active === 'on',
     },
   });
@@ -131,22 +133,34 @@ export async function saveBlock(
   // Los productos elegidos y las tarjetas sueltas viajan como listas propias.
   const productIds = formData.getAll('productId').map(String).filter(Boolean);
   const cardLabels = formData.getAll('cardLabel').map(String);
+  const cardEyebrows = formData.getAll('cardEyebrow').map(String);
   const cardCaptions = formData.getAll('cardCaption').map(String);
+  const cardCtas = formData.getAll('cardCta').map(String);
   const cardHrefs = formData.getAll('cardHref').map(String);
   const cardImages = formData.getAll('cardImage').map(String);
+  const cardVideos = formData.getAll('cardVideo').map(String);
+  const cardPosters = formData.getAll('cardPoster').map(String);
 
   const items = [
     ...productIds.map((productId, index) => ({ productId, position: index })),
+    // Una lámina de banner puede ser solo un video sin texto, así que basta
+    // con que tenga título o algún medio para contar como llena.
     ...cardLabels.flatMap((label, index) => {
       const clean = label.trim();
-      if (!clean) return [];
+      const imageUrl = mediaHref(cardImages[index]);
+      const videoUrl = mediaHref(cardVideos[index]);
+      if (!clean && !imageUrl && !videoUrl) return [];
       return [
         {
           position: productIds.length + index,
-          label: clean.slice(0, 80),
+          label: clean.slice(0, 120) || null,
+          eyebrow: text(cardEyebrows[index]),
           caption: text(cardCaptions[index]),
+          ctaLabel: text(cardCtas[index]),
           href: text(cardHrefs[index]),
-          imageUrl: mediaHref(cardImages[index]),
+          imageUrl,
+          videoUrl,
+          posterUrl: mediaHref(cardPosters[index]),
         },
       ];
     }),

@@ -33,9 +33,32 @@ export interface BlockFormData {
   align: string;
   background: string;
   columns: number;
+  intervalSec: number;
   productIds: string[];
-  cards: { label: string; caption: string; href: string; imageUrl: string }[];
+  cards: SlideData[];
 }
+
+export interface SlideData {
+  eyebrow: string;
+  label: string;
+  caption: string;
+  ctaLabel: string;
+  href: string;
+  imageUrl: string;
+  videoUrl: string;
+  posterUrl: string;
+}
+
+const SLIDE_VACIA: SlideData = {
+  eyebrow: '',
+  label: '',
+  caption: '',
+  ctaLabel: '',
+  href: '',
+  imageUrl: '',
+  videoUrl: '',
+  posterUrl: '',
+};
 
 export interface PickableProduct {
   id: string;
@@ -55,11 +78,29 @@ export function HomeBlockForm({
   const router = useRouter();
   const [state, action, pending] = useActionState(saveBlock, null);
   const [picked, setPicked] = useState<string[]>(block.productIds);
-  const [cards, setCards] = useState(
-    block.cards.length > 0 ? block.cards : [{ label: '', caption: '', href: '', imageUrl: '' }],
-  );
+  const esBanner = block.type === 'BANNER';
 
-  const conMedio = TIPO_MEDIO.includes(block.type);
+  // Un banner que todavía guarda su foto y su texto en el bloque se muestra
+  // como una lámina ya llena: así se le pueden agregar más sin rehacerlo.
+  const [cards, setCards] = useState<SlideData[]>(() => {
+    if (block.cards.length > 0) return block.cards;
+    if (!esBanner) return [SLIDE_VACIA];
+    return [
+      {
+        ...SLIDE_VACIA,
+        eyebrow: block.eyebrow ?? '',
+        label: block.title ?? '',
+        caption: block.subtitle ?? '',
+        ctaLabel: block.ctaLabel ?? '',
+        href: block.ctaHref ?? '',
+        imageUrl: block.imageUrl ?? '',
+        videoUrl: block.videoUrl ?? '',
+        posterUrl: block.posterUrl ?? '',
+      },
+    ];
+  });
+
+  const conMedio = block.type === 'MEDIA';
   const conProductos = block.type === 'PRODUCTOS';
   const conTarjetas = block.type === 'CATEGORIAS';
 
@@ -76,6 +117,16 @@ export function HomeBlockForm({
       const to = from + delta;
       if (from < 0 || to < 0 || to >= next.length) return current;
       next.splice(to, 0, ...next.splice(from, 1));
+      return next;
+    });
+  }
+
+  function moveCard(index: number, delta: number) {
+    setCards((current) => {
+      const next = [...current];
+      const to = index + delta;
+      if (to < 0 || to >= next.length) return current;
+      next.splice(to, 0, ...next.splice(index, 1));
       return next;
     });
   }
@@ -98,7 +149,7 @@ export function HomeBlockForm({
               defaultValue={block.label}
             />
 
-            {block.type !== 'MEDIA' ? (
+            {block.type !== 'MEDIA' && !esBanner ? (
               <>
                 <Input name="eyebrow" label="Antetítulo" defaultValue={block.eyebrow ?? ''} />
                 <Input name="title" label="Título" defaultValue={block.title ?? ''} />
@@ -106,9 +157,9 @@ export function HomeBlockForm({
               </>
             ) : (
               <>
-                <input type="hidden" name="eyebrow" value="" />
+                <input type="hidden" name="eyebrow" value={esBanner ? (block.eyebrow ?? '') : ''} />
                 <input type="hidden" name="title" value={block.title ?? ''} />
-                <input type="hidden" name="subtitle" value="" />
+                <input type="hidden" name="subtitle" value={esBanner ? (block.subtitle ?? '') : ''} />
               </>
             )}
 
@@ -118,15 +169,22 @@ export function HomeBlockForm({
               <input type="hidden" name="body" value={block.body ?? ''} />
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Input name="ctaLabel" label="Botón" defaultValue={block.ctaLabel ?? ''} />
-              <Input
-                name="ctaHref"
-                label="Enlace del botón"
-                placeholder="/catalogo"
-                defaultValue={block.ctaHref ?? ''}
-              />
-            </div>
+            {esBanner ? (
+              <>
+                <input type="hidden" name="ctaLabel" value={block.ctaLabel ?? ''} />
+                <input type="hidden" name="ctaHref" value={block.ctaHref ?? ''} />
+              </>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input name="ctaLabel" label="Botón" defaultValue={block.ctaLabel ?? ''} />
+                <Input
+                  name="ctaHref"
+                  label="Enlace del botón"
+                  placeholder="/catalogo"
+                  defaultValue={block.ctaHref ?? ''}
+                />
+              </div>
+            )}
 
             {conMedio ? (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -139,8 +197,8 @@ export function HomeBlockForm({
               </div>
             ) : (
               <>
-                <input type="hidden" name="ctaAltLabel" value="" />
-                <input type="hidden" name="ctaAltHref" value="" />
+                <input type="hidden" name="ctaAltLabel" value={block.ctaAltLabel ?? ''} />
+                <input type="hidden" name="ctaAltHref" value={block.ctaAltHref ?? ''} />
               </>
             )}
           </div>
@@ -245,26 +303,69 @@ export function HomeBlockForm({
           </Card>
         ) : null}
 
-        {conTarjetas ? (
-          <Card title="Tarjetas" description="Cada una es un acceso con su foto y su enlace.">
+        {conTarjetas || esBanner ? (
+          <Card
+            title={esBanner ? 'Láminas' : 'Tarjetas'}
+            description={
+              esBanner
+                ? 'Con más de una, el banner las va pasando solo: las fotos por tiempo y los videos cuando terminan.'
+                : 'Cada una es un acceso con su foto y su enlace.'
+            }
+          >
             <div className="grid gap-4">
               {cards.map((card, index) => (
                 <div key={index} className="grid gap-3 border border-line bg-ink p-4">
                   <div className="flex items-center justify-between">
-                    <Label>Tarjeta {index + 1}</Label>
-                    <button
-                      type="button"
-                      onClick={() => setCards((current) => current.filter((_, i) => i !== index))}
-                      className="text-[12px] text-chalk-faint hover:text-signal-bad"
-                    >
-                      Quitar
-                    </button>
+                    <Label>
+                      {esBanner ? 'Lámina' : 'Tarjeta'} {index + 1}
+                    </Label>
+                    <div className="flex items-center gap-3">
+                      {cards.length > 1 ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => moveCard(index, -1)}
+                            className="text-chalk-faint hover:text-chalk"
+                            aria-label="Subir"
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveCard(index, 1)}
+                            className="text-chalk-faint hover:text-chalk"
+                            aria-label="Bajar"
+                          >
+                            ↓
+                          </button>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => setCards((current) => current.filter((_, i) => i !== index))}
+                        className="text-[12px] text-chalk-faint hover:text-signal-bad"
+                      >
+                        Quitar
+                      </button>
+                    </div>
                   </div>
 
                   <input type="hidden" name="cardLabel" value={card.label} />
+                  <input type="hidden" name="cardEyebrow" value={card.eyebrow} />
                   <input type="hidden" name="cardCaption" value={card.caption} />
+                  <input type="hidden" name="cardCta" value={card.ctaLabel} />
                   <input type="hidden" name="cardHref" value={card.href} />
                   <input type="hidden" name="cardImage" value={card.imageUrl} />
+                  <input type="hidden" name="cardVideo" value={card.videoUrl} />
+                  <input type="hidden" name="cardPoster" value={card.posterUrl} />
+
+                  {esBanner ? (
+                    <Input
+                      label="Antetítulo"
+                      value={card.eyebrow}
+                      onChange={(event) => updateCard(index, { eyebrow: event.target.value })}
+                    />
+                  ) : null}
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <Input
@@ -273,24 +374,51 @@ export function HomeBlockForm({
                       onChange={(event) => updateCard(index, { label: event.target.value })}
                     />
                     <Input
-                      label="Enlace"
-                      placeholder="/catalogo?genero=MALE"
+                      label={esBanner ? 'Enlace del botón' : 'Enlace'}
+                      placeholder="/catalogo"
                       value={card.href}
                       onChange={(event) => updateCard(index, { href: event.target.value })}
                     />
                   </div>
 
-                  <Input
-                    label="Nota"
-                    value={card.caption}
-                    onChange={(event) => updateCard(index, { caption: event.target.value })}
-                  />
+                  <div className={cn('grid gap-3', esBanner && 'sm:grid-cols-2')}>
+                    <Input
+                      label={esBanner ? 'Bajada' : 'Nota'}
+                      value={card.caption}
+                      onChange={(event) => updateCard(index, { caption: event.target.value })}
+                    />
+                    {esBanner ? (
+                      <Input
+                        label="Botón"
+                        value={card.ctaLabel}
+                        onChange={(event) => updateCard(index, { ctaLabel: event.target.value })}
+                      />
+                    ) : null}
+                  </div>
 
                   <MediaField
-                    label="Foto"
+                    label={esBanner ? 'Imagen' : 'Foto'}
                     value={card.imageUrl}
                     onChange={(imageUrl) => updateCard(index, { imageUrl })}
                   />
+
+                  {esBanner ? (
+                    <>
+                      <MediaField
+                        label="Video"
+                        hint="mp4 o webm"
+                        kind="video"
+                        value={card.videoUrl}
+                        onChange={(videoUrl) => updateCard(index, { videoUrl })}
+                      />
+                      <MediaField
+                        label="Primer cuadro del video"
+                        hint="opcional"
+                        value={card.posterUrl}
+                        onChange={(posterUrl) => updateCard(index, { posterUrl })}
+                      />
+                    </>
+                  ) : null}
                 </div>
               ))}
 
@@ -298,12 +426,10 @@ export function HomeBlockForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() =>
-                  setCards((current) => [...current, { label: '', caption: '', href: '', imageUrl: '' }])
-                }
+                onClick={() => setCards((current) => [...current, SLIDE_VACIA])}
               >
                 <IconPlus className="h-3.5 w-3.5" />
-                Agregar tarjeta
+                {esBanner ? 'Agregar lámina' : 'Agregar tarjeta'}
               </Button>
             </div>
           </Card>
@@ -315,7 +441,7 @@ export function HomeBlockForm({
           <div className="grid gap-4">
             <Checkbox name="active" label="Visible en el inicio" defaultChecked={block.active} />
 
-            {conMedio ? (
+            {conMedio || esBanner ? (
               <>
                 <Select name="height" label="Alto" defaultValue={block.height}>
                   <option value="COMPACTA">Compacto</option>
@@ -344,6 +470,20 @@ export function HomeBlockForm({
                   help="0 deja la foto tal cual; súbelo hasta que el texto se lea."
                   defaultValue={block.overlay}
                 />
+
+                {esBanner ? (
+                  <Input
+                    name="intervalSec"
+                    type="number"
+                    min={2}
+                    max={30}
+                    label="Segundos por lámina"
+                    help="Solo para las fotos: un video pasa cuando termina."
+                    defaultValue={block.intervalSec}
+                  />
+                ) : (
+                  <input type="hidden" name="intervalSec" value={block.intervalSec} />
+                )}
               </>
             ) : (
               <>
@@ -351,6 +491,7 @@ export function HomeBlockForm({
                 <input type="hidden" name="align" value={block.align} />
                 <input type="hidden" name="fit" value={block.fit} />
                 <input type="hidden" name="overlay" value={block.overlay} />
+                <input type="hidden" name="intervalSec" value={block.intervalSec} />
               </>
             )}
 

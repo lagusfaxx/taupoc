@@ -39,15 +39,20 @@ export async function getHomeBlocks() {
       const product = item.productId ? byId.get(item.productId) : undefined;
       return product ? [product] : [];
     }),
+    // Las mismas filas sirven de tarjeta en un bloque de accesos y de lámina
+    // en un banner con varias; cambia qué campos usa cada uno al mostrarlas.
     cards: block.items
       .filter((item) => !item.productId)
       .map((item) => ({
         id: item.id,
+        eyebrow: item.eyebrow ?? '',
         label: item.label ?? '',
         caption: item.caption ?? '',
+        ctaLabel: item.ctaLabel ?? '',
         href: item.href ?? '',
         imageUrl: item.imageUrl,
         videoUrl: item.videoUrl,
+        posterUrl: item.posterUrl,
       })),
   }));
 }

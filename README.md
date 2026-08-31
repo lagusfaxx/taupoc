@@ -239,8 +239,8 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
   carga de imágenes con drag & drop y asignación por color; tabla de tallas y
   ficha técnica editables.
 - **Inicio** — bloques que arman la portada en el orden que se quiera: banners
-  con foto o video, franjas de productos elegidos a mano, tarjetas de acceso,
-  bloques de texto. Cada bloque se sube, se baja, se duplica, se oculta o se
+  de una o varias láminas —fotos y videos mezclados, pasando solos—, franjas de
+  productos elegidos a mano, tarjetas de acceso, bloques de texto. Cada bloque se sube, se baja, se duplica, se oculta o se
   borra. Las fotos y los videos se suben arrastrándolos o pegando una dirección.
 - **Inventario** — ajuste rápido de cualquier SKU, filtros por agotado y stock bajo.
 - **Clientes** — historial de compras, talla habitual, gestión de permisos.
