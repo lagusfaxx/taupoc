@@ -4,7 +4,13 @@ import { prisma } from '@/lib/db';
 import { getPayment, verifyWebhookSignature } from '@/lib/mercadopago';
 import { commitStockForOrder, restoreStockForOrder } from '@/lib/inventory';
 import { logOrderEvent } from '@/lib/orders';
-import { sendAdminNewOrder, sendOrderPaid } from '@/lib/mail';
+import {
+  sendAdminNewOrder,
+  sendOrderPaid,
+  sendOrderCancelled,
+  sendOrderRefunded,
+  type OrderMailData,
+} from '@/lib/mail';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -122,6 +128,25 @@ async function processPayment(paymentId: string) {
     },
   });
 
+  // Los datos del correo salen del mismo pedido en ambos caminos: pago
+  // acreditado y reversión.
+  const mailData: OrderMailData = {
+    number: order.number,
+    email: order.email,
+    firstName: order.firstName,
+    subtotal: order.subtotal,
+    discountTotal: order.discountTotal,
+    shippingTotal: order.shippingTotal,
+    total: order.total,
+    shippingLabel: order.shippingLabel,
+    isPickup: order.isPickup,
+    street: order.street,
+    streetNumber: order.streetNumber,
+    commune: order.commune,
+    region: order.region,
+    items: order.items,
+  };
+
   // El stock se descuenta una sola vez, al pasar a aprobado.
   if (payment.status === 'APPROVED' && previous !== 'APPROVED') {
     await commitStockForOrder(order.id);
@@ -133,22 +158,6 @@ async function processPayment(paymentId: string) {
       });
     }
 
-    const mailData = {
-      number: order.number,
-      email: order.email,
-      firstName: order.firstName,
-      subtotal: order.subtotal,
-      discountTotal: order.discountTotal,
-      shippingTotal: order.shippingTotal,
-      total: order.total,
-      shippingLabel: order.shippingLabel,
-      isPickup: order.isPickup,
-      street: order.street,
-      streetNumber: order.streetNumber,
-      commune: order.commune,
-      region: order.region,
-      items: order.items,
-    };
     await Promise.allSettled([sendOrderPaid(mailData), sendAdminNewOrder(mailData)]);
   }
 
@@ -164,5 +173,11 @@ async function processPayment(paymentId: string) {
       message: 'Stock devuelto al inventario tras la reversión del pago.',
       actor: 'Sistema',
     });
+
+    // Al cliente le cambió la plata: se entera por correo, no entrando al
+    // panel. Un pago anulado se cuenta como cancelación; devuelto o
+    // contracargado, como reembolso.
+    const aviso = payment.status === 'CANCELLED' ? sendOrderCancelled : sendOrderRefunded;
+    await aviso(mailData).catch(() => {});
   }
 }

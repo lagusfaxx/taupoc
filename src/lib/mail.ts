@@ -2,6 +2,7 @@ import 'server-only';
 import nodemailer, { type Transporter } from 'nodemailer';
 import { formatCLP } from './money';
 import { getSettings } from './settings';
+import { isMediaUrl } from './media-url';
 
 /**
  * Correo transaccional. Se elige el transporte en este orden:
@@ -94,52 +95,169 @@ export async function sendMail(opts: MailOptions) {
 
 // ── Plantillas ────────────────────────────────────────────────
 
-const BRAND_BG = '#07090B';
+/*
+ * Paleta espejo de `tailwind.config.ts`. Va duplicada a propósito: el correo
+ * se arma con estilos en línea porque los clientes ignoran las hojas de
+ * estilo, así que no puede leer los tokens de Tailwind.
+ */
+const INK = '#07090B';
+const INK_900 = '#0B0E11';
+const INK_800 = '#11151A';
+const LINE = '#232A33';
+const LINE_SOFT = '#1A2027';
+const CHALK = '#F4F6F8';
+const CHALK_DIM = '#B9C1CB';
+const CHALK_FAINT = '#7C8795';
 const ACCENT = '#00E0B8';
+const OK = '#22C58B';
+const WARN = '#F0A93B';
+const BAD = '#F04B4B';
 
-function layout(title: string, body: string, siteUrl: string) {
+/** Nada de lo que viene de la base entra crudo al HTML del correo. */
+function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+interface Brand {
+  siteUrl: string;
+  storeName: string;
+  logoUrl: string;
+  logoHeight: number;
+  logoHasName: boolean;
+  contactEmail: string;
+}
+
+async function brand(): Promise<Brand> {
+  const s = await getSettings();
+  return {
+    siteUrl: (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, ''),
+    storeName: s.storeName || 'TAUPOC Chile',
+    logoUrl: s.logoUrl,
+    logoHeight: s.logoHeight,
+    logoHasName: s.logoHasName,
+    contactEmail: s.contactEmail,
+  };
+}
+
+/** El correo viaja fuera del sitio: toda ruta interna necesita el dominio. */
+function absolute(siteUrl: string, url: string): string {
+  if (/^https?:\/\//i.test(url)) return url;
+  return `${siteUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+/**
+ * Encabezado de marca.
+ *
+ * Si hay logo subido en el panel se usa ese; el texto alternativo repite el
+ * nombre porque casi todos los clientes bloquean imágenes la primera vez, y
+ * un encabezado vacío deja el correo sin identidad. Cuando el archivo ya
+ * trae el nombre escrito (`logoHasName`) no se repite debajo.
+ */
+function logoBlock(b: Brand): string {
+  if (b.logoUrl) {
+    // Se pide al doble de alto para que no se vea borroso en pantallas retina.
+    const src = absolute(b.siteUrl, isMediaUrl(b.logoUrl) ? `${b.logoUrl}?w=640` : b.logoUrl);
+    const alto = Math.min(64, Math.max(18, b.logoHeight));
+    return `<img src="${esc(src)}" alt="${esc(b.storeName)}" height="${alto}"
+      style="display:block;border:0;outline:none;height:${alto}px;width:auto;max-width:100%;
+             font-family:'Helvetica Neue',Arial,sans-serif;font-size:20px;font-weight:800;
+             letter-spacing:.2em;color:${CHALK};">
+      ${b.logoHasName ? '' : `<div style="font-size:19px;font-weight:800;letter-spacing:.22em;color:${CHALK};margin-top:10px;">TAUPOC</div>`}`;
+  }
+  return `<div style="font-size:22px;font-weight:800;letter-spacing:.22em;color:${CHALK};">TAUPOC</div>`;
+}
+
+function layout(opts: { title: string; preheader: string; body: string; brand: Brand }): string {
+  const { title, preheader, body, brand: b } = opts;
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title></head>
-<body style="margin:0;padding:0;background:${BRAND_BG};font-family:'Helvetica Neue',Arial,sans-serif;color:#F4F6F8;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${BRAND_BG};padding:32px 16px;">
+<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">
+<title>${esc(title)}</title></head>
+<body style="margin:0;padding:0;background:${INK};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;color:${CHALK};-webkit-font-smoothing:antialiased;">
+  <!-- Texto de vista previa: es lo que la bandeja muestra junto al asunto. -->
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${esc(preheader)}</div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${INK};padding:32px 16px;">
     <tr><td align="center">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0F1216;border:1px solid #232A33;">
-        <tr><td style="padding:28px 32px;border-bottom:1px solid #232A33;">
-          <div style="font-size:22px;font-weight:800;letter-spacing:.22em;color:#fff;">TAUPOC</div>
-          <div style="font-size:11px;letter-spacing:.24em;color:${ACCENT};margin-top:6px;text-transform:uppercase;">Chile · Distribuidor oficial</div>
+
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:${INK_900};border:1px solid ${LINE};">
+        <!-- Filo de acento: la misma firma que corona el sitio. -->
+        <tr><td style="height:3px;background:${ACCENT};line-height:3px;font-size:0;">&nbsp;</td></tr>
+
+        <tr><td style="padding:30px 32px 26px;border-bottom:1px solid ${LINE};">
+          ${logoBlock(b)}
+          <div style="font-size:10px;letter-spacing:.24em;color:${ACCENT};margin-top:10px;text-transform:uppercase;">Chile · Distribuidor oficial</div>
         </td></tr>
-        <tr><td style="padding:32px;font-size:15px;line-height:1.65;color:#C9D1DA;">${body}</td></tr>
-        <tr><td style="padding:20px 32px;border-top:1px solid #232A33;font-size:12px;color:#7C8795;">
-          <a href="${siteUrl}" style="color:${ACCENT};text-decoration:none;">taupoc.cl</a>
-          &nbsp;·&nbsp; Trajes de competición homologados World Aquatics
+
+        <tr><td style="padding:32px;font-size:15px;line-height:1.65;color:${CHALK_DIM};">${body}</td></tr>
+
+        <tr><td style="padding:22px 32px;border-top:1px solid ${LINE};background:${INK};">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+            <td style="font-size:12px;color:${CHALK_FAINT};line-height:1.7;">
+              <a href="${b.siteUrl}/catalogo" style="color:${CHALK_DIM};text-decoration:none;">Catálogo</a>
+              <span style="color:${LINE_SOFT};"> · </span>
+              <a href="${b.siteUrl}/cuenta/pedidos" style="color:${CHALK_DIM};text-decoration:none;">Mis pedidos</a>
+              <span style="color:${LINE_SOFT};"> · </span>
+              <a href="${b.siteUrl}/contacto" style="color:${CHALK_DIM};text-decoration:none;">Contacto</a>
+              <div style="margin-top:10px;">Trajes de competición homologados World Aquatics.</div>
+              ${b.contactEmail ? `<div style="margin-top:4px;">Dudas: <a href="mailto:${esc(b.contactEmail)}" style="color:${ACCENT};text-decoration:none;">${esc(b.contactEmail)}</a></div>` : ''}
+            </td>
+          </tr></table>
         </td></tr>
       </table>
+
+      <div style="max-width:560px;margin:16px auto 0;font-size:11px;line-height:1.6;color:#5A6470;text-align:center;">
+        Recibes este correo porque hiciste un pedido en
+        <a href="${b.siteUrl}" style="color:#5A6470;">taupoc.cl</a>.
+      </div>
+
     </td></tr>
   </table>
 </body></html>`;
+}
+
+/** Antetítulo de color + titular. Abre todos los correos de pedido. */
+function heading(eyebrow: string, color: string, title: string): string {
+  return `<p style="margin:0 0 10px;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:${color};font-weight:700;">${esc(eyebrow)}</p>
+    <p style="margin:0 0 16px;color:${CHALK};font-size:22px;line-height:1.25;font-weight:700;">${title}</p>`;
+}
+
+/** Recuadro para destacar un dato: seguimiento, dirección, motivo. */
+function panel(label: string, inner: string, color = LINE): string {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0;">
+    <tr><td style="padding:16px 18px;background:${INK_800};border:1px solid ${color};">
+      <div style="font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:${CHALK_FAINT};">${esc(label)}</div>
+      <div style="margin-top:8px;color:${CHALK_DIM};font-size:14px;line-height:1.6;">${inner}</div>
+    </td></tr></table>`;
 }
 
 function itemsTable(items: { productName: string; colorName: string; size: string; quantity: number; lineTotal: number }[]) {
   const rows = items
     .map(
       (i) => `<tr>
-        <td style="padding:10px 0;border-bottom:1px solid #1A2027;">
-          <div style="color:#F4F6F8;font-weight:600;">${i.productName}</div>
-          <div style="color:#7C8795;font-size:13px;">${i.colorName} · Talla ${i.size} · ${i.quantity} u.</div>
+        <td valign="top" style="padding:12px 0;border-bottom:1px solid ${LINE_SOFT};">
+          <div style="color:${CHALK};font-weight:600;font-size:14.5px;">${esc(i.productName)}</div>
+          <div style="color:${CHALK_FAINT};font-size:12.5px;margin-top:3px;">${esc(i.colorName)} · Talla ${esc(i.size)} · ${i.quantity} u.</div>
         </td>
-        <td align="right" style="padding:10px 0;border-bottom:1px solid #1A2027;color:#F4F6F8;white-space:nowrap;">${formatCLP(i.lineTotal)}</td>
+        <td align="right" valign="top" style="padding:12px 0 12px 16px;border-bottom:1px solid ${LINE_SOFT};color:${CHALK};white-space:nowrap;font-size:14.5px;">${formatCLP(i.lineTotal)}</td>
       </tr>`,
     )
     .join('');
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0;">${rows}</table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0;">
+    <tr><td colspan="2" style="padding-bottom:10px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:${CHALK_FAINT};border-bottom:1px solid ${LINE};">Tu pedido</td></tr>
+    ${rows}
+  </table>`;
 }
 
 function totals(o: { subtotal: number; discountTotal: number; shippingTotal: number; total: number }) {
   const line = (label: string, value: string, strong = false) =>
-    `<tr><td style="padding:4px 0;color:${strong ? '#F4F6F8' : '#7C8795'};font-weight:${strong ? 700 : 400};">${label}</td>
-     <td align="right" style="padding:4px 0;color:${strong ? ACCENT : '#C9D1DA'};font-weight:${strong ? 700 : 400};font-size:${strong ? '18px' : '14px'};">${value}</td></tr>`;
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+    `<tr><td style="padding:${strong ? '12px 0 0' : '5px 0'};color:${strong ? CHALK : CHALK_FAINT};font-weight:${strong ? 700 : 400};font-size:${strong ? '15px' : '13.5px'};${strong ? `border-top:1px solid ${LINE};` : ''}">${label}</td>
+     <td align="right" style="padding:${strong ? '12px 0 0' : '5px 0'};color:${strong ? ACCENT : CHALK_DIM};font-weight:${strong ? 700 : 400};font-size:${strong ? '20px' : '13.5px'};white-space:nowrap;${strong ? `border-top:1px solid ${LINE};` : ''}">${value}</td></tr>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
     ${line('Subtotal', formatCLP(o.subtotal))}
     ${o.discountTotal > 0 ? line('Descuento', `-${formatCLP(o.discountTotal)}`) : ''}
     ${line('Despacho', o.shippingTotal > 0 ? formatCLP(o.shippingTotal) : 'Gratis')}
@@ -167,84 +285,203 @@ export interface OrderMailData {
   items: { productName: string; colorName: string; size: string; quantity: number; lineTotal: number }[];
 }
 
-function button(href: string, label: string) {
-  return `<a href="${href}" style="display:inline-block;background:${ACCENT};color:#07090B;font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:13px;padding:14px 26px;text-decoration:none;">${label}</a>`;
+/** Cómo llega el pedido: retiro coordinado o dirección de despacho. */
+function deliveryBlock(order: OrderMailData): string {
+  if (order.isPickup) {
+    return panel('Retiro', esc(order.shippingLabel ?? 'Retiro coordinado en Santiago'));
+  }
+  const calle = [order.street, order.streetNumber].filter(Boolean).join(' ');
+  const resto = [order.commune, order.region].filter(Boolean).join(', ');
+  return panel('Despacho a', `${esc(calle)}${resto ? `<br>${esc(resto)}` : ''}${order.shippingLabel ? `<br><span style="color:${CHALK_FAINT};">${esc(order.shippingLabel)}</span>` : ''}`);
 }
+
+function button(href: string, label: string) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0 0;"><tr>
+    <td style="background:${ACCENT};">
+      <a href="${href}" style="display:inline-block;color:${INK};font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:12.5px;padding:15px 30px;text-decoration:none;">${esc(label)}</a>
+    </td></tr></table>`;
+}
+
+/** Saludo con el nombre si lo tenemos; si no, algo que no suene a formulario. */
+function hola(order: OrderMailData): string {
+  return order.firstName ? `Hola ${esc(order.firstName)}, ` : '';
+}
+
+// ── Correos del ciclo del pedido ──────────────────────────────
 
 export async function sendOrderPlaced(order: OrderMailData) {
   const s = await getSettings();
   if (!s.notifyOrderEmail) return;
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
-  const html = layout(
-    `Pedido ${order.number}`,
-    `<p style="margin:0 0 6px;color:#fff;font-size:20px;font-weight:700;">Recibimos tu pedido ${order.number}</p>
-     <p style="margin:0 0 18px;">Hola ${order.firstName ?? ''}, estamos esperando la confirmación del pago. Te avisamos apenas se acredite.</p>
-     ${itemsTable(order.items)}
-     ${totals(order)}
-     <p style="margin:26px 0 0;">${button(`${site}/cuenta/pedidos`, 'Ver mi pedido')}</p>`,
-    site,
-  );
+  const b = await brand();
+  const html = layout({
+    title: `Pedido ${order.number}`,
+    preheader: `${hola(order)}recibimos tu pedido ${order.number}. Estamos esperando la confirmación del pago.`,
+    brand: b,
+    body:
+      heading('Pedido recibido', ACCENT, `Recibimos tu pedido <span style="color:${ACCENT};">${esc(order.number)}</span>`) +
+      `<p style="margin:0;">${hola(order)}estamos esperando la confirmación del pago. Te escribimos apenas se acredite.</p>` +
+      itemsTable(order.items) +
+      totals(order) +
+      deliveryBlock(order) +
+      button(`${b.siteUrl}/cuenta/pedidos`, 'Ver mi pedido'),
+  });
   await sendMail({ to: order.email, subject: `Pedido ${order.number} recibido · TAUPOC Chile`, html });
 }
 
 export async function sendOrderPaid(order: OrderMailData) {
   const s = await getSettings();
   if (!s.notifyOrderEmail) return;
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
-  const delivery = order.isPickup
-    ? `<p style="margin:18px 0 0;color:#C9D1DA;"><strong style="color:#fff;">Retiro:</strong> ${order.shippingLabel ?? 'Retiro coordinado'}</p>`
-    : `<p style="margin:18px 0 0;color:#C9D1DA;"><strong style="color:#fff;">Despacho a:</strong> ${[order.street, order.streetNumber].filter(Boolean).join(' ')}, ${order.commune ?? ''}</p>`;
-  const html = layout(
-    `Pago confirmado ${order.number}`,
-    `<p style="margin:0 0 6px;color:${ACCENT};font-size:12px;letter-spacing:.22em;text-transform:uppercase;">Pago acreditado</p>
-     <p style="margin:0 0 18px;color:#fff;font-size:20px;font-weight:700;">Tu pedido ${order.number} está confirmado</p>
-     <p style="margin:0 0 8px;">Ya estamos preparando tu envío. Te escribimos de nuevo cuando salga con el número de seguimiento.</p>
-     ${itemsTable(order.items)}
-     ${totals(order)}
-     ${delivery}
-     <p style="margin:26px 0 0;">${button(`${site}/cuenta/pedidos`, 'Seguir mi pedido')}</p>`,
-    site,
-  );
+  const b = await brand();
+  const html = layout({
+    title: `Pago confirmado ${order.number}`,
+    preheader: `Pago acreditado. Ya estamos preparando el pedido ${order.number}.`,
+    brand: b,
+    body:
+      heading('Pago acreditado', OK, `Tu pedido <span style="color:${ACCENT};">${esc(order.number)}</span> está confirmado`) +
+      `<p style="margin:0;">${hola(order)}ya estamos preparando tu envío. Te avisamos de nuevo cuando salga, con el número de seguimiento.</p>` +
+      itemsTable(order.items) +
+      totals(order) +
+      deliveryBlock(order) +
+      button(`${b.siteUrl}/cuenta/pedidos`, 'Seguir mi pedido'),
+  });
   await sendMail({ to: order.email, subject: `Pago confirmado · Pedido ${order.number}`, html });
+}
+
+export async function sendOrderProcessing(order: OrderMailData) {
+  const s = await getSettings();
+  if (!s.notifyOrderEmail) return;
+  const b = await brand();
+  const html = layout({
+    title: `Pedido ${order.number} en preparación`,
+    preheader: `Estamos armando tu pedido ${order.number}. Sale a despacho apenas quede listo.`,
+    brand: b,
+    body:
+      heading('En preparación', ACCENT, `Estamos armando tu pedido <span style="color:${ACCENT};">${esc(order.number)}</span>`) +
+      `<p style="margin:0;">${hola(order)}tu pedido ya está en nuestro mesón: revisamos talla y colorway uno por uno antes de embalar. Apenas salga te enviamos el seguimiento.</p>` +
+      itemsTable(order.items) +
+      deliveryBlock(order) +
+      `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿Necesitas cambiar la talla o la dirección? Escríbenos ahora, mientras el pedido siga en preparación.</p>` +
+      button(`${b.siteUrl}/cuenta/pedidos`, 'Ver mi pedido'),
+  });
+  await sendMail({ to: order.email, subject: `Pedido ${order.number} en preparación · TAUPOC Chile`, html });
 }
 
 export async function sendOrderShipped(order: OrderMailData) {
   const s = await getSettings();
   if (!s.notifyOrderEmail) return;
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
+  const b = await brand();
   const tracking = order.trackingNumber
-    ? `<div style="margin:18px 0;padding:16px;border:1px solid #232A33;background:#0B0E11;">
-         <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#7C8795;">Seguimiento ${order.carrier ?? ''}</div>
-         <div style="font-family:monospace;font-size:18px;color:${ACCENT};margin-top:6px;">${order.trackingNumber}</div>
-         ${order.trackingUrl ? `<div style="margin-top:12px;"><a href="${order.trackingUrl}" style="color:${ACCENT};font-size:13px;">Rastrear envío →</a></div>` : ''}
-       </div>`
+    ? panel(
+        `Seguimiento ${esc(order.carrier ?? '')}`.trim(),
+        `<span style="font-family:'SF Mono',Consolas,monospace;font-size:19px;color:${ACCENT};letter-spacing:.06em;">${esc(order.trackingNumber)}</span>
+         ${order.trackingUrl ? `<div style="margin-top:12px;"><a href="${esc(order.trackingUrl)}" style="color:${ACCENT};font-size:13px;text-decoration:none;font-weight:600;">Rastrear envío →</a></div>` : ''}`,
+        ACCENT,
+      )
     : '';
-  const html = layout(
-    `Pedido ${order.number} despachado`,
-    `<p style="margin:0 0 6px;color:${ACCENT};font-size:12px;letter-spacing:.22em;text-transform:uppercase;">En camino</p>
-     <p style="margin:0 0 18px;color:#fff;font-size:20px;font-weight:700;">Tu pedido ${order.number} salió a despacho</p>
-     ${tracking}
-     ${itemsTable(order.items)}
-     <p style="margin:26px 0 0;">${button(`${site}/cuenta/pedidos`, 'Ver detalle')}</p>`,
-    site,
-  );
+  const html = layout({
+    title: `Pedido ${order.number} despachado`,
+    preheader: `Tu pedido ${order.number} va en camino${order.trackingNumber ? ` · ${order.trackingNumber}` : ''}.`,
+    brand: b,
+    body:
+      heading('En camino', ACCENT, `Tu pedido <span style="color:${ACCENT};">${esc(order.number)}</span> salió a despacho`) +
+      `<p style="margin:0;">${hola(order)}tu pedido ya está en manos del transportista. El plazo va de 1 a 8 días hábiles según la región.</p>` +
+      tracking +
+      itemsTable(order.items) +
+      deliveryBlock(order) +
+      button(`${b.siteUrl}/cuenta/pedidos`, 'Ver detalle'),
+  });
   await sendMail({ to: order.email, subject: `Pedido ${order.number} despachado · TAUPOC Chile`, html });
 }
+
+export async function sendOrderDelivered(order: OrderMailData) {
+  const s = await getSettings();
+  if (!s.notifyOrderEmail) return;
+  const b = await brand();
+  const html = layout({
+    title: `Pedido ${order.number} entregado`,
+    preheader: `Tu pedido ${order.number} fue entregado. Cuidado del traje y cambios de talla acá.`,
+    brand: b,
+    body:
+      heading('Entregado', OK, `Tu pedido <span style="color:${ACCENT};">${esc(order.number)}</span> llegó`) +
+      `<p style="margin:0 0 4px;">${hola(order)}esperamos que te quede perfecto. Dos cosas que alargan la vida del traje:</p>` +
+      `<ul style="margin:12px 0 0;padding-left:20px;color:${CHALK_DIM};font-size:14px;line-height:1.7;">
+         <li>Enjuágalo con agua fría apenas salgas del agua, sin retorcerlo.</li>
+         <li>Sécalo a la sombra y en plano. Nunca en secadora ni al sol directo.</li>
+       </ul>` +
+      itemsTable(order.items) +
+      `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿La talla no calzó? Tienes 10 días para el cambio, con el traje sin uso y con etiqueta. <a href="${b.siteUrl}/devoluciones" style="color:${ACCENT};text-decoration:none;">Ver política de cambios</a></p>` +
+      button(`${b.siteUrl}/catalogo`, 'Ver el catálogo'),
+  });
+  await sendMail({ to: order.email, subject: `Pedido ${order.number} entregado · TAUPOC Chile`, html });
+}
+
+export async function sendOrderCancelled(order: OrderMailData) {
+  const s = await getSettings();
+  if (!s.notifyOrderEmail) return;
+  const b = await brand();
+  const html = layout({
+    title: `Pedido ${order.number} cancelado`,
+    preheader: `Cancelamos tu pedido ${order.number}. Si alcanzaste a pagar, el reembolso va en camino.`,
+    brand: b,
+    body:
+      heading('Cancelado', BAD, `Tu pedido <span style="color:${CHALK};">${esc(order.number)}</span> fue cancelado`) +
+      `<p style="margin:0;">${hola(order)}dimos de baja este pedido y devolvimos las unidades al inventario.</p>` +
+      panel(
+        'Sobre tu dinero',
+        `Si el pago alcanzó a acreditarse, el reembolso se hace por el mismo medio con que pagaste y lo verás reflejado en tu próximo estado de cuenta. Si el pago nunca se acreditó, no se te cobró nada.`,
+        LINE,
+      ) +
+      itemsTable(order.items) +
+      totals(order) +
+      `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿Fue un error o quieres retomarlo? Respóndenos este correo y lo vemos.</p>` +
+      button(`${b.siteUrl}/contacto`, 'Escríbenos'),
+  });
+  await sendMail({ to: order.email, subject: `Pedido ${order.number} cancelado · TAUPOC Chile`, html });
+}
+
+export async function sendOrderRefunded(order: OrderMailData) {
+  const s = await getSettings();
+  if (!s.notifyOrderEmail) return;
+  const b = await brand();
+  const html = layout({
+    title: `Reembolso del pedido ${order.number}`,
+    preheader: `Emitimos el reembolso de ${formatCLP(order.total)} por tu pedido ${order.number}.`,
+    brand: b,
+    body:
+      heading('Reembolsado', WARN, `Emitimos el reembolso de tu pedido <span style="color:${CHALK};">${esc(order.number)}</span>`) +
+      `<p style="margin:0;">${hola(order)}ya devolvimos el pago por el mismo medio con que compraste.</p>` +
+      panel(
+        'Monto devuelto',
+        `<span style="font-size:22px;font-weight:700;color:${ACCENT};">${formatCLP(order.total)}</span>
+         <div style="margin-top:8px;color:${CHALK_FAINT};font-size:13px;">Según tu banco puede tardar entre 5 y 10 días hábiles en aparecer. Mercado Pago te envía su propio comprobante.</div>`,
+        ACCENT,
+      ) +
+      itemsTable(order.items) +
+      `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">Si pasado ese plazo no lo ves reflejado, escríbenos con el número de pedido y lo revisamos contigo.</p>` +
+      button(`${b.siteUrl}/contacto`, 'Escríbenos'),
+  });
+  await sendMail({ to: order.email, subject: `Reembolso emitido · Pedido ${order.number}`, html });
+}
+
+// ── Avisos internos ───────────────────────────────────────────
 
 export async function sendAdminNewOrder(order: OrderMailData) {
   const s = await getSettings();
   const to = process.env.ADMIN_ALERT_EMAIL;
   if (!to || !s.notifyAdminNewOrder) return;
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
-  const html = layout(
-    `Nuevo pedido pagado ${order.number}`,
-    `<p style="margin:0 0 18px;color:#fff;font-size:20px;font-weight:700;">Pedido pagado: ${order.number}</p>
-     <p style="margin:0;">Cliente: ${order.email}</p>
-     ${itemsTable(order.items)}
-     ${totals(order)}
-     <p style="margin:26px 0 0;">${button(`${site}/admin/pedidos`, 'Abrir en el panel')}</p>`,
-    site,
-  );
+  const b = await brand();
+  const html = layout({
+    title: `Nuevo pedido pagado ${order.number}`,
+    preheader: `${order.number} · ${formatCLP(order.total)} · ${order.email}`,
+    brand: b,
+    body:
+      heading('Nuevo pedido pagado', OK, `Pedido <span style="color:${ACCENT};">${esc(order.number)}</span>`) +
+      panel('Cliente', esc(order.email)) +
+      itemsTable(order.items) +
+      totals(order) +
+      deliveryBlock(order) +
+      button(`${b.siteUrl}/admin/pedidos`, 'Abrir en el panel'),
+  });
   await sendMail({ to, subject: `[TAUPOC] Pedido pagado ${order.number} · ${formatCLP(order.total)}`, html });
 }
 
@@ -252,53 +489,61 @@ export async function sendLowStockAlert(items: { sku: string; productName: strin
   const s = await getSettings();
   const to = process.env.ADMIN_ALERT_EMAIL;
   if (!to || !s.notifyLowStock || items.length === 0) return;
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
+  const b = await brand();
   const rows = items
     .map(
       (i) => `<tr>
-        <td style="padding:8px 0;border-bottom:1px solid #1A2027;font-family:monospace;color:#C9D1DA;">${i.sku}</td>
-        <td style="padding:8px 0;border-bottom:1px solid #1A2027;color:#C9D1DA;">${i.productName} · ${i.colorName} · T${i.size}</td>
-        <td align="right" style="padding:8px 0;border-bottom:1px solid #1A2027;color:${i.stock === 0 ? '#F04B4B' : '#F0A93B'};font-weight:700;">${i.stock}</td>
+        <td style="padding:9px 0;border-bottom:1px solid ${LINE_SOFT};font-family:'SF Mono',Consolas,monospace;font-size:12.5px;color:${CHALK_DIM};">${esc(i.sku)}</td>
+        <td style="padding:9px 0;border-bottom:1px solid ${LINE_SOFT};color:${CHALK_DIM};font-size:13.5px;">${esc(i.productName)} · ${esc(i.colorName)} · T${esc(i.size)}</td>
+        <td align="right" style="padding:9px 0;border-bottom:1px solid ${LINE_SOFT};color:${i.stock === 0 ? BAD : WARN};font-weight:700;">${i.stock}</td>
       </tr>`,
     )
     .join('');
-  const html = layout(
-    'Alerta de stock bajo',
-    `<p style="margin:0 0 6px;color:#F0A93B;font-size:12px;letter-spacing:.22em;text-transform:uppercase;">Inventario</p>
-     <p style="margin:0 0 18px;color:#fff;font-size:20px;font-weight:700;">${items.length} SKU bajo el umbral</p>
-     <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
-     <p style="margin:26px 0 0;">${button(`${site}/admin/inventario`, 'Reponer stock')}</p>`,
-    site,
-  );
+  const html = layout({
+    title: 'Alerta de stock bajo',
+    preheader: `${items.length} SKU bajo el umbral de reposición.`,
+    brand: b,
+    body:
+      heading('Inventario', WARN, `${items.length} SKU bajo el umbral`) +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;">${rows}</table>` +
+      button(`${b.siteUrl}/admin/inventario`, 'Reponer stock'),
+  });
   await sendMail({ to, subject: `[TAUPOC] ${items.length} SKU con stock bajo`, html });
 }
 
 export async function sendQuoteRequestAlert(q: { clubName: string; contactName: string; email: string; phone: string; athletes?: number | null; message: string }) {
   const to = process.env.ADMIN_ALERT_EMAIL;
   if (!to) return;
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
-  const html = layout(
-    'Nueva cotización de club',
-    `<p style="margin:0 0 18px;color:#fff;font-size:20px;font-weight:700;">${q.clubName}</p>
-     <p style="margin:0 0 4px;">Contacto: ${q.contactName}</p>
-     <p style="margin:0 0 4px;">Email: ${q.email} · Teléfono: ${q.phone}</p>
-     <p style="margin:0 0 16px;">Nadadores: ${q.athletes ?? '—'}</p>
-     <p style="margin:0;padding:16px;border-left:2px solid ${ACCENT};background:#0B0E11;">${q.message.replace(/</g, '&lt;')}</p>
-     <p style="margin:26px 0 0;">${button(`${site}/admin/cotizaciones`, 'Ver cotizaciones')}</p>`,
-    site,
-  );
+  const b = await brand();
+  const html = layout({
+    title: 'Nueva cotización de club',
+    preheader: `${q.clubName} · ${q.athletes ?? '—'} nadadores`,
+    brand: b,
+    body:
+      heading('Cotización de club', ACCENT, esc(q.clubName)) +
+      panel(
+        'Contacto',
+        `${esc(q.contactName)}<br>
+         <a href="mailto:${esc(q.email)}" style="color:${ACCENT};text-decoration:none;">${esc(q.email)}</a> · ${esc(q.phone)}<br>
+         <span style="color:${CHALK_FAINT};">Nadadores: ${esc(q.athletes ?? '—')}</span>`,
+      ) +
+      `<div style="margin:20px 0 0;padding:16px 18px;border-left:2px solid ${ACCENT};background:${INK_800};color:${CHALK_DIM};font-size:14px;line-height:1.65;">${esc(q.message)}</div>` +
+      button(`${b.siteUrl}/admin/cotizaciones`, 'Ver cotizaciones'),
+  });
   await sendMail({ to, subject: `[TAUPOC] Cotización de club · ${q.clubName}`, html });
 }
 
 export async function sendPasswordReset(email: string, resetUrl: string) {
-  const site = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/$/, '');
-  const html = layout(
-    'Restablecer contraseña',
-    `<p style="margin:0 0 18px;color:#fff;font-size:20px;font-weight:700;">Restablecer tu contraseña</p>
-     <p style="margin:0 0 20px;">Recibimos una solicitud para cambiar tu contraseña. El enlace vence en 1 hora.</p>
-     <p style="margin:0;">${button(resetUrl, 'Crear nueva contraseña')}</p>
-     <p style="margin:20px 0 0;font-size:13px;color:#7C8795;">Si no fuiste tú, ignora este correo.</p>`,
-    site,
-  );
+  const b = await brand();
+  const html = layout({
+    title: 'Restablecer contraseña',
+    preheader: 'El enlace para crear tu nueva contraseña vence en 1 hora.',
+    brand: b,
+    body:
+      heading('Tu cuenta', ACCENT, 'Restablecer tu contraseña') +
+      `<p style="margin:0;">Recibimos una solicitud para cambiar tu contraseña. El enlace vence en 1 hora.</p>` +
+      button(resetUrl, 'Crear nueva contraseña') +
+      `<p style="margin:24px 0 0;font-size:13px;color:${CHALK_FAINT};">Si no fuiste tú, ignora este correo: tu contraseña actual sigue vigente.</p>`,
+  });
   await sendMail({ to: email, subject: 'Restablecer contraseña · TAUPOC Chile', html });
 }

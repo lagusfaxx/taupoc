@@ -8,7 +8,15 @@ import { requireAdmin } from '@/lib/auth';
 import { logOrderEvent, ORDER_STATUS_LABEL } from '@/lib/orders';
 import { commitStockForOrder, restoreStockForOrder } from '@/lib/inventory';
 import { trackingUrlFor } from '@/lib/shipping';
-import { sendOrderShipped, sendOrderPaid } from '@/lib/mail';
+import {
+  sendOrderShipped,
+  sendOrderPaid,
+  sendOrderProcessing,
+  sendOrderDelivered,
+  sendOrderCancelled,
+  sendOrderRefunded,
+  type OrderMailData,
+} from '@/lib/mail';
 import { refundPayment } from '@/lib/mercadopago';
 import type { AdminState } from './products';
 
@@ -46,6 +54,20 @@ async function mailPayload(orderId: string) {
  * Cambia el estado del pedido y sincroniza el inventario.
  * Marcar como pagado descuenta stock; cancelar lo devuelve.
  */
+/**
+ * Qué correo acompaña a cada estado.
+ *
+ * Los que no aparecen no avisan: PENDING ya lo cubre el correo de pedido
+ * recibido que sale del propio checkout.
+ */
+const AVISO_POR_ESTADO: Partial<Record<OrderStatus, (order: OrderMailData) => Promise<void>>> = {
+  PROCESSING: sendOrderProcessing,
+  SHIPPED: sendOrderShipped,
+  DELIVERED: sendOrderDelivered,
+  CANCELLED: sendOrderCancelled,
+  REFUNDED: sendOrderRefunded,
+};
+
 export async function updateOrderStatus(
   _prev: AdminState | null,
   formData: FormData,
@@ -85,11 +107,18 @@ export async function updateOrderStatus(
     actor: admin.email,
   });
 
-  // Avisos al cliente en los cambios que le importan.
+  // Aviso al cliente en cada cambio de estado.
   const payload = await mailPayload(id);
   if (payload) {
-    if (status === 'SHIPPED') await sendOrderShipped(payload).catch(() => {});
-    if (status === 'PAID' && order.paymentStatus !== 'APPROVED') await sendOrderPaid(payload).catch(() => {});
+    // PAID va aparte: solo se avisa si el pago no venía ya aprobado, porque
+    // en ese caso el webhook de Mercado Pago ya mandó su propio correo.
+    const aviso =
+      status === 'PAID'
+        ? order.paymentStatus !== 'APPROVED'
+          ? sendOrderPaid
+          : null
+        : (AVISO_POR_ESTADO[status] ?? null);
+    if (aviso) await aviso(payload).catch(() => {});
   }
 
   revalidateOrder(id);
