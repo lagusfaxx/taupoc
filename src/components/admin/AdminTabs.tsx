@@ -9,7 +9,22 @@ export interface AdminTab {
   content: ReactNode;
 }
 
-export function AdminTabs({ tabs }: { tabs: AdminTab[] }) {
+export function AdminTabs({
+  tabs,
+  keepMounted = false,
+}: {
+  tabs: AdminTab[];
+  /**
+   * Mantiene en el DOM el contenido de las pestañas ocultas.
+   *
+   * Hace falta cuando todas viven dentro de un mismo `<form>`: un campo que
+   * no está montado no viaja en el envío, así que guardar desde una pestaña
+   * perdía lo de las demás. Queda apagado por omisión porque hay pestañas
+   * caras de montar —galerías, matrices de variantes— que solo contienen
+   * formularios independientes y no ganan nada con estar siempre presentes.
+   */
+  keepMounted?: boolean;
+}) {
   const [active, setActive] = useState(tabs[0]?.id ?? '');
 
   return (
@@ -36,7 +51,7 @@ export function AdminTabs({ tabs }: { tabs: AdminTab[] }) {
 
       {tabs.map((tab) => (
         <div key={tab.id} role="tabpanel" hidden={active !== tab.id}>
-          {active === tab.id ? tab.content : null}
+          {keepMounted || active === tab.id ? tab.content : null}
         </div>
       ))}
     </div>
