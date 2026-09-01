@@ -6,13 +6,14 @@ import { mpConfigured, mpMode } from '@/lib/mercadopago';
 import { mailTransport } from '@/lib/mail';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { SettingsForm } from '@/components/admin/SettingsForm';
+import { MailTester } from '@/components/admin/MailTester';
 import { Badge } from '@/components/ui/Badge';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({ title: 'Panel — Ajustes', noIndex: true });
 
 export default async function AdminSettingsPage() {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const settings = await getSettings();
 
   const transport = mailTransport();
@@ -70,6 +71,10 @@ export default async function AdminSettingsPage() {
       </div>
 
       <SettingsForm settings={settings} />
+
+      <MailTester
+        defaultEmail={process.env.ADMIN_ALERT_EMAIL || admin.email || settings.contactEmail}
+      />
     </>
   );
 }

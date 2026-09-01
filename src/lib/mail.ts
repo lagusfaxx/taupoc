@@ -3,6 +3,7 @@ import nodemailer, { type Transporter } from 'nodemailer';
 import { formatCLP } from './money';
 import { getSettings } from './settings';
 import { isMediaUrl } from './media-url';
+import type { PlantillaDePrueba } from './mail-kinds';
 
 /**
  * Correo transaccional. Se elige el transporte en este orden:
@@ -285,6 +286,20 @@ export interface OrderMailData {
   items: { productName: string; colorName: string; size: string; quantity: number; lineTotal: number }[];
 }
 
+/**
+ * Ajustes de un envío puntual.
+ *
+ * Existen para la prueba desde el panel: permite ver una plantilla sin
+ * encender su bandera en Configuración y sin mandársela al cliente real.
+ * En el flujo normal nadie los pasa y todo se comporta como siempre.
+ */
+export interface EnvioOpts {
+  /** Ignora la bandera de Configuración que normalmente frena el envío. */
+  force?: boolean;
+  /** Reemplaza el destinatario que la plantilla elegiría. */
+  to?: string;
+}
+
 /** Cómo llega el pedido: retiro coordinado o dirección de despacho. */
 function deliveryBlock(order: OrderMailData): string {
   if (order.isPickup) {
@@ -309,9 +324,9 @@ function hola(order: OrderMailData): string {
 
 // ── Correos del ciclo del pedido ──────────────────────────────
 
-export async function sendOrderPlaced(order: OrderMailData) {
+export async function sendOrderPlaced(order: OrderMailData, opts?: EnvioOpts) {
   const s = await getSettings();
-  if (!s.notifyOrderEmail) return;
+  if (!opts?.force && !s.notifyOrderEmail) return;
   const b = await brand();
   const html = layout({
     title: `Pedido ${order.number}`,
@@ -325,12 +340,12 @@ export async function sendOrderPlaced(order: OrderMailData) {
       deliveryBlock(order) +
       button(`${b.siteUrl}/cuenta/pedidos`, 'Ver mi pedido'),
   });
-  await sendMail({ to: order.email, subject: `Pedido ${order.number} recibido · TAUPOC Chile`, html });
+  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} recibido · TAUPOC Chile`, html });
 }
 
-export async function sendOrderPaid(order: OrderMailData) {
+export async function sendOrderPaid(order: OrderMailData, opts?: EnvioOpts) {
   const s = await getSettings();
-  if (!s.notifyOrderEmail) return;
+  if (!opts?.force && !s.notifyOrderEmail) return;
   const b = await brand();
   const html = layout({
     title: `Pago confirmado ${order.number}`,
@@ -344,12 +359,12 @@ export async function sendOrderPaid(order: OrderMailData) {
       deliveryBlock(order) +
       button(`${b.siteUrl}/cuenta/pedidos`, 'Seguir mi pedido'),
   });
-  await sendMail({ to: order.email, subject: `Pago confirmado · Pedido ${order.number}`, html });
+  await sendMail({ to: opts?.to ?? order.email, subject: `Pago confirmado · Pedido ${order.number}`, html });
 }
 
-export async function sendOrderProcessing(order: OrderMailData) {
+export async function sendOrderProcessing(order: OrderMailData, opts?: EnvioOpts) {
   const s = await getSettings();
-  if (!s.notifyOrderEmail) return;
+  if (!opts?.force && !s.notifyOrderEmail) return;
   const b = await brand();
   const html = layout({
     title: `Pedido ${order.number} en preparación`,
@@ -363,12 +378,12 @@ export async function sendOrderProcessing(order: OrderMailData) {
       `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿Necesitas cambiar la talla o la dirección? Escríbenos ahora, mientras el pedido siga en preparación.</p>` +
       button(`${b.siteUrl}/cuenta/pedidos`, 'Ver mi pedido'),
   });
-  await sendMail({ to: order.email, subject: `Pedido ${order.number} en preparación · TAUPOC Chile`, html });
+  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} en preparación · TAUPOC Chile`, html });
 }
 
-export async function sendOrderShipped(order: OrderMailData) {
+export async function sendOrderShipped(order: OrderMailData, opts?: EnvioOpts) {
   const s = await getSettings();
-  if (!s.notifyOrderEmail) return;
+  if (!opts?.force && !s.notifyOrderEmail) return;
   const b = await brand();
   const tracking = order.trackingNumber
     ? panel(
@@ -390,12 +405,12 @@ export async function sendOrderShipped(order: OrderMailData) {
       deliveryBlock(order) +
       button(`${b.siteUrl}/cuenta/pedidos`, 'Ver detalle'),
   });
-  await sendMail({ to: order.email, subject: `Pedido ${order.number} despachado · TAUPOC Chile`, html });
+  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} despachado · TAUPOC Chile`, html });
 }
 
-export async function sendOrderDelivered(order: OrderMailData) {
+export async function sendOrderDelivered(order: OrderMailData, opts?: EnvioOpts) {
   const s = await getSettings();
-  if (!s.notifyOrderEmail) return;
+  if (!opts?.force && !s.notifyOrderEmail) return;
   const b = await brand();
   const html = layout({
     title: `Pedido ${order.number} entregado`,
@@ -412,12 +427,12 @@ export async function sendOrderDelivered(order: OrderMailData) {
       `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿La talla no calzó? Tienes 10 días para el cambio, con el traje sin uso y con etiqueta. <a href="${b.siteUrl}/devoluciones" style="color:${ACCENT};text-decoration:none;">Ver política de cambios</a></p>` +
       button(`${b.siteUrl}/catalogo`, 'Ver el catálogo'),
   });
-  await sendMail({ to: order.email, subject: `Pedido ${order.number} entregado · TAUPOC Chile`, html });
+  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} entregado · TAUPOC Chile`, html });
 }
 
-export async function sendOrderCancelled(order: OrderMailData) {
+export async function sendOrderCancelled(order: OrderMailData, opts?: EnvioOpts) {
   const s = await getSettings();
-  if (!s.notifyOrderEmail) return;
+  if (!opts?.force && !s.notifyOrderEmail) return;
   const b = await brand();
   const html = layout({
     title: `Pedido ${order.number} cancelado`,
@@ -436,12 +451,12 @@ export async function sendOrderCancelled(order: OrderMailData) {
       `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿Fue un error o quieres retomarlo? Respóndenos este correo y lo vemos.</p>` +
       button(`${b.siteUrl}/contacto`, 'Escríbenos'),
   });
-  await sendMail({ to: order.email, subject: `Pedido ${order.number} cancelado · TAUPOC Chile`, html });
+  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} cancelado · TAUPOC Chile`, html });
 }
 
-export async function sendOrderRefunded(order: OrderMailData) {
+export async function sendOrderRefunded(order: OrderMailData, opts?: EnvioOpts) {
   const s = await getSettings();
-  if (!s.notifyOrderEmail) return;
+  if (!opts?.force && !s.notifyOrderEmail) return;
   const b = await brand();
   const html = layout({
     title: `Reembolso del pedido ${order.number}`,
@@ -460,15 +475,15 @@ export async function sendOrderRefunded(order: OrderMailData) {
       `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">Si pasado ese plazo no lo ves reflejado, escríbenos con el número de pedido y lo revisamos contigo.</p>` +
       button(`${b.siteUrl}/contacto`, 'Escríbenos'),
   });
-  await sendMail({ to: order.email, subject: `Reembolso emitido · Pedido ${order.number}`, html });
+  await sendMail({ to: opts?.to ?? order.email, subject: `Reembolso emitido · Pedido ${order.number}`, html });
 }
 
 // ── Avisos internos ───────────────────────────────────────────
 
-export async function sendAdminNewOrder(order: OrderMailData) {
+export async function sendAdminNewOrder(order: OrderMailData, opts?: EnvioOpts) {
   const s = await getSettings();
-  const to = process.env.ADMIN_ALERT_EMAIL;
-  if (!to || !s.notifyAdminNewOrder) return;
+  const to = opts?.to ?? process.env.ADMIN_ALERT_EMAIL;
+  if (!to || (!opts?.force && !s.notifyAdminNewOrder)) return;
   const b = await brand();
   const html = layout({
     title: `Nuevo pedido pagado ${order.number}`,
@@ -485,10 +500,13 @@ export async function sendAdminNewOrder(order: OrderMailData) {
   await sendMail({ to, subject: `[TAUPOC] Pedido pagado ${order.number} · ${formatCLP(order.total)}`, html });
 }
 
-export async function sendLowStockAlert(items: { sku: string; productName: string; colorName: string; size: string; stock: number }[]) {
+export async function sendLowStockAlert(
+  items: { sku: string; productName: string; colorName: string; size: string; stock: number }[],
+  opts?: EnvioOpts,
+) {
   const s = await getSettings();
-  const to = process.env.ADMIN_ALERT_EMAIL;
-  if (!to || !s.notifyLowStock || items.length === 0) return;
+  const to = opts?.to ?? process.env.ADMIN_ALERT_EMAIL;
+  if (!to || (!opts?.force && !s.notifyLowStock) || items.length === 0) return;
   const b = await brand();
   const rows = items
     .map(
@@ -511,8 +529,11 @@ export async function sendLowStockAlert(items: { sku: string; productName: strin
   await sendMail({ to, subject: `[TAUPOC] ${items.length} SKU con stock bajo`, html });
 }
 
-export async function sendQuoteRequestAlert(q: { clubName: string; contactName: string; email: string; phone: string; athletes?: number | null; message: string }) {
-  const to = process.env.ADMIN_ALERT_EMAIL;
+export async function sendQuoteRequestAlert(
+  q: { clubName: string; contactName: string; email: string; phone: string; athletes?: number | null; message: string },
+  opts?: EnvioOpts,
+) {
+  const to = opts?.to ?? process.env.ADMIN_ALERT_EMAIL;
   if (!to) return;
   const b = await brand();
   const html = layout({
@@ -546,4 +567,97 @@ export async function sendPasswordReset(email: string, resetUrl: string) {
       `<p style="margin:24px 0 0;font-size:13px;color:${CHALK_FAINT};">Si no fuiste tú, ignora este correo: tu contraseña actual sigue vigente.</p>`,
   });
   await sendMail({ to: email, subject: 'Restablecer contraseña · TAUPOC Chile', html });
+}
+
+// ── Envío de prueba desde el panel ────────────────────────────
+
+/**
+ * Pedido ficticio para ver una plantilla sin tener que comprar de verdad.
+ *
+ * Lleva dos líneas, descuento y despacho gratis a propósito: así se ven de
+ * una vez todas las filas del bloque de totales, que con un pedido simple
+ * quedarían ocultas.
+ */
+function pedidoDeMuestra(destino: string): OrderMailData {
+  return {
+    number: 'TP-PRUEBA',
+    email: destino,
+    firstName: 'Camila',
+    subtotal: 189900,
+    discountTotal: 19000,
+    shippingTotal: 0,
+    total: 170900,
+    shippingLabel: 'Chilexpress Express · 1 a 3 días hábiles',
+    isPickup: false,
+    street: 'Av. Providencia',
+    streetNumber: '1234',
+    commune: 'Providencia',
+    region: 'Metropolitana',
+    carrier: 'Chilexpress',
+    trackingNumber: '992847100238',
+    trackingUrl: 'https://www.chilexpress.cl/seguimiento',
+    items: [
+      { productName: 'Knee Suit Vortex Pro', colorName: 'Negro / Aqua', size: '26', quantity: 1, lineTotal: 129900 },
+      { productName: 'Gorra Silicona Race', colorName: 'Aqua', size: 'U', quantity: 2, lineTotal: 60000 },
+    ],
+  };
+}
+
+
+/**
+ * Manda una plantilla a la dirección que se indique.
+ *
+ * Va con `force` para que se pueda revisar el diseño aunque la bandera de
+ * Configuración esté apagada, y con `to` para que nunca salga al correo de
+ * un cliente. Devuelve si el transporte llegó a intentarlo: sin proveedor
+ * configurado `sendMail` no envía nada y conviene decirlo en pantalla.
+ */
+export async function sendTestMail(
+  kind: PlantillaDePrueba,
+  to: string,
+): Promise<{ enviado: boolean }> {
+  if (mailTransport() === 'none') return { enviado: false };
+
+  const order = pedidoDeMuestra(to);
+  const opts: EnvioOpts = { force: true, to };
+
+  switch (kind) {
+    case 'placed': await sendOrderPlaced(order, opts); break;
+    case 'paid': await sendOrderPaid(order, opts); break;
+    case 'processing': await sendOrderProcessing(order, opts); break;
+    case 'shipped': await sendOrderShipped(order, opts); break;
+    case 'delivered': await sendOrderDelivered(order, opts); break;
+    case 'cancelled': await sendOrderCancelled(order, opts); break;
+    case 'refunded': await sendOrderRefunded(order, opts); break;
+    case 'admin': await sendAdminNewOrder(order, opts); break;
+    case 'lowstock':
+      await sendLowStockAlert(
+        [
+          { sku: 'VTX-26-NEG', productName: 'Knee Suit Vortex Pro', colorName: 'Negro / Aqua', size: '26', stock: 1 },
+          { sku: 'VTX-28-NEG', productName: 'Knee Suit Vortex Pro', colorName: 'Negro / Aqua', size: '28', stock: 0 },
+        ],
+        opts,
+      );
+      break;
+    case 'quote':
+      await sendQuoteRequestAlert(
+        {
+          clubName: 'Club Natación Ejemplo',
+          contactName: 'Camila Rojas',
+          email: 'entrenador@ejemplo.cl',
+          phone: '+56 9 1234 5678',
+          athletes: 18,
+          message: 'Necesitamos trajes para el equipo juvenil antes del nacional.',
+        },
+        opts,
+      );
+      break;
+    case 'reset': {
+      const b = await brand();
+      await sendPasswordReset(to, `${b.siteUrl}/cuenta/restablecer?token=prueba`);
+      break;
+    }
+  }
+
+  return { enviado: true };
 }
