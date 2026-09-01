@@ -45,6 +45,7 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
       ) : null}
 
       <AdminTabs
+        keepMounted
         tabs={[
           {
             id: 'tienda',
