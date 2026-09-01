@@ -24,6 +24,11 @@ export const metadata: Metadata = {
   authors: [{ name: SITE_NAME }],
   creator: SITE_NAME,
   formatDetection: { telephone: false },
+  // Verificación de propiedad en Google Search Console. Next lo emite como
+  // <meta name="google-site-verification">. Va en el layout raíz y no en
+  // `buildMetadata`: las páginas no definen `verification`, así que lo
+  // heredan y la etiqueta queda en todo el sitio, no solo en la portada.
+  verification: { google: '_sZyWMARMexGYCxAaSz8Lj1y58Ux3A8lahiHRTvp0c4' },
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
     apple: '/icon.svg',
