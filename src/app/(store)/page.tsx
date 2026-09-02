@@ -7,7 +7,6 @@ import { getFeatured } from '@/lib/catalog';
 import { getHomeBlocks } from '@/lib/home';
 import { buildMetadata, jsonLd, absoluteUrl, SITE_NAME } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
-import { Reveal } from '@/components/ui/Reveal';
 import { HomeBlocks } from '@/components/store/home/HomeBlocks';
 import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
@@ -120,9 +119,7 @@ async function PortadaPorDefecto() {
       <section className="container pb-10 pt-6 lg:pb-12 lg:pt-7">
         <div className="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4 lg:gap-x-6">
           {featured.map((product, i) => (
-            <Reveal key={product.id} delay={(i % 4) * 90}>
-              <ProductCard product={product} priority={i < 4} />
-            </Reveal>
+            <ProductCard key={product.id} product={product} priority={i < 4} />
           ))}
         </div>
 

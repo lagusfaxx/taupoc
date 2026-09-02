@@ -7,7 +7,6 @@ import { addToCart, type CartActionState } from '@/actions/cart';
 import { formatCLP, installment } from '@/lib/money';
 import { cn, readableOn } from '@/lib/utils';
 import { colorLabel } from '@/lib/colors';
-import { ondaDeAgua } from '@/lib/ripple';
 import { Price } from '@/components/ui/Price';
 import { RatingSummary } from '@/components/ui/Stars';
 import { announceCart, flyToCart } from './CartLink';
@@ -77,9 +76,8 @@ function AddButton({
     <button
       type="submit"
       disabled={disabled || pending || comingSoon}
-      onPointerDown={ondaDeAgua}
       className={cn(
-        'relative overflow-hidden h-14 w-full accent-bg font-display text-[13px] font-bold uppercase tracking-widest',
+        'h-14 w-full accent-bg font-display text-[13px] font-bold uppercase tracking-widest',
         'transition-all duration-200 ease-tech clip-notch-sm',
         'hover:brightness-110 active:brightness-95',
         'disabled:cursor-not-allowed disabled:bg-ink-600 disabled:text-chalk-faint',
@@ -500,8 +498,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
                 <button
                   type="submit"
                   form="compra"
-                  onPointerDown={ondaDeAgua}
-                  className="relative overflow-hidden h-12 shrink-0 accent-bg px-6 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm"
+                  className="h-12 shrink-0 accent-bg px-6 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm"
                 >
                   Agregar
                 </button>

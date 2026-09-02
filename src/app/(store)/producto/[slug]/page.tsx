@@ -10,7 +10,6 @@ import { ProductCard } from '@/components/store/ProductCard';
 import { ProductReviews } from '@/components/store/ProductReviews';
 import { SectionHeading } from '@/components/store/SectionHeading';
 import { Accordion } from '@/components/store/Accordion';
-import { Reveal } from '@/components/ui/Reveal';
 
 // El encabezado lee el cookie del carrito: estas páginas ya se renderizan por
 // solicitud. Declararlo permite compilar la imagen sin base de datos.
@@ -208,7 +207,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <section className="border-t border-line bg-ink-900">
         <div className="container py-14 lg:py-20">
           <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-20">
-            <Reveal>
+            <div>
               <p className="eyebrow-accent mb-4">Sobre este traje</p>
               <div className="prose-taupoc max-w-xl">
                 {product.description.split('\n\n').map((paragraph, i) => (
@@ -228,9 +227,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   ))}
                 </dl>
               ) : null}
-            </Reveal>
+            </div>
 
-            <Reveal delay={120}>
+            <div>
               <Accordion
                 items={[
                   ...(product.specs.length > 0
@@ -328,7 +327,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   },
                 ]}
               />
-            </Reveal>
+            </div>
           </div>
         </div>
       </section>

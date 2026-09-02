@@ -100,11 +100,6 @@ const config: Config = {
           '0%': { transform: 'scale(.5)', opacity: '.85' },
           '100%': { transform: 'scale(1.7)', opacity: '0' },
         },
-        // Entrada de los bloques al hacer scroll: salen a flote.
-        emerger: {
-          '0%': { opacity: '0', transform: 'translateY(18px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
       },
       animation: {
         'rise-in': 'rise-in .6s cubic-bezier(.2,.7,.2,1) both',
@@ -113,7 +108,6 @@ const config: Config = {
         'cart-pop': 'cart-pop .42s cubic-bezier(.2,.9,.25,1.4) both',
         'cart-nudge': 'cart-nudge .5s cubic-bezier(.2,.7,.2,1) both',
         'cart-ring': 'cart-ring .6s cubic-bezier(.2,.7,.2,1) forwards',
-        emerger: 'emerger .7s cubic-bezier(.2,.7,.2,1) both',
       },
       transitionTimingFunction: {
         tech: 'cubic-bezier(.2,.7,.2,1)',

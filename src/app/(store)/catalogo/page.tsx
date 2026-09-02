@@ -3,7 +3,6 @@ import type { Gender } from '@prisma/client';
 import { getCatalog, getCatalogFacets } from '@/lib/catalog';
 import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
-import { Reveal } from '@/components/ui/Reveal';
 import { CatalogShell } from '@/components/store/CatalogFilters';
 import { Empty } from '@/components/ui/Empty';
 import { ButtonLink } from '@/components/ui/Button';
@@ -115,11 +114,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
           ) : (
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-3 lg:gap-x-6 xl:gap-x-8">
               {products.map((product, i) => (
-                // El retardo se reinicia cada fila: escalonar las 30 tarjetas
-                // seguidas dejaría la última esperando casi dos segundos.
-                <Reveal key={product.id} delay={(i % 3) * 90}>
-                  <ProductCard product={product} priority={i < 3} />
-                </Reveal>
+                <ProductCard key={product.id} product={product} priority={i < 3} />
               ))}
             </div>
           )}

@@ -44,12 +44,7 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
   const unavailable = product.comingSoon || product.totalStock === 0;
 
   return (
-    <article
-      // Sube despacio al pasar el cursor: la lentitud es lo que lo hace leer
-      // como flotar y no como un rebote.
-      className="group flex flex-col transition-transform duration-500 ease-tech hover:-translate-y-1.5"
-      style={{ ['--accent' as string]: product.accentHex }}
-    >
+    <article className="group flex flex-col" style={{ ['--accent' as string]: product.accentHex }}>
       <Link
         href={`/producto/${product.slug}`}
         className="relative block overflow-hidden border border-line bg-ink-800"
