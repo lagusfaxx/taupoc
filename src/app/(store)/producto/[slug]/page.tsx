@@ -8,9 +8,9 @@ import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductView, type ProductViewData } from '@/components/store/ProductView';
 import { ProductCard } from '@/components/store/ProductCard';
 import { ProductReviews } from '@/components/store/ProductReviews';
-import { LaneDivider } from '@/components/store/LaneDivider';
 import { SectionHeading } from '@/components/store/SectionHeading';
 import { Accordion } from '@/components/store/Accordion';
+import { Reveal } from '@/components/ui/Reveal';
 
 // El encabezado lee el cookie del carrito: estas páginas ya se renderizan por
 // solicitud. Declararlo permite compilar la imagen sin base de datos.
@@ -208,7 +208,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <section className="border-t border-line bg-ink-900">
         <div className="container py-14 lg:py-20">
           <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-20">
-            <div>
+            <Reveal>
               <p className="eyebrow-accent mb-4">Sobre este traje</p>
               <div className="prose-taupoc max-w-xl">
                 {product.description.split('\n\n').map((paragraph, i) => (
@@ -228,9 +228,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   ))}
                 </dl>
               ) : null}
-            </div>
+            </Reveal>
 
-            <div>
+            <Reveal delay={120}>
               <Accordion
                 items={[
                   ...(product.specs.length > 0
@@ -328,12 +328,11 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                   },
                 ]}
               />
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
-      {product.reviews.length > 0 ? <LaneDivider /> : null}
       <ProductReviews reviews={product.reviews} average={rating.average} productName={product.name} />
 
       {/* Los relacionados van en streaming: son una consulta más y quedan

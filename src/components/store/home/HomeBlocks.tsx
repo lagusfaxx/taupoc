@@ -7,6 +7,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
 import { BlockMedia } from './BlockMedia';
 import { BannerCarousel, type BannerSlide } from './BannerCarousel';
+import { Reveal } from '@/components/ui/Reveal';
 
 /** Alto del bloque según lo elegido en el panel. */
 const HEIGHTS: Record<string, string> = {
@@ -36,7 +37,11 @@ export function HomeBlocks({ blocks }: { blocks: HomeBlockData[] }) {
   return (
     <>
       {blocks.map((block, index) => (
-        <Block key={block.id} block={block} first={index === 0} />
+        // El primero queda quieto solo: `Reveal` no anima lo que ya está en
+        // pantalla al montar, y el bloque de portada siempre lo está.
+        <Reveal key={block.id}>
+          <Block block={block} first={index === 0} />
+        </Reveal>
       ))}
     </>
   );

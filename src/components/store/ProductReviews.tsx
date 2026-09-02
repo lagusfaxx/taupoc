@@ -34,7 +34,7 @@ export function ProductReviews({
   if (reviews.length === 0) return null;
 
   return (
-    <section id="opiniones" className="scroll-mt-24">
+    <section id="opiniones" className="border-t border-line scroll-mt-24">
       <div className="container py-14 lg:py-20">
         <p className="eyebrow-accent mb-4">Opiniones</p>
         <h2 className="font-display text-[26px] leading-tight tracking-tight text-chalk sm:text-[32px]">

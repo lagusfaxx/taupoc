@@ -100,17 +100,6 @@ const config: Config = {
           '0%': { transform: 'scale(.5)', opacity: '.85' },
           '100%': { transform: 'scale(1.7)', opacity: '0' },
         },
-        // Los flotadores del andarivel corren justo un período del patrón,
-        // así el ciclo cierra sin salto visible.
-        deriva: {
-          '0%': { backgroundPosition: '0 50%' },
-          '100%': { backgroundPosition: '44px 50%' },
-        },
-        // Vaivén de la superficie: amplitud mínima, a propósito.
-        ondear: {
-          '0%, 100%': { transform: 'translateY(0)' },
-          '50%': { transform: 'translateY(-3px)' },
-        },
         // Entrada de los bloques al hacer scroll: salen a flote.
         emerger: {
           '0%': { opacity: '0', transform: 'translateY(18px)' },
@@ -124,8 +113,6 @@ const config: Config = {
         'cart-pop': 'cart-pop .42s cubic-bezier(.2,.9,.25,1.4) both',
         'cart-nudge': 'cart-nudge .5s cubic-bezier(.2,.7,.2,1) both',
         'cart-ring': 'cart-ring .6s cubic-bezier(.2,.7,.2,1) forwards',
-        deriva: 'deriva 4.5s linear infinite',
-        ondear: 'ondear 4.5s ease-in-out infinite',
         emerger: 'emerger .7s cubic-bezier(.2,.7,.2,1) both',
       },
       transitionTimingFunction: {
