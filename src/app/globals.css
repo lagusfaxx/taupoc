@@ -75,6 +75,19 @@
     );
   }
 
+  /* Andarivel: la cuerda de flotadores que divide los carriles.
+     Dos discos por período de 32px, uno del acento y otro de tiza. El
+     desplazamiento anima `background-position` exactamente un período, así
+     el bucle cierra sin salto y no obliga al navegador a recalcular nada
+     más que el pintado. */
+  .andarivel {
+    background-image:
+      radial-gradient(circle at 11px 50%, var(--accent) 0 7px, transparent 7.5px),
+      radial-gradient(circle at 33px 50%, rgba(244, 246, 248, 0.5) 0 7px, transparent 7.5px);
+    background-size: 44px 100%;
+    background-repeat: repeat-x;
+  }
+
   .surface {
     @apply border border-line bg-ink-900;
   }

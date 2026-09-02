@@ -38,6 +38,7 @@ model User {
   addresses   Address[]
   orders      Order[]
   resetTokens PasswordResetToken[]
+  reviews     Review[]
 
   @@index([role])
   @@index([createdAt])
@@ -171,11 +172,49 @@ model Product {
   orderItems OrderItem[]
   coupons    CouponProduct[]
   homeItems  HomeBlockItem[]
+  reviews    Review[]
 
   @@index([status])
   @@index([gender])
   @@index([lineId])
   @@index([featured])
+}
+
+/// Calificación de un producto.
+///
+/// Se cargan a mano desde el panel: son reseñas que los clientes dejaron por
+/// WhatsApp, Instagram o en el stand del torneo, y que acá quedan atribuidas
+/// al producto para que se vean en la ficha y las lea Google.
+model Review {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// Cliente registrado, cuando la reseña vino de una cuenta del sitio.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  /// De 1 a 5. Se valida en la acción, Postgres no tiene rango nativo.
+  rating     Int
+  title      String?
+  body       String  @default("")
+  authorName String
+  /// Club, ciudad o categoría. Da contexto sin exponer al cliente.
+  authorNote String?
+
+  /// Compra verificada. Solo lo marca el panel, y solo si consta el pedido.
+  verified Boolean      @default(false)
+  status   ReviewStatus @default(PUBLISHED)
+
+  /// Fecha que se muestra y que viaja en el marcado de Google. Se separa de
+  /// `createdAt` para que una reseña antigua cargada hoy no aparezca de hoy.
+  publishedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId, status])
+  @@index([publishedAt])
 }
 
 model ProductSpec {
@@ -442,6 +481,11 @@ model CouponProduct {
 // ─────────────────────────────────────────────────────────────
 // Pedidos
 // ─────────────────────────────────────────────────────────────
+
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN
+}
 
 enum OrderStatus {
   PENDING
@@ -723,10 +767,10 @@ model HomeBlock {
   subtitle String?
   body     String?
 
-  ctaLabel      String?
-  ctaHref       String?
-  ctaAltLabel   String?
-  ctaAltHref    String?
+  ctaLabel    String?
+  ctaHref     String?
+  ctaAltLabel String?
+  ctaAltHref  String?
 
   /// URL de la imagen o el video: una subida (/api/media/…) o una externa.
   imageUrl       String?
@@ -736,13 +780,13 @@ model HomeBlock {
   posterUrl      String?
 
   /// contain deja ver la imagen completa; cover la recorta para llenar.
-  fit     String      @default("cover")
+  fit        String      @default("cover")
   /// Oscurecido sobre el medio, de 0 a 90, para que el texto se lea.
-  overlay Int         @default(40)
-  height  BlockHeight @default(MEDIA)
-  align   BlockAlign  @default(IZQUIERDA)
+  overlay    Int         @default(40)
+  height     BlockHeight @default(MEDIA)
+  align      BlockAlign  @default(IZQUIERDA)
   /// Fondo del bloque cuando no lleva imagen.
-  background String @default("ink")
+  background String      @default("ink")
 
   /// Cuántas columnas usa una grilla de productos o de mosaico.
   columns Int @default(4)
@@ -767,17 +811,17 @@ model HomeBlockItem {
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  position Int     @default(0)
-  eyebrow  String?
-  label    String?
-  caption  String?
-  ctaLabel String?
-  href     String?
-  imageUrl String?
+  position       Int     @default(0)
+  eyebrow        String?
+  label          String?
+  caption        String?
+  ctaLabel       String?
+  href           String?
+  imageUrl       String?
   /// Versión para pantallas angostas; si falta se usa la principal.
   imageMobileUrl String?
-  videoUrl String?
-  posterUrl String?
+  videoUrl       String?
+  posterUrl      String?
 
   @@index([blockId, position])
 }

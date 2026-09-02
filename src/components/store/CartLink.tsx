@@ -86,6 +86,51 @@ export function flyToCart(source: {
 
   animacion.onfinish = () => volador.remove();
   animacion.oncancel = () => volador.remove();
+
+  burbujas(origin);
+}
+
+/**
+ * Sueltan burbujas desde donde salió la miniatura.
+ *
+ * Es el detalle que ata el gesto al rubro: el traje entra al agua. Son seis
+ * círculos que suben con deriva lateral, cada uno con su propio retardo,
+ * para que no parezcan una fila. Se limpian solos al terminar.
+ */
+function burbujas(origin: { x: number; y: number; width: number; height: number }) {
+  const centroX = origin.x + origin.width / 2;
+  const base = origin.y + origin.height * 0.75;
+
+  for (let i = 0; i < 6; i++) {
+    const tamano = 5 + Math.random() * 7;
+    const burbuja = document.createElement('span');
+    burbuja.setAttribute('aria-hidden', 'true');
+    burbuja.style.cssText = [
+      'position:fixed',
+      `left:${centroX + (Math.random() - 0.5) * origin.width * 0.6}px`,
+      `top:${base}px`,
+      `width:${tamano}px`,
+      `height:${tamano}px`,
+      'border-radius:50%',
+      'border:1px solid rgba(0,224,184,.75)',
+      'background:rgba(0,224,184,.14)',
+      'z-index:79',
+      'pointer-events:none',
+      'will-change:transform,opacity',
+    ].join(';');
+    document.body.appendChild(burbuja);
+
+    const animacion = burbuja.animate(
+      [
+        { transform: 'translate(0,0) scale(.4)', opacity: 0 },
+        { transform: `translate(${(Math.random() - 0.5) * 26}px, -${40 + Math.random() * 45}px) scale(1)`, opacity: 0.9, offset: 0.45 },
+        { transform: `translate(${(Math.random() - 0.5) * 40}px, -${110 + Math.random() * 60}px) scale(.75)`, opacity: 0 },
+      ],
+      { duration: 900 + Math.random() * 500, delay: i * 55, easing: 'cubic-bezier(.3,.6,.4,1)', fill: 'forwards' },
+    );
+    animacion.onfinish = () => burbuja.remove();
+    animacion.oncancel = () => burbuja.remove();
+  }
 }
 
 /**
