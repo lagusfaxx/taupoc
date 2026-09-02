@@ -8,6 +8,7 @@ import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductView, type ProductViewData } from '@/components/store/ProductView';
 import { ProductCard } from '@/components/store/ProductCard';
 import { ProductReviews } from '@/components/store/ProductReviews';
+import { LaneDivider } from '@/components/store/LaneDivider';
 import { SectionHeading } from '@/components/store/SectionHeading';
 import { Accordion } from '@/components/store/Accordion';
 
@@ -332,6 +333,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </section>
 
+      {product.reviews.length > 0 ? <LaneDivider /> : null}
       <ProductReviews reviews={product.reviews} average={rating.average} productName={product.name} />
 
       {/* Los relacionados van en streaming: son una consulta más y quedan
