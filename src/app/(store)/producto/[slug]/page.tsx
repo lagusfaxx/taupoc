@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getProductDetail, getRelated, GENDER_LABEL } from '@/lib/catalog';
+import { getProductDetail, getRelated, resumenDeNotas, GENDER_LABEL } from '@/lib/catalog';
 import { getSettings } from '@/lib/settings';
 import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductView, type ProductViewData } from '@/components/store/ProductView';
 import { ProductCard } from '@/components/store/ProductCard';
+import { ProductReviews } from '@/components/store/ProductReviews';
 import { SectionHeading } from '@/components/store/SectionHeading';
 import { Accordion } from '@/components/store/Accordion';
 
@@ -38,6 +39,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const { slug } = await params;
   const [product, settings] = await Promise.all([getProductDetail(slug), getSettings()]);
   if (!product) notFound();
+
+  const rating = resumenDeNotas(product.reviews);
 
   const colors = product.colors.map((color) => ({
     id: color.id,
@@ -90,6 +93,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     fallbackImages: product.images.map((img) => ({ id: img.id, url: img.url, alt: img.alt })),
     installmentsMax: settings.installmentsMax,
     freeShippingOver: settings.freeShippingOver,
+    rating,
   };
 
   const totalStock = colors.reduce(
@@ -118,6 +122,32 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
               value: product.approvalCode,
             },
           ],
+        }
+      : {}),
+    // Solo con reseñas de verdad: Google exige que el marcado refleje lo que
+    // se ve en la página, y una nota inventada es motivo de sanción manual.
+    ...(rating.count > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: rating.average,
+            reviewCount: rating.count,
+            bestRating: 5,
+            worstRating: 1,
+          },
+          review: product.reviews.slice(0, 10).map((r) => ({
+            '@type': 'Review',
+            author: { '@type': 'Person', name: r.authorName },
+            datePublished: r.publishedAt.toISOString().slice(0, 10),
+            reviewRating: {
+              '@type': 'Rating',
+              ratingValue: r.rating,
+              bestRating: 5,
+              worstRating: 1,
+            },
+            ...(r.title ? { name: r.title } : {}),
+            ...(r.body ? { reviewBody: r.body } : {}),
+          })),
         }
       : {}),
     offers: {
@@ -301,6 +331,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           </div>
         </div>
       </section>
+
+      <ProductReviews reviews={product.reviews} average={rating.average} productName={product.name} />
 
       {/* Los relacionados van en streaming: son una consulta más y quedan
           fuera de la primera pantalla, así que esperarlos solo retrasaba la

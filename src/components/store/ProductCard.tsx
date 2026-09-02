@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Price } from '@/components/ui/Price';
+import { RatingSummary } from '@/components/ui/Stars';
 import { cn } from '@/lib/utils';
 import { colorLabel } from '@/lib/colors';
 
@@ -28,6 +29,7 @@ export interface ProductCardData {
   colors: ProductCardColor[];
   fallbackImage: string | null;
   accentHex: string;
+  rating: { average: number; count: number };
 }
 
 export function ProductCard({ product, priority }: { product: ProductCardData; priority?: boolean }) {
@@ -102,6 +104,14 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
               </button>
             ))}
           </div>
+        ) : null}
+
+        {product.rating.count > 0 ? (
+          <RatingSummary
+            average={product.rating.average}
+            count={product.rating.count}
+            className="mt-2.5"
+          />
         ) : null}
 
         <div className="mt-auto pt-3.5">

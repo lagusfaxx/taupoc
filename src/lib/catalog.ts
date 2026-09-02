@@ -21,6 +21,10 @@ const CARD_INCLUDE = {
     },
   },
   images: { orderBy: { sortOrder: 'asc' as const }, take: 1 },
+  // Solo el entero de cada reseña publicada: el promedio se calcula en
+  // memoria. Con este catálogo sale más barato que un groupBy aparte, y
+  // nunca se desincroniza como lo haría una columna denormalizada.
+  reviews: { where: { status: 'PUBLISHED' as const }, select: { rating: true } },
 } satisfies Prisma.ProductInclude;
 
 type ProductWithCard = Prisma.ProductGetPayload<{ include: typeof CARD_INCLUDE }>;
@@ -49,7 +53,16 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     colors,
     fallbackImage: product.images[0]?.url ?? colors.find((c) => c.imageUrl)?.imageUrl ?? null,
     accentHex: product.line?.accentHex ?? '#00E0B8',
+    rating: resumenDeNotas(product.reviews),
   };
+}
+
+/** Promedio y total de un puñado de notas ya filtradas a publicadas. */
+export function resumenDeNotas(reviews: { rating: number }[]): { average: number; count: number } {
+  if (reviews.length === 0) return { average: 0, count: 0 };
+  const suma = reviews.reduce((s, r) => s + r.rating, 0);
+  // Un decimal: es lo que muestran las estrellas y lo que espera Google.
+  return { average: Math.round((suma / reviews.length) * 10) / 10, count: reviews.length };
 }
 
 export interface CatalogFilters {
@@ -234,6 +247,10 @@ export const getProductDetail = cache(async function getProductDetail(slug: stri
         },
       },
       images: { orderBy: { sortOrder: 'asc' } },
+      reviews: {
+        where: { status: 'PUBLISHED' },
+        orderBy: [{ publishedAt: 'desc' }],
+      },
     },
   });
 });

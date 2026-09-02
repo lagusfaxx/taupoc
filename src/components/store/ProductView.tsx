@@ -8,6 +8,7 @@ import { formatCLP, installment } from '@/lib/money';
 import { cn, readableOn } from '@/lib/utils';
 import { colorLabel } from '@/lib/colors';
 import { Price } from '@/components/ui/Price';
+import { RatingSummary } from '@/components/ui/Stars';
 import { announceCart, flyToCart } from './CartLink';
 import { ProductGallery, type GalleryImage } from './ProductGallery';
 import { SizeChart, type SizeChartRowData } from './SizeChart';
@@ -59,6 +60,7 @@ export interface ProductViewData {
   fallbackImages: GalleryImage[];
   installmentsMax: number;
   freeShippingOver: number | null;
+  rating: { average: number; count: number };
 }
 
 function AddButton({
@@ -306,6 +308,16 @@ export function ProductView({ product }: { product: ProductViewData }) {
         </h1>
         {product.subtitle ? (
           <p className="mt-2.5 text-[15px] text-chalk-dim">{product.subtitle}</p>
+        ) : null}
+
+        {product.rating.count > 0 ? (
+          <a
+            href="#opiniones"
+            className="mt-3 inline-flex items-center gap-2 text-chalk-dim transition-colors hover:text-chalk"
+          >
+            <RatingSummary average={product.rating.average} count={product.rating.count} size="md" />
+            <span className="text-[12.5px] underline underline-offset-4">Ver opiniones</span>
+          </a>
         ) : null}
 
         {/* Precio */}

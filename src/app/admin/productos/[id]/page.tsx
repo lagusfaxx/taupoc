@@ -12,6 +12,7 @@ import { VariantMatrix } from '@/components/admin/VariantMatrix';
 import { ColorManager } from '@/components/admin/ColorManager';
 import { ImageManager } from '@/components/admin/ImageManager';
 import { SpecsEditor, SizeChartEditor } from '@/components/admin/SpecsEditor';
+import { ReviewManager } from '@/components/admin/ReviewManager';
 import { AdminTabs } from '@/components/admin/AdminTabs';
 import { Badge } from '@/components/ui/Badge';
 import { IconExternal } from '@/components/ui/Icons';
@@ -42,6 +43,7 @@ export default async function EditProductPage({
         images: { orderBy: { sortOrder: 'asc' } },
         specs: { orderBy: { sortOrder: 'asc' } },
         sizeChart: { orderBy: { sortOrder: 'asc' } },
+        reviews: { orderBy: [{ publishedAt: 'desc' }] },
         _count: { select: { orderItems: true } },
       },
     }),
@@ -185,6 +187,31 @@ export default async function EditProductPage({
                     hipMinCm: r.hipMinCm, hipMaxCm: r.hipMaxCm,
                     heightMinCm: r.heightMinCm, heightMaxCm: r.heightMaxCm,
                     cn: r.cn, usa: r.usa, uk: r.uk, aus: r.aus, nz: r.nz,
+                  }))}
+                />
+              </Card>
+            ),
+          },
+          {
+            id: 'opiniones',
+            label: `Opiniones (${product.reviews.length})`,
+            content: (
+              <Card
+                title="Opiniones del producto"
+                description="Se muestran en la ficha y viajan en el marcado que lee Google."
+              >
+                <ReviewManager
+                  productId={product.id}
+                  reviews={product.reviews.map((r) => ({
+                    id: r.id,
+                    rating: r.rating,
+                    title: r.title,
+                    body: r.body,
+                    authorName: r.authorName,
+                    authorNote: r.authorNote,
+                    verified: r.verified,
+                    status: r.status,
+                    publishedAt: r.publishedAt.toISOString().slice(0, 10),
                   }))}
                 />
               </Card>
