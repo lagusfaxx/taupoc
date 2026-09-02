@@ -27,7 +27,7 @@ export default async function NewProductPage() {
         categories={categories}
         product={{
           name: '', slug: '', modelCode: '', subtitle: '', description: '',
-          status: 'DRAFT', gender: 'MALE', lineId: '', categoryId: '',
+          status: 'DRAFT', gender: 'MALE', kind: 'SWIMSUIT', lineId: '', categoryId: '',
           approvalCode: '', approvalBody: 'World Aquatics', approvalYear: '', approvalVerifyUrl: 'https://www.worldaquatics.com/swimming/approved-swimwear',
           basePrice: '', weightGrams: '180',
           composition: '', construction: '', finish: '', countryOrigin: '',

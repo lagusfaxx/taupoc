@@ -53,6 +53,8 @@ export interface ProductViewData {
   approvalYear: number | null;
   approvalVerifyUrl: string | null;
   comingSoon: boolean;
+  /** Un accesorio no lleva homologación, tabla de tallas ni notas de calce. */
+  esAccesorio: boolean;
   fitNotes: string | null;
   fitOffset: number;
   colors: ViewColor[];
@@ -171,7 +173,13 @@ function ColorPicker({
 export function ProductView({ product }: { product: ProductViewData }) {
   const router = useRouter();
   const [colorId, setColorId] = useState(product.colors[0]?.id ?? '');
-  const [variantId, setVariantId] = useState<string | null>(null);
+  // Un accesorio de talla única no obliga a elegir nada: se preselecciona
+  // para que el botón de compra quede activo de entrada.
+  const unicaVariante =
+    product.esAccesorio && product.colors[0]?.variants.length === 1
+      ? (product.colors[0].variants[0] ?? null)
+      : null;
+  const [variantId, setVariantId] = useState<string | null>(unicaVariante?.id ?? null);
   const [state, setState] = useState<CartActionState | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -350,18 +358,26 @@ export function ProductView({ product }: { product: ProductViewData }) {
           <fieldset id="tallas" className="scroll-mt-24">
             <legend className="mb-3 flex w-full items-center justify-between gap-3">
               <span className="font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim">
-                Talla {variant ? <span className="text-chalk">· {variant.size}</span> : null}
+                {unicaVariante ? 'Presentación' : 'Talla'}
+                {variant && !unicaVariante ? <span className="text-chalk">· {variant.size}</span> : null}
               </span>
-              <SizeChart
-                rows={product.sizeChart}
-                gender={product.gender}
-                fitNotes={product.fitNotes}
-                fitOffset={product.fitOffset}
-                productName={product.name}
-                onPickSize={selectSize}
-              />
+              {product.esAccesorio ? null : (
+                <SizeChart
+                  rows={product.sizeChart}
+                  gender={product.gender}
+                  fitNotes={product.fitNotes}
+                  fitOffset={product.fitOffset}
+                  productName={product.name}
+                  onPickSize={selectSize}
+                />
+              )}
             </legend>
 
+            {unicaVariante ? (
+              <p className="border border-line bg-ink-800 px-4 py-3 text-[13.5px] text-chalk-dim">
+                Talla única
+              </p>
+            ) : (
             <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
               {color?.variants.map((v) => {
                 const selected = v.id === variant?.id;
@@ -393,6 +409,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
                 );
               })}
             </div>
+            )}
 
             {/* Estado de stock en vivo */}
             <p ref={liveRef} aria-live="polite" className="mt-3 min-h-[20px] text-[13px]">
@@ -413,7 +430,9 @@ export function ProductView({ product }: { product: ProductViewData }) {
                 </span>
               ) : (
                 <span className="text-chalk-faint">
-                  Selecciona tu talla. Recuerda: los trajes de carrera se usan 1 a 2 tallas por debajo.
+                  {product.esAccesorio
+                    ? 'Selecciona una opción.'
+                    : 'Selecciona tu talla. Recuerda: los trajes de carrera se usan 1 a 2 tallas por debajo.'}
                 </span>
               )}
             </p>
@@ -446,7 +465,7 @@ export function ProductView({ product }: { product: ProductViewData }) {
 
         {/* Homologación: va después de la compra. Es el argumento que cierra
             la decisión, pero quien entra busca primero precio, color y talla. */}
-        {product.approvalCode ? (
+        {product.approvalCode && !product.esAccesorio ? (
           <div className="mt-8 border accent-border bg-ink-900">
             <div className="flex items-start gap-3.5 p-4">
               <IconShield className="mt-0.5 h-6 w-6 shrink-0 accent-text" />
@@ -532,7 +551,9 @@ export function ProductView({ product }: { product: ProductViewData }) {
           <li className="flex items-start gap-3 py-3.5">
             <IconCheck className="mt-0.5 h-5 w-5 shrink-0 text-chalk-faint" />
             <p className="text-[13.5px] leading-relaxed text-chalk-dim">
-              Cambio de talla sin costo dentro de 10 días, con el traje sin uso y con etiqueta.{' '}
+              {product.esAccesorio
+                ? 'Cambio o devolución dentro de 10 días, sin uso y con su empaque original. '
+                : 'Cambio de talla sin costo dentro de 10 días, con el traje sin uso y con etiqueta. '}
               <Link href="/devoluciones" className="underline underline-offset-2 hover:text-chalk">
                 Ver política
               </Link>

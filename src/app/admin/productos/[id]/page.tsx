@@ -173,7 +173,8 @@ export default async function EditProductPage({
               </Card>
             ),
           },
-          {
+          // Un accesorio no lleva tabla de tallas: la pestaña sobra.
+          ...(product.kind === 'ACCESSORY' ? [] : [{
             id: 'tallas',
             label: 'Tabla de tallas',
             content: (
@@ -216,7 +217,7 @@ export default async function EditProductPage({
                 />
               </Card>
             ),
-          },
+          }]),
           {
             id: 'ficha',
             label: 'Ficha técnica',
@@ -245,7 +246,7 @@ export default async function EditProductPage({
 
 function toFormData(product: {
   id: string; name: string; slug: string; modelCode: string; subtitle: string | null;
-  description: string; status: string; gender: string; lineId: string | null; categoryId: string | null;
+  description: string; status: string; gender: string; kind: string; lineId: string | null; categoryId: string | null;
   approvalCode: string | null; approvalBody: string; approvalYear: number | null; approvalVerifyUrl: string | null;
   basePrice: number; weightGrams: number;
   composition: string | null; construction: string | null; finish: string | null; countryOrigin: string | null;
@@ -261,6 +262,7 @@ function toFormData(product: {
     description: product.description,
     status: product.status,
     gender: product.gender,
+    kind: product.kind,
     lineId: product.lineId ?? '',
     categoryId: product.categoryId ?? '',
     approvalCode: product.approvalCode ?? '',
