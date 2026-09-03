@@ -18,6 +18,7 @@ export interface ProductFormData {
   description: string;
   status: string;
   gender: string;
+  kind: string;
   lineId: string;
   categoryId: string;
   approvalCode: string;
@@ -62,6 +63,8 @@ export function ProductForm({
   categories: { id: string; name: string }[];
 }) {
   const [state, action] = useActionState<AdminState | null, FormData>(saveProduct, null);
+  const [kind, setKind] = useState(product.kind || 'SWIMSUIT');
+  const esAccesorio = kind === 'ACCESSORY';
   const [name, setName] = useState(product.name);
   const [slug, setSlug] = useState(product.slug);
   const [slugTouched, setSlugTouched] = useState(Boolean(product.slug));
@@ -139,6 +142,7 @@ export function ProductForm({
             </div>
           </Card>
 
+          {esAccesorio ? null : (
           <Card title="Homologación World Aquatics" description="Es el principal argumento de venta: publícalo completo.">
             <div className="grid gap-4 sm:grid-cols-2">
               <Input
@@ -158,6 +162,7 @@ export function ProductForm({
               />
             </div>
           </Card>
+          )}
 
           <Card title="Ficha técnica">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -167,19 +172,23 @@ export function ProductForm({
               <Input label="Origen" name="countryOrigin" defaultValue={product.countryOrigin} placeholder="Tejido italiano" />
               <Input label="Peso unitario (gramos)" name="weightGrams" type="number" defaultValue={product.weightGrams} help="Se usa para calcular el envío por peso." />
               <Textarea label="Cuidado" name="careNotes" rows={3} defaultValue={product.careNotes} className="sm:col-span-2" />
-              <Textarea
-                label="Notas de calce"
-                name="fitNotes"
-                rows={3}
-                defaultValue={product.fitNotes}
-                help="Se muestra en la tabla de tallas. Explica el uso 1-2 tallas por debajo."
-                className="sm:col-span-2"
-              />
-              <Select label="Tallas a bajar por compresión" name="fitOffset" defaultValue={product.fitOffset || '1'}>
-                <option value="0">Sin ajuste</option>
-                <option value="1">1 talla</option>
-                <option value="2">2 tallas</option>
-              </Select>
+              {esAccesorio ? null : (
+                <>
+                  <Textarea
+                    label="Notas de calce"
+                    name="fitNotes"
+                    rows={3}
+                    defaultValue={product.fitNotes}
+                    help="Se muestra en la tabla de tallas. Explica el uso 1-2 tallas por debajo."
+                    className="sm:col-span-2"
+                  />
+                  <Select label="Tallas a bajar por compresión" name="fitOffset" defaultValue={product.fitOffset || '1'}>
+                    <option value="0">Sin ajuste</option>
+                    <option value="1">1 talla</option>
+                    <option value="2">2 tallas</option>
+                  </Select>
+                </>
+              )}
             </div>
           </Card>
 
@@ -211,6 +220,21 @@ export function ProductForm({
                 <option value="COMING_SOON">Próximamente — visible sin comprar</option>
                 <option value="ARCHIVED">Archivado</option>
               </Select>
+              <Select
+                label="Tipo de producto"
+                name="kind"
+                value={kind}
+                onChange={(ev) => setKind(ev.target.value)}
+                help={
+                  esAccesorio
+                    ? 'Sin homologación, calce ni tabla de tallas.'
+                    : 'Pide homologación, calce y tabla de tallas.'
+                }
+              >
+                <option value="SWIMSUIT">Traje de competición</option>
+                <option value="ACCESSORY">Accesorio (gorro, lentes, toalla…)</option>
+              </Select>
+
               <Select label="Género" name="gender" defaultValue={product.gender || 'UNISEX'}>
                 <option value="MALE">Hombre</option>
                 <option value="FEMALE">Mujer</option>

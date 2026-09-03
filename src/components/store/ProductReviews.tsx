@@ -1,6 +1,5 @@
 import { formatDate } from '@/lib/utils';
 import { Stars } from '@/components/ui/Stars';
-import { Reveal } from '@/components/ui/Reveal';
 import { IconCheck } from '@/components/ui/Icons';
 
 export interface ReviewData {
@@ -34,7 +33,7 @@ export function ProductReviews({
   if (reviews.length === 0) return null;
 
   return (
-    <section id="opiniones" className="scroll-mt-24">
+    <section id="opiniones" className="border-t border-line scroll-mt-24">
       <div className="container py-14 lg:py-20">
         <p className="eyebrow-accent mb-4">Opiniones</p>
         <h2 className="font-display text-[26px] leading-tight tracking-tight text-chalk sm:text-[32px]">
@@ -81,9 +80,8 @@ export function ProductReviews({
 
           {/* Listado */}
           <ul className="divide-y divide-line">
-            {reviews.map((review, i) => (
+            {reviews.map((review) => (
               <li key={review.id} className="py-6 first:pt-0">
-                <Reveal delay={Math.min(i, 4) * 70}>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                   <Stars value={review.rating} size="sm" />
                   <span className="sr-only">{review.rating} de 5</span>
@@ -113,7 +111,6 @@ export function ProductReviews({
                 ) : null}
 
                 <p className="mt-3 text-[12px] text-chalk-faint">{formatDate(review.publishedAt)}</p>
-                </Reveal>
               </li>
             ))}
           </ul>

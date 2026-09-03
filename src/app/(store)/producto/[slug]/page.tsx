@@ -8,7 +8,6 @@ import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductView, type ProductViewData } from '@/components/store/ProductView';
 import { ProductCard } from '@/components/store/ProductCard';
 import { ProductReviews } from '@/components/store/ProductReviews';
-import { LaneDivider } from '@/components/store/LaneDivider';
 import { SectionHeading } from '@/components/store/SectionHeading';
 import { Accordion } from '@/components/store/Accordion';
 
@@ -42,6 +41,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   if (!product) notFound();
 
   const rating = resumenDeNotas(product.reviews);
+  const esAccesorio = product.kind === 'ACCESSORY';
 
   const colors = product.colors.map((color) => ({
     id: color.id,
@@ -80,6 +80,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     approvalYear: product.approvalYear,
     approvalVerifyUrl: product.approvalVerifyUrl,
     comingSoon: product.status === 'COMING_SOON',
+    esAccesorio,
     fitNotes: product.fitNotes,
     fitOffset: product.fitOffset,
     colors,
@@ -114,7 +115,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     image: product.colors
       .flatMap((c) => c.images.map((i) => absoluteUrl(i.url)))
       .slice(0, 8),
-    ...(product.approvalCode
+    ...(product.approvalCode && !esAccesorio
       ? {
           additionalProperty: [
             {
@@ -209,7 +210,9 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         <div className="container py-14 lg:py-20">
           <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:gap-20">
             <div>
-              <p className="eyebrow-accent mb-4">Sobre este traje</p>
+              <p className="eyebrow-accent mb-4">
+                {esAccesorio ? 'Sobre este producto' : 'Sobre este traje'}
+              </p>
               <div className="prose-taupoc max-w-xl">
                 {product.description.split('\n\n').map((paragraph, i) => (
                   <p key={i}>{paragraph}</p>
@@ -282,7 +285,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
                         },
                       ]
                     : []),
-                  ...(product.fitNotes
+                  ...(product.fitNotes && !esAccesorio
                     ? [
                         {
                           title: 'Cómo debe calzar',
@@ -333,7 +336,6 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
         </div>
       </section>
 
-      {product.reviews.length > 0 ? <LaneDivider /> : null}
       <ProductReviews reviews={product.reviews} average={rating.average} productName={product.name} />
 
       {/* Los relacionados van en streaming: son una consulta más y quedan

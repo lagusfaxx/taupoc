@@ -7,7 +7,6 @@ import { getFeatured } from '@/lib/catalog';
 import { getHomeBlocks } from '@/lib/home';
 import { buildMetadata, jsonLd, absoluteUrl, SITE_NAME } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
-import { LaneDivider } from '@/components/store/LaneDivider';
 import { HomeBlocks } from '@/components/store/home/HomeBlocks';
 import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
@@ -133,9 +132,7 @@ async function PortadaPorDefecto() {
         </Link>
       </section>
 
-      <LaneDivider />
-
-      <section>
+      <section className="border-t border-line">
         <div className="container py-10 lg:py-12">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
             {entries.map((entry) => (
@@ -166,9 +163,7 @@ async function PortadaPorDefecto() {
         </div>
       </section>
 
-      <LaneDivider />
-
-      <section className="bg-ink-900">
+      <section className="border-t border-line bg-ink-900">
         <div className="container flex flex-col gap-6 py-12 sm:flex-row sm:items-center sm:justify-between lg:py-14">
           <div>
             <h2 className="font-display text-[22px] leading-none tracking-tight text-chalk">Clubes</h2>

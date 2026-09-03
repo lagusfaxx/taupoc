@@ -81,6 +81,13 @@ model Address {
 // Catálogo
 // ─────────────────────────────────────────────────────────────
 
+enum ProductKind {
+  /// Traje de competición: homologación, tabla de tallas y notas de calce.
+  SWIMSUIT
+  /// Accesorio: gorros, lentes, toallas. Sin homologación ni calce.
+  ACCESSORY
+}
+
 enum ProductStatus {
   DRAFT
   ACTIVE
@@ -129,6 +136,10 @@ model Product {
   description String        @default("")
   status      ProductStatus @default(DRAFT)
   gender      Gender        @default(UNISEX)
+  /// Qué es el producto. Un gorro o unos lentes no tienen homologación ni
+  /// calce, y pedirlos en el panel obliga a inventar datos que después
+  /// ensucian la ficha.
+  kind        ProductKind   @default(SWIMSUIT)
 
   categoryId String?
   category   Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
