@@ -61,9 +61,9 @@ export function toCardData(product: ProductWithCard): ProductCardData {
  * Una tarjeta por color en vez de una por modelo.
  *
  * El jammer con diez colorways ocupa diez lugares en la grilla y cada uno
- * abre la misma ficha con ese color elegido. No se duplica el producto: el
- * stock, las tallas y el precio siguen colgando de un solo `Product`, y la
- * URL canónica de la ficha no lleva el parámetro, así que Google indexa una.
+ * lleva a la ficha de ese color, que es una página con URL, título, fotos y
+ * stock propios. En la base sigue siendo un solo `Product` con sus colores:
+ * el inventario y los pedidos no se parten, solo se separa lo que se publica.
  */
 export function splitCardsByColor(cards: ProductCardData[]): ProductCardData[] {
   return cards.flatMap((card) =>
@@ -289,3 +289,55 @@ export async function getRelated(productId: string, lineId: string | null, limit
   });
   return products.map(toCardData);
 }
+
+/** URL de la ficha de un color: `/producto/<modelo>-<color>`. */
+export function colorPagePath(productSlug: string, colorSlug: string): string {
+  return `/producto/${productSlug}-${colorSlug}`;
+}
+
+export type ProductDetail = NonNullable<Awaited<ReturnType<typeof getProductDetail>>>;
+
+export interface ResolvedProductRoute {
+  product: ProductDetail;
+  /** El color que nombra la URL. `null` en la ficha del modelo completo. */
+  color: ProductDetail['colors'][number] | null;
+}
+
+/**
+ * Resuelve `/producto/<slug>` aceptando además `<modelo>-<color>`.
+ *
+ * Cada colorway tiene su propia ficha, con su URL, su título, sus fotos y su
+ * stock. Como el slug del color va pegado al del modelo con un guion y ambos
+ * pueden llevar guiones, se prueban todos los cortes posibles empezando por
+ * el modelo más largo: así un modelo llamado `ts703-azul` gana sobre el corte
+ * `ts703` + color `azul`, que es lo que espera quien nombró el producto.
+ */
+export const resolveProductRoute = cache(async function resolveProductRoute(
+  slug: string,
+): Promise<ResolvedProductRoute | null> {
+  const exact = await getProductDetail(slug);
+  if (exact) return { product: exact, color: null };
+
+  const parts = slug.split('-');
+  const cortes: { productSlug: string; colorSlug: string }[] = [];
+  for (let i = parts.length - 1; i >= 1; i--) {
+    cortes.push({ productSlug: parts.slice(0, i).join('-'), colorSlug: parts.slice(i).join('-') });
+  }
+  if (cortes.length === 0) return null;
+
+  const posibles = await prisma.product.findMany({
+    where: { slug: { in: cortes.map((c) => c.productSlug) }, status: { in: VISIBLE } },
+    select: { slug: true, colors: { where: { active: true }, select: { slug: true } } },
+  });
+
+  for (const corte of cortes) {
+    const candidato = posibles.find((p) => p.slug === corte.productSlug);
+    if (!candidato?.colors.some((c) => c.slug === corte.colorSlug)) continue;
+
+    const product = await getProductDetail(corte.productSlug);
+    const color = product?.colors.find((c) => c.slug === corte.colorSlug);
+    if (product && color) return { product, color };
+  }
+
+  return null;
+});

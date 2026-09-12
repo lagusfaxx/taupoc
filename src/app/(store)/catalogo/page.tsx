@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { Gender } from '@prisma/client';
-import { getCatalog, getCatalogFacets, splitCardsByColor } from '@/lib/catalog';
+import { colorPagePath, getCatalog, getCatalogFacets, splitCardsByColor } from '@/lib/catalog';
 import { getSettings } from '@/lib/settings';
 import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
@@ -86,15 +86,20 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: heading,
-    // La lista va sobre los modelos y no sobre las tarjetas: separar por color
-    // repetiría la misma URL diez veces, que es justo lo que Google descarta.
-    numberOfItems: found.length,
-    itemListElement: found.slice(0, 20).map((p, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      url: absoluteUrl(`/producto/${p.slug}`),
-      name: p.name,
-    })),
+    // Una entrada por ficha publicada. Con la división activa cada color tiene
+    // su propia URL, así que no se repite ninguna.
+    numberOfItems: products.length,
+    itemListElement: products.slice(0, 20).map((p, i) => {
+      const color = p.colorSlug ? p.colors.find((c) => c.slug === p.colorSlug) : null;
+      return {
+        '@type': 'ListItem',
+        position: i + 1,
+        url: absoluteUrl(
+          color ? colorPagePath(p.slug, color.slug) : `/producto/${p.slug}`,
+        ),
+        name: color ? `${p.name} — ${color.name}` : p.name,
+      };
+    }),
   };
 
   return (

@@ -81,6 +81,9 @@ export async function updateSettings(
 
   revalidatePath('/', 'layout');
   revalidatePath('/admin/configuracion');
+  // `catalogSplitByColor` cambia qué fichas se publican, y el sitemap se
+  // regenera cada hora: sin esto el buscador seguiría viendo las anteriores.
+  revalidatePath('/sitemap.xml');
 
   return { ok: true, message: 'Configuración guardada. Los cambios ya están en la tienda.' };
 }

@@ -58,6 +58,11 @@ export interface ProductViewData {
   fitNotes: string | null;
   fitOffset: number;
   colors: ViewColor[];
+  /**
+   * Cada color tiene ficha propia: el selector navega a `/producto/<modelo>-<color>`
+   * en vez de cambiar el color dentro de esta página.
+   */
+  colorPages?: boolean;
   sizeChart: SizeChartRowData[];
   fallbackImages: GalleryImage[];
   installmentsMax: number;
@@ -101,11 +106,14 @@ function ColorPicker({
   colors,
   activeId,
   onPick,
+  hrefFor,
   className,
 }: {
   colors: ViewColor[];
   activeId: string | undefined;
   onPick: (id: string) => void;
+  /** Con fichas por color cada muestra es un enlace a la ficha de ese color. */
+  hrefFor?: (color: ViewColor) => string;
   className?: string;
 }) {
   if (colors.length <= 1) return null;
@@ -141,27 +149,49 @@ function ColorPicker({
         {colors.map((c) => {
           const stock = c.variants.reduce((s, v) => s + v.available, 0);
           const selected = c.id === color?.id;
+          const etiqueta = `Color ${colorLabel(c)}${stock === 0 ? ' (agotado)' : ''}`;
+          const titulo = `${colorLabel(c)}${c.stripCode ? ` · vivo ${c.stripCode}` : ''}`;
+          const clase = cn(
+            'relative block h-10 w-10 border-2 transition-all duration-150',
+            selected ? 'border-chalk' : 'border-line hover:border-chalk-faint',
+          );
+          const tachado =
+            stock === 0 ? (
+              <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+                {/* Sin bajar la opacidad: atenuar el swatch falsearía el
+                    colorway, y el código del fabricante es parte de la ficha. */}
+                <span className="h-px w-[135%] rotate-45 bg-ink shadow-[0_0_0_1px_rgba(244,246,248,0.65)]" />
+              </span>
+            ) : null;
+
+          if (hrefFor) {
+            return (
+              <Link
+                key={c.id}
+                href={hrefFor(c)}
+                aria-current={selected ? 'page' : undefined}
+                aria-label={etiqueta}
+                title={titulo}
+                className={clase}
+                style={{ background: c.hex }}
+              >
+                {tachado}
+              </Link>
+            );
+          }
+
           return (
             <button
               key={c.id}
               type="button"
               onClick={() => onPick(c.id)}
               aria-pressed={selected}
-              aria-label={`Color ${colorLabel(c)}${stock === 0 ? ' (agotado)' : ''}`}
-              title={`${colorLabel(c)}${c.stripCode ? ` · vivo ${c.stripCode}` : ''}`}
-              className={cn(
-                'relative h-10 w-10 border-2 transition-all duration-150',
-                selected ? 'border-chalk' : 'border-line hover:border-chalk-faint',
-              )}
+              aria-label={etiqueta}
+              title={titulo}
+              className={clase}
               style={{ background: c.hex }}
             >
-              {stock === 0 ? (
-                <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
-                  {/* Sin bajar la opacidad: atenuar el swatch falsearía el
-                      colorway, y el código del fabricante es parte de la ficha. */}
-                  <span className="h-px w-[135%] rotate-45 bg-ink shadow-[0_0_0_1px_rgba(244,246,248,0.65)]" />
-                </span>
-              ) : null}
+              {tachado}
             </button>
           );
         })}
@@ -182,6 +212,9 @@ export function ProductView({
   const inicial =
     product.colors.find((c) => c.slug === initialColorSlug) ?? product.colors[0] ?? null;
   const [colorId, setColorId] = useState(inicial?.id ?? '');
+  const hrefDeColor = product.colorPages
+    ? (c: ViewColor) => `/producto/${product.slug}-${c.slug}`
+    : undefined;
   // Un accesorio de talla única no obliga a elegir nada: se preselecciona
   // para que el botón de compra quede activo de entrada.
   const unicaVariante =
@@ -299,6 +332,7 @@ export function ProductView({
           colors={product.colors}
           activeId={color?.id}
           onPick={setColorId}
+          hrefFor={hrefDeColor}
           className="mt-5 lg:hidden"
         />
       </div>
@@ -358,6 +392,7 @@ export function ProductView({
             colors={product.colors}
             activeId={color?.id}
             onPick={setColorId}
+            hrefFor={hrefDeColor}
             className="mb-7 hidden lg:block"
           />
 

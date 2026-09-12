@@ -32,7 +32,7 @@ export interface ProductCardData {
   rating: { average: number; count: number };
   /**
    * Tarjeta de un color concreto: la grilla muestra ese color, lo nombra bajo
-   * el título y abre la ficha con él ya elegido. No es una ficha aparte.
+   * el título y enlaza a la ficha de ese color.
    */
   colorSlug?: string | null;
 }
@@ -49,7 +49,14 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
     [fixed, activeId, product.colors],
   );
 
-  const href = fixed ? `/producto/${product.slug}?color=${fixed.slug}` : `/producto/${product.slug}`;
+  // Tarjeta fijada a un color: va derecho a la ficha de ese color. Tarjeta de
+  // modelo con varios colores: lleva el elegido en la muestra, y la ficha
+  // decide si lo preselecciona o redirige a su propia página.
+  const href = fixed
+    ? `/producto/${product.slug}-${fixed.slug}`
+    : active && product.colors.length > 1
+      ? `/producto/${product.slug}?color=${active.slug}`
+      : `/producto/${product.slug}`;
   const image = active?.imageUrl ?? product.fallbackImage;
   // Con la tarjeta fijada a un color manda el stock de ese color, no el del modelo.
   const unavailable = product.comingSoon || (fixed ? fixed.stock === 0 : product.totalStock === 0);

@@ -2,7 +2,14 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { getProductDetail, getRelated, resumenDeNotas, GENDER_LABEL } from '@/lib/catalog';
+import {
+  colorPagePath,
+  getRelated,
+  resolveProductRoute,
+  resumenDeNotas,
+  GENDER_LABEL,
+} from '@/lib/catalog';
+import { colorLabel } from '@/lib/colors';
 import { getSettings } from '@/lib/settings';
 import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductView, type ProductViewData } from '@/components/store/ProductView';
@@ -16,21 +23,91 @@ import { Accordion } from '@/components/store/Accordion';
 export const dynamic = 'force-dynamic';
 
 
+/**
+ * Decide qué ficha corresponde a la URL pedida.
+ *
+ * Con la división activa las fichas publicadas son las de color, y la URL del
+ * modelo muestra la del primer color en vez de redirigir: esta ruta tiene
+ * `loading.tsx`, o sea que se renderiza dentro de un Suspense, y ahí un
+ * `redirect()` sale como redirección por streaming con estado 200 —que para
+ * Google no es una redirección—. Sirviendo la ficha con la canónica apuntando
+ * a `/producto/<modelo>-<color>` se consigue lo mismo sin depender de eso: el
+ * visitante ve la ficha y el buscador consolida en la página del color, que es
+ * la que está en el sitemap.
+ */
+async function resolverFicha(
+  slug: string,
+  query: Record<string, string | string[] | undefined>,
+) {
+  const [resolved, settings] = await Promise.all([resolveProductRoute(slug), getSettings()]);
+  if (!resolved) return null;
+
+  const { product } = resolved;
+  const dividirPorColor = settings.catalogSplitByColor && product.colors.length > 1;
+
+  // `?color=` es el enlace de la portada y los relacionados, donde la tarjeta
+  // deja elegir color antes de entrar.
+  const colorParam = Array.isArray(query.color) ? query.color[0] : query.color;
+  const colorPedido = colorParam
+    ? (product.colors.find((c) => c.slug === colorParam) ?? null)
+    : null;
+
+  // Sin división hay una sola ficha por modelo: la URL de un color sigue
+  // funcionando, pero solo preselecciona y su canónica es la del modelo, para
+  // que apagar el ajuste no deje diez direcciones compitiendo por lo mismo.
+  const elegido = resolved.color ?? colorPedido;
+  const color = dividirPorColor ? (elegido ?? product.colors[0]) : null;
+
+  return {
+    product,
+    color,
+    settings,
+    dividirPorColor,
+    preseleccion: color ? null : elegido,
+    canonicalPath: color ? colorPagePath(product.slug, color.slug) : `/producto/${product.slug}`,
+  };
+}
+
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  const product = await getProductDetail(slug);
-  if (!product) return buildMetadata({ title: 'Producto no encontrado', noIndex: true });
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const resolved = await resolverFicha(slug, query);
+  if (!resolved) return buildMetadata({ title: 'Producto no encontrado', noIndex: true });
+
+  const { product, color } = resolved;
+
+  // La ficha de un color es una página propia: su título, su descripción, su
+  // foto y su canónica nombran ese colorway y no el modelo.
+  if (color) {
+    const tallas = color.variants
+      .filter((v) => v.stock - v.reserved > 0)
+      .map((v) => v.size);
+    const rango =
+      tallas.length > 0 ? `Tallas ${tallas[0]} a ${tallas[tallas.length - 1]}` : 'Tallas 20 a 36';
+
+    return buildMetadata({
+      title: `${product.name} ${product.modelCode} ${colorLabel(color)}`,
+      description:
+        `${product.name} de competición TAUPOC en ${color.name}` +
+        `${color.code ? ` (colorway ${color.code})` : ''}. ` +
+        `${product.approvalCode ? `Homologación ${product.approvalBody} ${product.approvalCode}. ` : ''}` +
+        `${rango} con stock en Chile.`,
+      path: resolved.canonicalPath,
+      image: color.images[0]?.url ?? product.images[0]?.url ?? null,
+    });
+  }
 
   return buildMetadata({
     title: product.seoTitle ?? `${product.name} ${product.modelCode}`,
     description:
       product.seoDescription ??
       `${product.name} de competición TAUPOC. Homologación ${product.approvalBody} ${product.approvalCode ?? ''}. Tallas 20 a 36 con stock en Chile.`,
-    path: `/producto/${product.slug}`,
+    path: resolved.canonicalPath,
     image: product.colors[0]?.images[0]?.url ?? product.images[0]?.url ?? null,
   });
 }
@@ -42,18 +119,11 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const { slug } = await params;
-  const [product, settings, query] = await Promise.all([
-    getProductDetail(slug),
-    getSettings(),
-    searchParams,
-  ]);
-  if (!product) notFound();
+  const [{ slug }, query] = await Promise.all([params, searchParams]);
+  const resolved = await resolverFicha(slug, query);
+  if (!resolved) notFound();
 
-  // El catálogo puede enlazar un color concreto. La canónica de la ficha no
-  // lleva el parámetro, así que Google sigue viendo una sola página.
-  const colorParam = Array.isArray(query.color) ? query.color[0] : query.color;
-
+  const { product, color, settings, dividirPorColor, preseleccion } = resolved;
   const rating = resumenDeNotas(product.reviews);
   const esAccesorio = product.kind === 'ACCESSORY';
 
@@ -98,6 +168,9 @@ export default async function ProductPage({
     fitNotes: product.fitNotes,
     fitOffset: product.fitOffset,
     colors,
+    // Con fichas por color el selector deja de cambiar de estado: cada muestra
+    // es un enlace a la ficha de ese color, que es una página aparte.
+    colorPages: dividirPorColor,
     sizeChart: product.sizeChart.map((r) => ({
       size: r.size,
       chestMinCm: r.chestMinCm, chestMaxCm: r.chestMaxCm,
@@ -112,21 +185,33 @@ export default async function ProductPage({
     rating,
   };
 
-  const totalStock = colors.reduce(
+  // La ficha de un color solo cuenta el stock, las tallas y las fotos de ese
+  // colorway: es lo que se ve en la página y lo que debe decir el marcado.
+  const enVista = color ? colors.filter((c) => c.id === color.id) : colors;
+  const totalStock = enVista.reduce(
     (s, c) => s + c.variants.reduce((cs, v) => cs + v.available, 0),
     0,
   );
 
+  const pagePath = resolved.canonicalPath;
+  const pageTitle = color ? `${product.name} — ${color.name}` : product.name;
+
   const productLd = {
     '@context': 'https://schema.org',
     '@type': 'Product',
-    name: product.name,
+    name: color ? `${product.name} ${colorLabel(color)}` : product.name,
     description: product.description.split('\n')[0],
-    sku: product.modelCode,
+    // En la ficha de un color el SKU es el del colorway, y `inProductGroupWithID`
+    // es lo que schema.org usa para decir que estas fichas son variantes del
+    // mismo modelo. Sin eso Google sí las leería como páginas repetidas.
+    sku: color ? (color.code ?? `${product.modelCode}-${color.slug}`) : product.modelCode,
     mpn: product.modelCode,
+    ...(color
+      ? { color: color.name, inProductGroupWithID: product.modelCode }
+      : {}),
     brand: { '@type': 'Brand', name: 'TAUPOC' },
     category: product.category?.name,
-    image: product.colors
+    image: (color ? [color] : product.colors)
       .flatMap((c) => c.images.map((i) => absoluteUrl(i.url)))
       .slice(0, 8),
     ...(product.approvalCode && !esAccesorio
@@ -171,14 +256,14 @@ export default async function ProductPage({
       priceCurrency: 'CLP',
       lowPrice: product.basePrice,
       highPrice: product.basePrice,
-      offerCount: colors.reduce((s, c) => s + c.variants.length, 0),
+      offerCount: enVista.reduce((s, c) => s + c.variants.length, 0),
       availability:
         product.status === 'COMING_SOON'
           ? 'https://schema.org/PreOrder'
           : totalStock > 0
             ? 'https://schema.org/InStock'
             : 'https://schema.org/OutOfStock',
-      url: absoluteUrl(`/producto/${product.slug}`),
+      url: absoluteUrl(pagePath),
       seller: { '@type': 'Organization', name: 'TAUPOC Chile' },
     },
   };
@@ -189,7 +274,7 @@ export default async function ProductPage({
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Inicio', item: absoluteUrl('/') },
       { '@type': 'ListItem', position: 2, name: 'Catálogo', item: absoluteUrl('/catalogo') },
-      { '@type': 'ListItem', position: 3, name: product.name, item: absoluteUrl(`/producto/${product.slug}`) },
+      { '@type': 'ListItem', position: 3, name: pageTitle, item: absoluteUrl(pagePath) },
     ],
   };
 
@@ -211,12 +296,12 @@ export default async function ProductPage({
           <li aria-hidden>/</li>
           <li><Link href="/catalogo" className="hover:text-chalk">Catálogo</Link></li>
           <li aria-hidden>/</li>
-          <li className="truncate text-chalk-dim">{product.name}</li>
+          <li className="truncate text-chalk-dim">{pageTitle}</li>
         </ol>
       </nav>
 
       <div className="container py-8 lg:py-14">
-        <ProductView product={viewData} initialColorSlug={colorParam ?? null} />
+        <ProductView product={viewData} initialColorSlug={color?.slug ?? preseleccion?.slug ?? null} />
       </div>
 
       {/* Descripción y ficha técnica */}

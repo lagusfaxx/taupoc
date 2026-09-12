@@ -134,8 +134,8 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                     <Checkbox
                       name="catalogSplitByColor"
                       defaultChecked={settings.catalogSplitByColor}
-                      label="Mostrar una tarjeta por color en el catálogo"
-                      help="Cada color del modelo ocupa su propio lugar en la grilla y abre la ficha con ese color elegido. La ficha sigue siendo una sola."
+                      label="Publicar una ficha por color"
+                      help="Cada color tiene su propia página, su propia tarjeta en el catálogo y su lugar en el sitemap. La dirección del modelo lleva al primer color. El inventario no se divide: se sigue administrando desde el mismo producto."
                     />
                   </div>
                 </Card>
