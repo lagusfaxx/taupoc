@@ -25,6 +25,7 @@ const schema = z.object({
   installmentsMax: z.string().optional(),
   announcementBar: z.string().optional(),
   announcementActive: z.string().optional(),
+  catalogSplitByColor: z.string().optional(),
 
   gaMeasurementId: z.string().optional(),
   metaPixelId: z.string().optional(),
@@ -67,6 +68,7 @@ export async function updateSettings(
     installmentsMax: Math.min(24, Math.max(1, Number(d.installmentsMax ?? 12) || 12)),
     announcementBar: d.announcementBar?.trim() ?? '',
     announcementActive: d.announcementActive === 'on',
+    catalogSplitByColor: d.catalogSplitByColor === 'on',
 
     gaMeasurementId: d.gaMeasurementId?.trim() ?? '',
     metaPixelId: d.metaPixelId?.trim() ?? '',

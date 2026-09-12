@@ -35,10 +35,24 @@ export async function generateMetadata({
   });
 }
 
-export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ProductPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { slug } = await params;
-  const [product, settings] = await Promise.all([getProductDetail(slug), getSettings()]);
+  const [product, settings, query] = await Promise.all([
+    getProductDetail(slug),
+    getSettings(),
+    searchParams,
+  ]);
   if (!product) notFound();
+
+  // El catálogo puede enlazar un color concreto. La canónica de la ficha no
+  // lleva el parámetro, así que Google sigue viendo una sola página.
+  const colorParam = Array.isArray(query.color) ? query.color[0] : query.color;
 
   const rating = resumenDeNotas(product.reviews);
   const esAccesorio = product.kind === 'ACCESSORY';
@@ -202,7 +216,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </nav>
 
       <div className="container py-8 lg:py-14">
-        <ProductView product={viewData} />
+        <ProductView product={viewData} initialColorSlug={colorParam ?? null} />
       </div>
 
       {/* Descripción y ficha técnica */}

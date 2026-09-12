@@ -57,6 +57,27 @@ export function toCardData(product: ProductWithCard): ProductCardData {
   };
 }
 
+/**
+ * Una tarjeta por color en vez de una por modelo.
+ *
+ * El jammer con diez colorways ocupa diez lugares en la grilla y cada uno
+ * abre la misma ficha con ese color elegido. No se duplica el producto: el
+ * stock, las tallas y el precio siguen colgando de un solo `Product`, y la
+ * URL canónica de la ficha no lleva el parámetro, así que Google indexa una.
+ */
+export function splitCardsByColor(cards: ProductCardData[]): ProductCardData[] {
+  return cards.flatMap((card) =>
+    card.colors.length <= 1
+      ? [card]
+      : card.colors.map((color) => ({
+          ...card,
+          id: `${card.id}:${color.slug}`,
+          colorSlug: color.slug,
+          fallbackImage: color.imageUrl ?? card.fallbackImage,
+        })),
+  );
+}
+
 /** Promedio y total de un puñado de notas ya filtradas a publicadas. */
 export function resumenDeNotas(reviews: { rating: number }[]): { average: number; count: number } {
   if (reviews.length === 0) return { average: 0, count: 0 };

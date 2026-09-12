@@ -90,8 +90,8 @@ export function Select({
 }
 
 export function Checkbox({
-  label, className, ...props
-}: { label: ReactNode; className?: string } & ComponentProps<'input'>) {
+  label, help, className, ...props
+}: { label: ReactNode; help?: string; className?: string } & ComponentProps<'input'>) {
   const autoId = useId();
   const id = props.id ?? autoId;
   return (
@@ -111,7 +111,10 @@ export function Checkbox({
           <path d="M2 7.4 5.4 11 12 3.4" strokeLinecap="square" />
         </svg>
       </span>
-      <span>{label}</span>
+      <span>
+        {label}
+        {help ? <span className="mt-1 block text-[13px] text-chalk-faint">{help}</span> : null}
+      </span>
     </label>
   );
 }

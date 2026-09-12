@@ -131,6 +131,12 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                       defaultChecked={settings.announcementActive}
                       label="Mostrar la barra de anuncio"
                     />
+                    <Checkbox
+                      name="catalogSplitByColor"
+                      defaultChecked={settings.catalogSplitByColor}
+                      label="Mostrar una tarjeta por color en el catálogo"
+                      help="Cada color del modelo ocupa su propio lugar en la grilla y abre la ficha con ese color elegido. La ficha sigue siendo una sola."
+                    />
                   </div>
                 </Card>
               </div>

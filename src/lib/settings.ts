@@ -30,6 +30,13 @@ export interface SiteSettings {
   installmentsMax: number;
   announcementBar: string;
   announcementActive: boolean;
+  /**
+   * Muestra una tarjeta por color en el catálogo en vez de una por modelo.
+   * La ficha sigue siendo una sola: cada tarjeta enlaza al mismo producto con
+   * el color ya elegido, así la grilla se ve completa sin duplicar contenido
+   * ni partir el stock en fichas separadas.
+   */
+  catalogSplitByColor: boolean;
 
   // Marketing / analítica
   gaMeasurementId: string;
@@ -61,6 +68,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   // {envio_gratis} se reemplaza por el umbral vigente al renderizar.
   announcementBar: 'Despacho a todo Chile · Envío gratis sobre {envio_gratis}',
   announcementActive: true,
+  catalogSplitByColor: true,
 
   gaMeasurementId: '',
   metaPixelId: '',

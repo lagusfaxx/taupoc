@@ -170,15 +170,22 @@ function ColorPicker({
   );
 }
 
-export function ProductView({ product }: { product: ProductViewData }) {
+export function ProductView({
+  product,
+  initialColorSlug,
+}: {
+  product: ProductViewData;
+  /** Color con el que abre la ficha, cuando el enlace ya trae uno elegido. */
+  initialColorSlug?: string | null;
+}) {
   const router = useRouter();
-  const [colorId, setColorId] = useState(product.colors[0]?.id ?? '');
+  const inicial =
+    product.colors.find((c) => c.slug === initialColorSlug) ?? product.colors[0] ?? null;
+  const [colorId, setColorId] = useState(inicial?.id ?? '');
   // Un accesorio de talla única no obliga a elegir nada: se preselecciona
   // para que el botón de compra quede activo de entrada.
   const unicaVariante =
-    product.esAccesorio && product.colors[0]?.variants.length === 1
-      ? (product.colors[0].variants[0] ?? null)
-      : null;
+    product.esAccesorio && inicial?.variants.length === 1 ? (inicial.variants[0] ?? null) : null;
   const [variantId, setVariantId] = useState<string | null>(unicaVariante?.id ?? null);
   const [state, setState] = useState<CartActionState | null>(null);
   const [enviando, setEnviando] = useState(false);
