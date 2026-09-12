@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { Gender } from '@prisma/client';
-import { getCatalog, getCatalogFacets } from '@/lib/catalog';
+import { colorPagePath, getCatalog, getCatalogFacets, splitCardsByColor } from '@/lib/catalog';
+import { getSettings } from '@/lib/settings';
 import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
 import { CatalogShell } from '@/components/store/CatalogFilters';
@@ -56,7 +57,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     ? (sortRaw as (typeof SORT_VALUES)[number])
     : 'destacados';
 
-  const [products, facets] = await Promise.all([
+  const [found, facets, settings] = await Promise.all([
     getCatalog({
       gender,
       lineSlug: one(params.linea),
@@ -69,7 +70,11 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
       sort,
     }),
     getCatalogFacets(),
+    getSettings(),
   ]);
+
+  // Con el ajuste activo cada color ocupa su propio lugar en la grilla.
+  const products = settings.catalogSplitByColor ? splitCardsByColor(found) : found;
 
   const heading =
     gender === 'MALE' ? 'Competición hombre'
@@ -81,13 +86,20 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: heading,
+    // Una entrada por ficha publicada. Con la división activa cada color tiene
+    // su propia URL, así que no se repite ninguna.
     numberOfItems: products.length,
-    itemListElement: products.slice(0, 20).map((p, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      url: absoluteUrl(`/producto/${p.slug}`),
-      name: p.name,
-    })),
+    itemListElement: products.slice(0, 20).map((p, i) => {
+      const color = p.colorSlug ? p.colors.find((c) => c.slug === p.colorSlug) : null;
+      return {
+        '@type': 'ListItem',
+        position: i + 1,
+        url: absoluteUrl(
+          color ? colorPagePath(p.slug, color.slug) : `/producto/${p.slug}`,
+        ),
+        name: color ? `${p.name} — ${color.name}` : p.name,
+      };
+    }),
   };
 
   return (

@@ -131,6 +131,12 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                       defaultChecked={settings.announcementActive}
                       label="Mostrar la barra de anuncio"
                     />
+                    <Checkbox
+                      name="catalogSplitByColor"
+                      defaultChecked={settings.catalogSplitByColor}
+                      label="Publicar una ficha por color"
+                      help="Cada color tiene su propia página, su propia tarjeta en el catálogo y su lugar en el sitemap. La dirección del modelo lleva al primer color. El inventario no se divide: se sigue administrando desde el mismo producto."
+                    />
                   </div>
                 </Card>
               </div>

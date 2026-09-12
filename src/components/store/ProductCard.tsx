@@ -30,23 +30,41 @@ export interface ProductCardData {
   fallbackImage: string | null;
   accentHex: string;
   rating: { average: number; count: number };
+  /**
+   * Tarjeta de un color concreto: la grilla muestra ese color, lo nombra bajo
+   * el título y enlaza a la ficha de ese color.
+   */
+  colorSlug?: string | null;
 }
 
 export function ProductCard({ product, priority }: { product: ProductCardData; priority?: boolean }) {
-  const [activeId, setActiveId] = useState(product.colors[0]?.id ?? null);
+  const fixed = product.colorSlug
+    ? (product.colors.find((c) => c.slug === product.colorSlug) ?? null)
+    : null;
+
+  const [activeId, setActiveId] = useState(fixed?.id ?? product.colors[0]?.id ?? null);
 
   const active = useMemo(
-    () => product.colors.find((c) => c.id === activeId) ?? product.colors[0] ?? null,
-    [activeId, product.colors],
+    () => (fixed ?? product.colors.find((c) => c.id === activeId) ?? product.colors[0] ?? null),
+    [fixed, activeId, product.colors],
   );
 
+  // Tarjeta fijada a un color: va derecho a la ficha de ese color. Tarjeta de
+  // modelo con varios colores: lleva el elegido en la muestra, y la ficha
+  // decide si lo preselecciona o redirige a su propia página.
+  const href = fixed
+    ? `/producto/${product.slug}-${fixed.slug}`
+    : active && product.colors.length > 1
+      ? `/producto/${product.slug}?color=${active.slug}`
+      : `/producto/${product.slug}`;
   const image = active?.imageUrl ?? product.fallbackImage;
-  const unavailable = product.comingSoon || product.totalStock === 0;
+  // Con la tarjeta fijada a un color manda el stock de ese color, no el del modelo.
+  const unavailable = product.comingSoon || (fixed ? fixed.stock === 0 : product.totalStock === 0);
 
   return (
     <article className="group flex flex-col" style={{ ['--accent' as string]: product.accentHex }}>
       <Link
-        href={`/producto/${product.slug}`}
+        href={href}
         className="relative block overflow-hidden border border-line bg-ink-800"
       >
         <div className="relative aspect-[4/5]">
@@ -73,12 +91,23 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
 
       <div className="flex flex-1 flex-col pt-3.5">
         <h3 className="font-display text-[16px] leading-tight tracking-tight text-chalk">
-          <Link href={`/producto/${product.slug}`} className="hover:accent-text">
+          <Link href={href} className="hover:accent-text">
             {product.name}
           </Link>
         </h3>
 
-        {product.colors.length > 1 ? (
+        {fixed ? (
+          <p className="mt-1.5 flex items-center gap-2 text-[13px] text-chalk-dim">
+            <span
+              aria-hidden
+              className="inline-block h-3 w-3 border border-line-bright"
+              style={{ background: fixed.hex }}
+            />
+            {colorLabel(fixed)}
+          </p>
+        ) : null}
+
+        {!fixed && product.colors.length > 1 ? (
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             {product.colors.map((color) => (
               <button

@@ -30,6 +30,16 @@ export interface SiteSettings {
   installmentsMax: number;
   announcementBar: string;
   announcementActive: boolean;
+  /**
+   * Publica una ficha por color en vez de una por modelo.
+   *
+   * Con esto activo cada colorway tiene su página —`/producto/<modelo>-<color>`—
+   * con su título, sus fotos, sus tallas y su stock, aparece como una tarjeta
+   * propia en el catálogo y entra por separado al sitemap; la URL del modelo
+   * redirige a la primera. En la base sigue siendo un solo `Product` con sus
+   * colores, así que el inventario y los pedidos no se parten.
+   */
+  catalogSplitByColor: boolean;
 
   // Marketing / analítica
   gaMeasurementId: string;
@@ -61,6 +71,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   // {envio_gratis} se reemplaza por el umbral vigente al renderizar.
   announcementBar: 'Despacho a todo Chile · Envío gratis sobre {envio_gratis}',
   announcementActive: true,
+  catalogSplitByColor: true,
 
   gaMeasurementId: '',
   metaPixelId: '',

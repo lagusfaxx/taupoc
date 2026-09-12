@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next';
 import { prisma } from '@/lib/db';
 import { absoluteUrl } from '@/lib/seo';
+import { colorPagePath } from '@/lib/catalog';
+import { getSettings } from '@/lib/settings';
 
 export const revalidate = 3600;
 
@@ -20,25 +22,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const [products, posts] = await Promise.all([
+    const [products, posts, settings] = await Promise.all([
       prisma.product.findMany({
         where: { status: { in: ['ACTIVE', 'COMING_SOON'] } },
-        select: { slug: true, updatedAt: true },
+        select: {
+          slug: true,
+          updatedAt: true,
+          colors: { where: { active: true }, orderBy: { sortOrder: 'asc' }, select: { slug: true } },
+        },
       }),
       prisma.post.findMany({
         where: { status: 'PUBLISHED' },
         select: { slug: true, updatedAt: true },
       }),
+      getSettings(),
     ]);
+
+    // Con la división activa lo que se indexa es la ficha de cada color; la
+    // URL del modelo redirige a la primera y no entra al sitemap.
+    const productRoutes: MetadataRoute.Sitemap = products.flatMap((p) =>
+      settings.catalogSplitByColor && p.colors.length > 1
+        ? p.colors.map((c) => ({
+            url: absoluteUrl(colorPagePath(p.slug, c.slug)),
+            lastModified: p.updatedAt,
+            changeFrequency: 'daily' as const,
+            priority: 0.95,
+          }))
+        : [
+            {
+              url: absoluteUrl(`/producto/${p.slug}`),
+              lastModified: p.updatedAt,
+              changeFrequency: 'daily' as const,
+              priority: 0.95,
+            },
+          ],
+    );
 
     return [
       ...staticRoutes,
-      ...products.map((p) => ({
-        url: absoluteUrl(`/producto/${p.slug}`),
-        lastModified: p.updatedAt,
-        changeFrequency: 'daily' as const,
-        priority: 0.95,
-      })),
+      ...productRoutes,
       ...posts.map((p) => ({
         url: absoluteUrl(`/blog/${p.slug}`),
         lastModified: p.updatedAt,

@@ -26,10 +26,32 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage() {
   const [settings, blocks] = await Promise.all([getSettings(), getHomeBlocks()]);
 
-  const store = {
-    '@context': 'https://schema.org',
-    '@type': 'Store',
+  // Google arma el nombre del sitio en los resultados a partir de la portada.
+  // Sin este marcado cae al dominio y muestra "taupoc.cl" en minúsculas; con
+  // `name` y `alternateName` pasa a mostrar la marca como se escribe.
+  const website = {
+    '@type': 'WebSite',
+    '@id': `${absoluteUrl('/')}#website`,
+    url: absoluteUrl('/'),
     name: SITE_NAME,
+    alternateName: ['TAUPOC.CL', 'TAUPOC', 'Taupoc Chile'],
+    inLanguage: 'es-CL',
+    publisher: { '@id': `${absoluteUrl('/')}#store` },
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${absoluteUrl('/catalogo')}?q={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
+  const store = {
+    '@type': 'Store',
+    '@id': `${absoluteUrl('/')}#store`,
+    name: SITE_NAME,
+    alternateName: 'TAUPOC.CL',
     description:
       'Distribuidor oficial de TAUPOC Swimwear en Chile. Trajes de competición homologados por World Aquatics.',
     url: absoluteUrl('/'),
@@ -40,9 +62,11 @@ export default async function HomePage() {
     paymentAccepted: 'Tarjeta de crédito, tarjeta de débito, Mercado Pago',
   };
 
+  const grafo = { '@context': 'https://schema.org', '@graph': [website, store] };
+
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(store)} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(grafo)} />
 
       <h1 className="sr-only">
         TAUPOC Chile — trajes de competición homologados por World Aquatics
