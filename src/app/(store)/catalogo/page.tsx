@@ -1,9 +1,16 @@
 import type { Metadata } from 'next';
 import type { Gender } from '@prisma/client';
-import { colorPagePath, getCatalog, getCatalogFacets, splitCardsByColor } from '@/lib/catalog';
+import {
+  colorPagePath,
+  getCatalog,
+  getCatalogFacets,
+  getLineComparison,
+  splitCardsByColor,
+} from '@/lib/catalog';
 import { getSettings } from '@/lib/settings';
 import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
+import { LineCompareTeaser } from '@/components/store/LineCompareTeaser';
 import { CatalogShell } from '@/components/store/CatalogFilters';
 import { Empty } from '@/components/ui/Empty';
 import { ButtonLink } from '@/components/ui/Button';
@@ -57,7 +64,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     ? (sortRaw as (typeof SORT_VALUES)[number])
     : 'destacados';
 
-  const [found, facets, settings] = await Promise.all([
+  const [found, facets, settings, comparacion] = await Promise.all([
     getCatalog({
       gender,
       lineSlug: one(params.linea),
@@ -71,6 +78,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     }),
     getCatalogFacets(),
     getSettings(),
+    getLineComparison(),
   ]);
 
   // Con el ajuste activo cada color ocupa su propio lugar en la grilla.
@@ -132,6 +140,10 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
           )}
         </CatalogShell>
       </div>
+
+      {/* Solo cuando la grilla mezcla las dos líneas: filtrando por una, la
+          comparación ya no es la pregunta que trae al visitante. */}
+      {one(params.linea) ? null : <LineCompareTeaser columns={comparacion} />}
     </>
   );
 }

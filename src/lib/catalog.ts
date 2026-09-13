@@ -56,6 +56,7 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     // Solo la línea superior se distingue en la grilla: si todas llevaran
     // sello, el sello dejaría de significar que una vale más que la otra.
     tierLabel: (product.line?.tier ?? 0) > 1 ? product.line?.tierLabel ?? null : null,
+    tier: product.line?.tier ?? 0,
     rating: resumenDeNotas(product.reviews),
   };
 }
@@ -206,6 +207,8 @@ export interface LineComparisonColumn {
   tierLabel: string | null;
   accentHex: string;
   bestFor: string | null;
+  /** Los datos que resumen la línea en una línea de texto. */
+  claim: string | null;
   fromPrice: number | null;
   /** Ficha equivalente en esta línea, del mismo género que la que se mira. */
   productSlug: string | null;
@@ -222,10 +225,11 @@ export interface LineComparisonColumn {
  * si hay al menos dos: un comparador de una columna no compara nada.
  *
  * `gender` es el del producto que se está mirando, para que el enlace de la
- * otra línea lleve al modelo equivalente y no al del otro género.
+ * otra línea lleve al modelo equivalente y no al del otro género. Sin género
+ * —la página de líneas, que no mira ningún producto— manda el más barato.
  */
 export const getLineComparison = cache(async function getLineComparison(
-  gender: Gender,
+  gender?: Gender,
 ): Promise<LineComparisonColumn[]> {
   const lines = await prisma.productLine.findMany({
     where: { active: true, metrics: { some: {} } },
@@ -243,7 +247,8 @@ export const getLineComparison = cache(async function getLineComparison(
   if (lines.length < 2) return [];
 
   return lines.map((line) => {
-    const delGenero = line.products.filter((p) => p.gender === gender);
+    // Sin género —la página de líneas— vale cualquier modelo de la línea.
+    const delGenero = gender ? line.products.filter((p) => p.gender === gender) : line.products;
     const referencia = delGenero[0] ?? line.products[0] ?? null;
     return {
       slug: line.slug,
@@ -252,6 +257,7 @@ export const getLineComparison = cache(async function getLineComparison(
       tierLabel: line.tierLabel,
       accentHex: line.accentHex,
       bestFor: line.bestFor,
+      claim: line.cardClaim,
       // El "desde" se calcula sobre los modelos del mismo género: comparar el
       // jammer de una línea con el knee suit de la otra exagera la diferencia.
       fromPrice: (delGenero[0] ?? line.products[0])?.basePrice ?? null,

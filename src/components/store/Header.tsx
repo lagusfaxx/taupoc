@@ -33,6 +33,7 @@ async function buildNav(): Promise<NavItem[]> {
         ...lines
           .filter((l) => l.slug !== 'accesorios')
           .map((l) => ({ label: `Línea ${l.name}`, href: `/catalogo?linea=${l.slug}`, note: l.tagline ?? undefined })),
+        { label: 'R-SKIN o VEL-SKIN', href: '/lineas', note: 'Las dos líneas comparadas dato a dato' },
         { label: 'Ver todo el catálogo', href: '/catalogo' },
       ],
     },

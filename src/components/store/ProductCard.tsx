@@ -31,6 +31,8 @@ export interface ProductCardData {
   accentHex: string;
   /** Sello de gama, solo en la línea superior. Ej. "Serie Élite". */
   tierLabel?: string | null;
+  /** Escalón de la línea: 1 es la de entrada, los mayores son superiores. */
+  tier?: number;
   rating: { average: number; count: number };
   /**
    * Tarjeta de un color concreto: la grilla muestra ese color, lo nombra bajo
@@ -63,11 +65,19 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
   // Con la tarjeta fijada a un color manda el stock de ese color, no el del modelo.
   const unavailable = product.comingSoon || (fixed ? fixed.stock === 0 : product.totalStock === 0);
 
+  // Las dos líneas comparten fotografía, así que la tarjeta de la línea
+  // superior se distingue por el marco y el sello: sin eso, en la grilla son
+  // la misma foto con otro precio.
+  const elite = (product.tier ?? 0) > 1;
+
   return (
     <article className="group flex flex-col" style={{ ['--accent' as string]: product.accentHex }}>
       <Link
         href={href}
-        className="relative block overflow-hidden border border-line bg-ink-800"
+        className={cn(
+          'relative block overflow-hidden border bg-ink-800',
+          elite ? 'accent-border' : 'border-line',
+        )}
       >
         <div className="relative aspect-[4/5]">
           {image ? (
@@ -86,7 +96,7 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
           {/* El sello de gama: en una grilla donde dos trajes se ven iguales,
               es lo único que anticipa por qué uno cuesta más. */}
           {product.tierLabel ? (
-            <span className="absolute left-3 top-3 border accent-border bg-ink/85 px-2 py-1 font-display text-[9.5px] font-semibold uppercase tracking-mega accent-text backdrop-blur">
+            <span className="absolute left-0 top-3 accent-bg px-2.5 py-1.5 font-display text-[9.5px] font-bold uppercase tracking-mega">
               {product.tierLabel}
             </span>
           ) : null}

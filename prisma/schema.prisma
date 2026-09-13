@@ -132,6 +132,10 @@ model ProductLine {
   tierLabel String?
   /// Para quién es la línea. La frase que resuelve "¿cuál de las dos compro?".
   bestFor   String?
+  /// Los dos o tres datos que separan esta línea de la otra, para la tarjeta
+  /// del catálogo. Con la misma foto en las dos líneas, es lo único que
+  /// distingue una tarjeta de la otra antes de entrar a la ficha.
+  cardClaim String?
 
   products    Product[]
   sizeChart   SizeChartRow[]
