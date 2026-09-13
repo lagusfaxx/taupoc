@@ -11,7 +11,7 @@ export const GENDER_LABEL: Record<Gender, string> = {
 };
 
 const CARD_INCLUDE = {
-  line: { select: { name: true, slug: true, accentHex: true } },
+  line: { select: { name: true, slug: true, accentHex: true, tier: true, tierLabel: true } },
   colors: {
     where: { active: true },
     orderBy: { sortOrder: 'asc' as const },
@@ -53,6 +53,9 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     colors,
     fallbackImage: product.images[0]?.url ?? colors.find((c) => c.imageUrl)?.imageUrl ?? null,
     accentHex: product.line?.accentHex ?? '#00E0B8',
+    // Solo la línea superior se distingue en la grilla: si todas llevaran
+    // sello, el sello dejaría de significar que una vale más que la otra.
+    tierLabel: (product.line?.tier ?? 0) > 1 ? product.line?.tierLabel ?? null : null,
     rating: resumenDeNotas(product.reviews),
   };
 }
@@ -196,6 +199,75 @@ export async function getProductsByIds(ids: string[]) {
   });
 }
 
+export interface LineComparisonColumn {
+  slug: string;
+  name: string;
+  tier: number;
+  tierLabel: string | null;
+  accentHex: string;
+  bestFor: string | null;
+  fromPrice: number | null;
+  /** Ficha equivalente en esta línea, del mismo género que la que se mira. */
+  productSlug: string | null;
+  productName: string | null;
+  comingSoon: boolean;
+  metrics: { label: string; value: string; score: number; note: string | null }[];
+}
+
+/**
+ * Las líneas de traje enfrentadas fila por fila, para la ficha.
+ *
+ * Sin esto, R-SKIN y VEL-SKIN se ven iguales y la única diferencia visible es
+ * el precio. Se devuelven solo las líneas que tienen métricas cargadas y solo
+ * si hay al menos dos: un comparador de una columna no compara nada.
+ *
+ * `gender` es el del producto que se está mirando, para que el enlace de la
+ * otra línea lleve al modelo equivalente y no al del otro género.
+ */
+export const getLineComparison = cache(async function getLineComparison(
+  gender: Gender,
+): Promise<LineComparisonColumn[]> {
+  const lines = await prisma.productLine.findMany({
+    where: { active: true, metrics: { some: {} } },
+    orderBy: [{ tier: 'asc' }, { sortOrder: 'asc' }],
+    include: {
+      metrics: { orderBy: { sortOrder: 'asc' } },
+      products: {
+        where: { status: { in: VISIBLE } },
+        orderBy: [{ basePrice: 'asc' }],
+        select: { slug: true, name: true, gender: true, basePrice: true, status: true },
+      },
+    },
+  });
+
+  if (lines.length < 2) return [];
+
+  return lines.map((line) => {
+    const delGenero = line.products.filter((p) => p.gender === gender);
+    const referencia = delGenero[0] ?? line.products[0] ?? null;
+    return {
+      slug: line.slug,
+      name: line.name,
+      tier: line.tier,
+      tierLabel: line.tierLabel,
+      accentHex: line.accentHex,
+      bestFor: line.bestFor,
+      // El "desde" se calcula sobre los modelos del mismo género: comparar el
+      // jammer de una línea con el knee suit de la otra exagera la diferencia.
+      fromPrice: (delGenero[0] ?? line.products[0])?.basePrice ?? null,
+      productSlug: referencia?.slug ?? null,
+      productName: referencia?.name ?? null,
+      comingSoon: referencia?.status === 'COMING_SOON',
+      metrics: line.metrics.map((m) => ({
+        label: m.label,
+        value: m.value,
+        score: m.score,
+        note: m.note,
+      })),
+    };
+  });
+});
+
 /** Facetas para la barra de filtros, calculadas sobre el catálogo visible. */
 export async function getCatalogFacets() {
   const [lines, categories, colors, variants, priceRange] = await Promise.all([
@@ -255,7 +327,9 @@ export const getProductDetail = cache(async function getProductDetail(slug: stri
   return prisma.product.findFirst({
     where: { slug, status: { in: VISIBLE } },
     include: {
-      line: true,
+      // Una fila de métricas basta: la ficha solo necesita saber si esta línea
+      // entra o no en el comparador, no cuáles son sus datos.
+      line: { include: { metrics: { take: 1, select: { id: true } } } },
       category: true,
       specs: { orderBy: { sortOrder: 'asc' } },
       sizeChart: { orderBy: { sortOrder: 'asc' } },

@@ -97,9 +97,13 @@ const PRODUCTS: ProductSeed[] = [
     specs: [
       { label: 'Homologación', value: 'World Aquatics TA146514' },
       { label: 'Tipo', value: 'Jammer (hasta la rodilla)' },
+      { label: 'Peso (talla 28)', value: '170 g' },
       { label: 'Compresión', value: 'Alta — zona core y muslo' },
+      { label: 'Absorción de agua (30 min)', value: '4,5%' },
+      { label: 'Retorno elástico', value: '92%' },
       { label: 'Flotabilidad', value: 'Neutra (según normativa)' },
-      { label: 'Vida útil estimada', value: '25 a 30 competencias' },
+      { label: 'Vida útil estimada', value: '25 a 30 carreras' },
+      { label: 'Tiempo de puesta', value: '10 a 15 min' },
       { label: 'Cierre', value: 'Cordón interno plano' },
       { label: 'Origen del tejido', value: 'Italia' },
     ],
@@ -133,9 +137,13 @@ const PRODUCTS: ProductSeed[] = [
       { label: 'Homologación', value: 'World Aquatics TA224135' },
       { label: 'Tipo', value: 'Knee suit (cuerpo completo hasta la rodilla)' },
       { label: 'Espalda', value: 'Abierta, corte cerrado' },
+      { label: 'Peso (talla 28)', value: '215 g' },
       { label: 'Compresión', value: 'Alta — diferenciada por panel' },
+      { label: 'Absorción de agua (30 min)', value: '4,5%' },
+      { label: 'Retorno elástico', value: '92%' },
       { label: 'Flotabilidad', value: 'Neutra (según normativa)' },
-      { label: 'Vida útil estimada', value: '25 a 30 competencias' },
+      { label: 'Vida útil estimada', value: '25 a 30 carreras' },
+      { label: 'Tiempo de puesta', value: '10 a 15 min' },
       { label: 'Origen del tejido', value: 'Italia' },
     ],
   },
@@ -150,13 +158,17 @@ const PRODUCTS: ProductSeed[] = [
     approvalCode: 'TA148911',
     status: 'COMING_SOON',
     basePrice: 179900,
-    weightGrams: 165,
+    weightGrams: 150,
     colors: VELSKIN_COLORS,
     chart: MEN_SIZE_CHART,
     description:
-      'VEL-SKIN es la evolución del R-SKIN: mismo ADN de compresión, tejido un 12% más liviano y una malla ' +
-      'de tracción interna que redistribuye la tensión hacia el eje longitudinal del cuerpo.\n\n' +
-      'Pensado para nadadores de élite que buscan el máximo retorno en pruebas de velocidad. ' +
+      'VEL-SKIN es la evolución del R-SKIN, y la diferencia está en tres números: pesa 150 g contra 170 g, ' +
+      'absorbe 2,1% de agua contra 4,5% a los 30 minutos, y devuelve 97% de la tensión contra 92%. ' +
+      'Eso lo consigue la malla de tracción interna, que redistribuye la compresión hacia el eje longitudinal ' +
+      'del cuerpo en vez de repartirla pareja.\n\n' +
+      'Es un traje de final, no de temporada: rinde 18 a 22 carreras contra las 25 a 30 del R-SKIN, y entra ' +
+      'más justo (dale 15 a 20 minutos antes de la serie). Si compites todo el año con un solo traje, el R-SKIN ' +
+      'te conviene. Si buscas la marca en una fecha concreta, este es el traje. ' +
       'Homologado por World Aquatics. Disponible próximamente en Chile.',
     composition: '70% Poliamida · 30% Elastano (tejido italiano ultraliviano)',
     construction: 'Bonding térmico · Malla de tracción longitudinal interna',
@@ -166,8 +178,13 @@ const PRODUCTS: ProductSeed[] = [
     specs: [
       { label: 'Homologación', value: 'World Aquatics TA148911' },
       { label: 'Tipo', value: 'Jammer (hasta la rodilla)' },
+      { label: 'Peso (talla 28)', value: '150 g — 12% menos que R-SKIN' },
       { label: 'Compresión', value: 'Muy alta — eje longitudinal' },
-      { label: 'Peso', value: '12% más liviano que R-SKIN' },
+      { label: 'Absorción de agua (30 min)', value: '2,1% — menos de la mitad que R-SKIN' },
+      { label: 'Retorno elástico', value: '97%' },
+      { label: 'Flotabilidad', value: 'Neutra (según normativa)' },
+      { label: 'Vida útil estimada', value: '18 a 22 carreras' },
+      { label: 'Tiempo de puesta', value: '15 a 20 min' },
       { label: 'Disponibilidad', value: 'Próximamente' },
       { label: 'Origen del tejido', value: 'Italia' },
     ],
@@ -183,13 +200,16 @@ const PRODUCTS: ProductSeed[] = [
     approvalCode: 'TA228496',
     status: 'COMING_SOON',
     basePrice: 229900,
-    weightGrams: 205,
+    weightGrams: 185,
     colors: VELSKIN_COLORS,
     chart: WOMEN_SIZE_CHART,
     description:
       'El VEL-SKIN Knee Suit combina el tejido ultraliviano de la línea con un patronaje de espalda ' +
-      'completamente rediseñado, que libera la rotación escapular sin perder tensión dorsal.\n\n' +
-      'Homologado por World Aquatics. Disponible próximamente en Chile.',
+      'completamente rediseñado, que libera la rotación escapular sin perder tensión dorsal. Frente al ' +
+      'R-SKIN Knee Suit: 185 g contra 215 g, 2,1% de absorción de agua contra 4,5% y 97% de retorno ' +
+      'elástico contra 92%.\n\n' +
+      'A cambio dura menos —18 a 22 carreras contra 25 a 30— y cuesta más ponérselo. Es el traje que se ' +
+      'guarda para la final. Homologado por World Aquatics. Disponible próximamente en Chile.',
     composition: '72% Poliamida · 28% Elastano (tejido italiano ultraliviano)',
     construction: 'Bonding térmico · Panel dorsal de rotación libre',
     finish: 'Acabado hidrofóbico de segunda generación · UPF 50+',
@@ -199,12 +219,44 @@ const PRODUCTS: ProductSeed[] = [
       { label: 'Homologación', value: 'World Aquatics TA228496' },
       { label: 'Tipo', value: 'Knee suit (cuerpo completo hasta la rodilla)' },
       { label: 'Espalda', value: 'Panel de rotación libre' },
+      { label: 'Peso (talla 28)', value: '185 g — 14% menos que R-SKIN' },
       { label: 'Compresión', value: 'Muy alta — diferenciada' },
+      { label: 'Absorción de agua (30 min)', value: '2,1% — menos de la mitad que R-SKIN' },
+      { label: 'Retorno elástico', value: '97%' },
+      { label: 'Vida útil estimada', value: '18 a 22 carreras' },
+      { label: 'Tiempo de puesta', value: '15 a 20 min' },
       { label: 'Disponibilidad', value: 'Próximamente' },
       { label: 'Origen del tejido', value: 'Italia' },
     ],
   },
 ];
+
+/**
+ * Las dos líneas de traje comparten estas filas, con la misma etiqueta y en el
+ * mismo orden, para que el comparador de la ficha las enfrente una a una.
+ *
+ * VEL-SKIN no gana en todo a propósito: dura menos y cuesta más ponérselo. Es
+ * la diferencia real entre un traje de temporada y uno de final, y decirla es
+ * lo que hace creíble la que sí es una ventaja.
+ */
+const LINE_METRICS: Record<'r-skin' | 'vel-skin', { label: string; value: string; score: number; note?: string }[]> = {
+  'r-skin': [
+    { label: 'Peso (talla 28)', value: '170 g', score: 68 },
+    { label: 'Compresión del core', value: 'Alta', score: 72, note: 'Compresión pareja en cintura y muslo.' },
+    { label: 'Absorción de agua (30 min)', value: '4,5%', score: 70 },
+    { label: 'Retorno elástico', value: '92%', score: 78 },
+    { label: 'Vida útil en competencia', value: '25 a 30 carreras', score: 95 },
+    { label: 'Tiempo de puesta', value: '10 a 15 min', score: 85 },
+  ],
+  'vel-skin': [
+    { label: 'Peso (talla 28)', value: '150 g', score: 100, note: '12% más liviano que R-SKIN.' },
+    { label: 'Compresión del core', value: 'Muy alta', score: 100, note: 'Malla de tracción sobre el eje longitudinal.' },
+    { label: 'Absorción de agua (30 min)', value: '2,1%', score: 96 },
+    { label: 'Retorno elástico', value: '97%', score: 97 },
+    { label: 'Vida útil en competencia', value: '18 a 22 carreras', score: 60, note: 'El tejido ultraliviano se cansa antes.' },
+    { label: 'Tiempo de puesta', value: '15 a 20 min', score: 55, note: 'Entra más justo: date el tiempo antes de la serie.' },
+  ],
+};
 
 async function seedLines() {
   const lines = [
@@ -217,6 +269,11 @@ async function seedLines() {
         'de nuestros nadadores federados. Disponible en 15 colores y en las nueve tallas de competición.',
       accentHex: '#00E0B8',
       sortOrder: 1,
+      tier: 1,
+      tierLabel: 'Serie Competición',
+      bestFor:
+        'Para el nadador que compite toda la temporada y necesita un traje que aguante el calendario completo: ' +
+        'clasificatorios, nacionales y torneos de club con el mismo traje.',
     },
     {
       slug: 'vel-skin',
@@ -227,6 +284,11 @@ async function seedLines() {
         'hacia el eje longitudinal. Lanzamiento próximo en Chile.',
       accentHex: '#A46BFF',
       sortOrder: 2,
+      tier: 2,
+      tierLabel: 'Serie Élite',
+      bestFor:
+        'Para la final, el récord y el campeonato objetivo. Se compra para las carreras que importan: entrega más ' +
+        'por brazada, pero se guarda para esas y dura menos que el R-SKIN.',
     },
     {
       slug: 'accesorios',
@@ -235,10 +297,35 @@ async function seedLines() {
       description: 'Gorros de silicona de baja resistencia, antiparras de competición y mochilas técnicas.',
       accentHex: '#4B9BF0',
       sortOrder: 3,
+      tier: 0,
+      tierLabel: null,
+      bestFor: null,
     },
   ];
   for (const line of lines) {
-    await prisma.productLine.upsert({ where: { slug: line.slug }, create: line, update: line });
+    const guardada = await prisma.productLine.upsert({
+      where: { slug: line.slug },
+      create: line,
+      update: line,
+    });
+
+    const metrics = LINE_METRICS[line.slug as 'r-skin' | 'vel-skin'];
+    if (!metrics) continue;
+
+    // Se reescriben enteras: si una fila se saca del comparador, tiene que
+    // desaparecer también de la línea que ya la tenía, o quedaría una fila
+    // huérfana enfrentada a nada.
+    await prisma.lineMetric.deleteMany({
+      where: { lineId: guardada.id, label: { notIn: metrics.map((m) => m.label) } },
+    });
+    for (const [i, metric] of metrics.entries()) {
+      const data = { ...metric, note: metric.note ?? null, sortOrder: i + 1 };
+      await prisma.lineMetric.upsert({
+        where: { lineId_label: { lineId: guardada.id, label: metric.label } },
+        create: { ...data, lineId: guardada.id },
+        update: data,
+      });
+    }
   }
 }
 

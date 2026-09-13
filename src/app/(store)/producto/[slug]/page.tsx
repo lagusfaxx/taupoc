@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import {
   colorPagePath,
+  getLineComparison,
   getRelated,
   resolveProductRoute,
   resumenDeNotas,
@@ -14,6 +15,7 @@ import { getSettings } from '@/lib/settings';
 import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductView, type ProductViewData } from '@/components/store/ProductView';
 import { ProductCard } from '@/components/store/ProductCard';
+import { LineCompare } from '@/components/store/LineCompare';
 import { ProductReviews } from '@/components/store/ProductReviews';
 import { SectionHeading } from '@/components/store/SectionHeading';
 import { Accordion } from '@/components/store/Accordion';
@@ -156,6 +158,11 @@ export default async function ProductPage({
     modelCode: product.modelCode,
     subtitle: product.subtitle,
     lineName: product.line?.name ?? null,
+    lineSlug: product.line?.slug ?? null,
+    // El sello de gama solo lo lleva la línea de arriba: puesto en todas,
+    // dejaría de decir cuál de las dos es la cara.
+    lineTierLabel: (product.line?.tier ?? 0) > 1 ? product.line?.tierLabel ?? null : null,
+    comparable: !esAccesorio && (product.line?.metrics.length ?? 0) > 0,
     genderLabel: GENDER_LABEL[product.gender],
     gender: product.gender,
     basePrice: product.basePrice,
@@ -435,6 +442,15 @@ export default async function ProductPage({
         </div>
       </section>
 
+      {/* El comparador entre líneas: sin él, dos trajes que se ven iguales en
+          la foto solo se distinguen por el precio. Va en streaming porque es
+          una consulta aparte y queda muy por debajo del botón de compra. */}
+      {esAccesorio || product.line?.metrics.length === 0 || !product.line ? null : (
+        <Suspense fallback={null}>
+          <LineComparison gender={product.gender} lineSlug={product.line?.slug ?? null} />
+        </Suspense>
+      )}
+
       <ProductReviews reviews={product.reviews} average={rating.average} productName={product.name} />
 
       {/* Los relacionados van en streaming: son una consulta más y quedan
@@ -445,6 +461,17 @@ export default async function ProductPage({
       </Suspense>
     </>
   );
+}
+
+async function LineComparison({
+  gender,
+  lineSlug,
+}: {
+  gender: 'MALE' | 'FEMALE' | 'UNISEX';
+  lineSlug: string | null;
+}) {
+  const columns = await getLineComparison(gender);
+  return <LineCompare columns={columns} activeSlug={lineSlug} />;
 }
 
 function RelatedShell({ children }: { children: React.ReactNode }) {

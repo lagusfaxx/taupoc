@@ -45,6 +45,11 @@ export interface ProductViewData {
   modelCode: string;
   subtitle: string | null;
   lineName: string | null;
+  lineSlug: string | null;
+  /** Sello de gama, solo en la línea superior. Ej. "Serie Élite". */
+  lineTierLabel: string | null;
+  /** Si la página trae el comparador entre líneas más abajo. */
+  comparable: boolean;
   genderLabel: string;
   gender: 'MALE' | 'FEMALE' | 'UNISEX';
   basePrice: number;
@@ -347,6 +352,11 @@ export function ProductView({
           {product.lineName ? (
             <span className="eyebrow-accent">{product.lineName}</span>
           ) : null}
+          {product.lineTierLabel ? (
+            <span className="accent-border accent-text border px-2 py-1 font-display text-[9.5px] font-semibold uppercase tracking-mega">
+              {product.lineTierLabel}
+            </span>
+          ) : null}
           <span className="font-display text-[10px] uppercase tracking-mega text-chalk-faint">
             {product.genderLabel} · {product.modelCode}
           </span>
@@ -357,6 +367,17 @@ export function ProductView({
         </h1>
         {product.subtitle ? (
           <p className="mt-2.5 text-[15px] text-chalk-dim">{product.subtitle}</p>
+        ) : null}
+
+        {/* Con dos líneas casi idénticas en la foto, quien entra necesita un
+            atajo a la comparación antes de mirar el precio. */}
+        {product.comparable ? (
+          <a
+            href="#comparar"
+            className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-chalk-dim underline underline-offset-4 transition-colors hover:text-chalk"
+          >
+            ¿En qué se diferencia de la otra línea?
+          </a>
         ) : null}
 
         {product.rating.count > 0 ? (

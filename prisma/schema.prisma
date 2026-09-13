@@ -122,8 +122,43 @@ model ProductLine {
   accentHex   String         @default("#00E0B8")
   sortOrder   Int            @default(0)
   active      Boolean        @default(true)
+
+  /// Escalón dentro de la gama: 1 es la línea de entrada a competición y los
+  /// números mayores son líneas superiores. Ordena el comparador y decide qué
+  /// línea se marca como la de arriba.
+  tier      Int     @default(1)
+  /// Nombre del escalón en la tienda, ej. "Serie Élite". Es el distintivo que
+  /// separa una línea cara de una barata antes de abrir la ficha.
+  tierLabel String?
+  /// Para quién es la línea. La frase que resuelve "¿cuál de las dos compro?".
+  bestFor   String?
+
   products    Product[]
   sizeChart   SizeChartRow[]
+  metrics     LineMetric[]
+}
+
+/**
+ * Una fila del comparador entre líneas.
+ *
+ * Las dos líneas repiten las mismas etiquetas para que el comparador las
+ * enfrente fila por fila. `score` es solo el largo de la barra; el dato que
+ * se lee es `value`.
+ */
+model LineMetric {
+  id        String      @id @default(cuid())
+  lineId    String
+  line      ProductLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  /// 0 a 100. No es un porcentaje del dato, es cuánto se llena la barra.
+  score     Int         @default(0)
+  /// Nota al pie de la fila, para matizar un dato que no es "más es mejor".
+  note      String?
+  sortOrder Int         @default(0)
+
+  @@unique([lineId, label])
+  @@index([lineId])
 }
 
 model Product {
