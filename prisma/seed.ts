@@ -271,6 +271,7 @@ async function seedLines() {
       sortOrder: 1,
       tier: 1,
       tierLabel: 'Serie Competición',
+      cardClaim: '170 g · 25 a 30 carreras · 15 colorways',
       bestFor:
         'Para el nadador que compite toda la temporada y necesita un traje que aguante el calendario completo: ' +
         'clasificatorios, nacionales y torneos de club con el mismo traje.',
@@ -286,6 +287,7 @@ async function seedLines() {
       sortOrder: 2,
       tier: 2,
       tierLabel: 'Serie Élite',
+      cardClaim: '150 g · 2,1% de absorción · para la final',
       bestFor:
         'Para la final, el récord y el campeonato objetivo. Se compra para las carreras que importan: entrega más ' +
         'por brazada, pero se guarda para esas y dura menos que el R-SKIN.',
@@ -300,6 +302,7 @@ async function seedLines() {
       tier: 0,
       tierLabel: null,
       bestFor: null,
+      cardClaim: null,
     },
   ];
   for (const line of lines) {

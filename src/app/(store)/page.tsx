@@ -3,10 +3,11 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
-import { getFeatured } from '@/lib/catalog';
+import { getFeatured, getLineComparison } from '@/lib/catalog';
 import { getHomeBlocks } from '@/lib/home';
 import { buildMetadata, jsonLd, absoluteUrl, SITE_NAME } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
+import { LineCompareTeaser } from '@/components/store/LineCompareTeaser';
 import { HomeBlocks } from '@/components/store/home/HomeBlocks';
 import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
@@ -24,7 +25,11 @@ export const metadata: Metadata = buildMetadata({
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const [settings, blocks] = await Promise.all([getSettings(), getHomeBlocks()]);
+  const [settings, blocks, comparacion] = await Promise.all([
+    getSettings(),
+    getHomeBlocks(),
+    getLineComparison(),
+  ]);
 
   // Google arma el nombre del sitio en los resultados a partir de la portada.
   // Sin este marcado cae al dominio y muestra "taupoc.cl" en minúsculas; con
@@ -72,7 +77,17 @@ export default async function HomePage() {
         TAUPOC Chile — trajes de competición homologados por World Aquatics
       </h1>
 
-      {blocks.length > 0 ? <HomeBlocks blocks={blocks} /> : <PortadaPorDefecto />}
+      {blocks.length > 0 ? (
+        <>
+          <HomeBlocks blocks={blocks} />
+          {/* Con la portada armada en el panel no hay dónde intercalarla, así
+              que la cinta de líneas cierra la página. La portada por defecto la
+              pone pegada a la grilla, que es su lugar natural. */}
+          <LineCompareTeaser columns={comparacion} />
+        </>
+      ) : (
+        <PortadaPorDefecto />
+      )}
     </>
   );
 }
@@ -83,13 +98,14 @@ export default async function HomePage() {
  * instalación nueva no queda en blanco.
  */
 async function PortadaPorDefecto() {
-  const [featured, lines] = await Promise.all([
+  const [featured, lines, comparacion] = await Promise.all([
     getFeatured(4),
     prisma.productLine.findMany({
       where: { active: true, slug: { in: ['r-skin', 'vel-skin'] } },
       orderBy: { sortOrder: 'asc' },
       select: { slug: true, name: true },
     }),
+    getLineComparison(),
   ]);
 
   // Las portadas de categoría salen del propio catálogo, tomando un colorway
@@ -155,6 +171,11 @@ async function PortadaPorDefecto() {
           <IconArrow className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
         </Link>
       </section>
+
+      {/* La grilla de arriba muestra las dos líneas con la misma fotografía:
+          esta cinta va justo debajo para decir en qué se diferencian antes de
+          que el visitante tenga que abrir las dos fichas. */}
+      <LineCompareTeaser columns={comparacion} />
 
       <section className="border-t border-line">
         <div className="container py-10 lg:py-12">
