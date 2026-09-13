@@ -11,9 +11,7 @@ export const GENDER_LABEL: Record<Gender, string> = {
 };
 
 const CARD_INCLUDE = {
-  line: {
-    select: { name: true, slug: true, accentHex: true, tier: true, tierLabel: true, cardClaim: true },
-  },
+  line: { select: { name: true, slug: true, accentHex: true, tier: true, tierLabel: true } },
   colors: {
     where: { active: true },
     orderBy: { sortOrder: 'asc' as const },
@@ -59,9 +57,6 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     // sello, el sello dejaría de significar que una vale más que la otra.
     tierLabel: (product.line?.tier ?? 0) > 1 ? product.line?.tierLabel ?? null : null,
     tier: product.line?.tier ?? 0,
-    // Con la misma fotografía en las dos líneas, esta línea de datos es lo
-    // único que distingue las tarjetas en la grilla.
-    lineClaim: product.line?.cardClaim ?? null,
     rating: resumenDeNotas(product.reviews),
   };
 }

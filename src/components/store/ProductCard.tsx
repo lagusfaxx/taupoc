@@ -33,8 +33,6 @@ export interface ProductCardData {
   tierLabel?: string | null;
   /** Escalón de la línea: 1 es la de entrada, los mayores son superiores. */
   tier?: number;
-  /** Los datos que separan esta línea de la otra. Ej. "150 g · 2,1%…". */
-  lineClaim?: string | null;
   rating: { average: number; count: number };
   /**
    * Tarjeta de un color concreto: la grilla muestra ese color, lo nombra bajo
@@ -117,19 +115,6 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
             {product.name}
           </Link>
         </h3>
-
-        {/* Los datos de la línea, bajo el título: con la misma foto en las dos
-            líneas, es lo que explica la diferencia de precio en la grilla. */}
-        {product.lineClaim ? (
-          <p
-            className={cn(
-              'mt-1.5 text-[12px] leading-snug',
-              elite ? 'accent-text' : 'text-chalk-faint',
-            )}
-          >
-            {product.lineClaim}
-          </p>
-        ) : null}
 
         {fixed ? (
           <p className="mt-1.5 flex items-center gap-2 text-[13px] text-chalk-dim">
