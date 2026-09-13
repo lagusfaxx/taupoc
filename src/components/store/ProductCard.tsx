@@ -29,6 +29,8 @@ export interface ProductCardData {
   colors: ProductCardColor[];
   fallbackImage: string | null;
   accentHex: string;
+  /** Sello de gama, solo en la línea superior. Ej. "Serie Élite". */
+  tierLabel?: string | null;
   rating: { average: number; count: number };
   /**
    * Tarjeta de un color concreto: la grilla muestra ese color, lo nombra bajo
@@ -80,6 +82,14 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
           ) : (
             <div className="absolute inset-0 bg-ink-700" />
           )}
+
+          {/* El sello de gama: en una grilla donde dos trajes se ven iguales,
+              es lo único que anticipa por qué uno cuesta más. */}
+          {product.tierLabel ? (
+            <span className="absolute left-3 top-3 border accent-border bg-ink/85 px-2 py-1 font-display text-[9.5px] font-semibold uppercase tracking-mega accent-text backdrop-blur">
+              {product.tierLabel}
+            </span>
+          ) : null}
 
           {unavailable ? (
             <span className="absolute bottom-3 left-3 bg-ink/85 px-2 py-1 font-display text-[10px] font-semibold uppercase tracking-widest text-chalk-dim backdrop-blur">
