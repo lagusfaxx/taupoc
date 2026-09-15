@@ -77,7 +77,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
       query: one(params.q),
       sort,
     }),
-    getCatalogFacets(),
+    getCatalogFacets({ gender }),
     getSettings(),
     getLineComparison(),
   ]);
