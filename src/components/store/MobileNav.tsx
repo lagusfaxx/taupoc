@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePathname } from 'next/navigation';
-import type { NavItem } from './Header';
+import type { NavItem } from '@/lib/nav';
 import { IconClose, IconMenu } from '@/components/ui/Icons';
 import { Logo } from '@/components/ui/Logo';
 

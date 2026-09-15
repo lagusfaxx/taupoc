@@ -3,54 +3,19 @@ import { getSettings } from '@/lib/settings';
 import { formatCLP } from '@/lib/money';
 import { getCartCount } from '@/lib/cart';
 import { getSession } from '@/lib/auth';
-import { prisma } from '@/lib/db';
+import { getNav } from '@/lib/nav';
 import { Logo } from '@/components/ui/Logo';
 import { IconUser } from '@/components/ui/Icons';
 import { CartLink } from './CartLink';
 import { MobileNav } from './MobileNav';
 import { SearchTrigger } from './SearchTrigger';
 
-export interface NavItem {
-  label: string;
-  href: string;
-  children?: { label: string; href: string; note?: string }[];
-}
-
-async function buildNav(): Promise<NavItem[]> {
-  const lines = await prisma.productLine.findMany({
-    where: { active: true },
-    orderBy: { sortOrder: 'asc' },
-    select: { slug: true, name: true, tagline: true },
-  });
-
-  return [
-    {
-      label: 'Competición',
-      href: '/catalogo',
-      children: [
-        { label: 'Hombre — Jammers', href: '/catalogo?genero=MALE', note: 'Homologados World Aquatics' },
-        { label: 'Mujer — Knee suits', href: '/catalogo?genero=FEMALE', note: 'Homologados World Aquatics' },
-        ...lines
-          .filter((l) => l.slug !== 'accesorios')
-          .map((l) => ({ label: `Línea ${l.name}`, href: `/catalogo?linea=${l.slug}`, note: l.tagline ?? undefined })),
-        { label: 'R-SKIN o VEL-SKIN', href: '/lineas', note: 'Las dos líneas comparadas dato a dato' },
-        { label: 'Ver todo el catálogo', href: '/catalogo' },
-      ],
-    },
-    { label: 'Guía de tallas', href: '/guia-de-tallas' },
-    { label: 'Clubes', href: '/clubes' },
-    { label: 'La marca', href: '/marca' },
-    { label: 'Blog', href: '/blog' },
-    { label: 'Contacto', href: '/contacto' },
-  ];
-}
-
 export async function Header() {
   const [settings, cartCount, session, nav] = await Promise.all([
     getSettings(),
     getCartCount(),
     getSession(),
-    buildNav(),
+    getNav(),
   ]);
 
   // El umbral de envío gratis se edita en Ajustes; el banner lo toma de ahí

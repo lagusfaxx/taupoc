@@ -68,6 +68,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     getCatalog({
       gender,
       lineSlug: one(params.linea),
+      categorySlug: one(params.categoria),
       sizes: list(params.tallas),
       colors: list(params.colores),
       minPrice: one(params.precio_min) ? Number(one(params.precio_min)) : undefined,

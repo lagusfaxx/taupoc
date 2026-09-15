@@ -101,6 +101,35 @@ enum Gender {
   UNISEX
 }
 
+/**
+ * Un enlace de la barra de navegación de la tienda.
+ *
+ * El menú era código: cambiar una categoría del encabezado obligaba a tocar
+ * `Header.tsx` y volver a desplegar. Con esto se edita desde el panel. Los
+ * enlaces de primer nivel tienen `parentId` nulo; sus hijos son las entradas
+ * del desplegable, en el orden de `position`.
+ *
+ * Sin ninguna fila, la tienda muestra el menú por defecto de `lib/nav.ts`: una
+ * instalación nueva —o un menú borrado por error— nunca queda sin navegación.
+ */
+model MenuItem {
+  id       String  @id @default(cuid())
+  label    String
+  /// Ruta interna ("/catalogo?genero=MALE") o URL completa.
+  href     String
+  /// Línea de apoyo bajo el enlace, solo en el desplegable.
+  note     String?
+  position Int     @default(0)
+  active   Boolean @default(true)
+
+  parentId String?
+  parent   MenuItem?  @relation("MenuTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children MenuItem[] @relation("MenuTree")
+
+  @@index([parentId, position])
+  @@index([active])
+}
+
 model Category {
   id          String    @id @default(cuid())
   slug        String    @unique

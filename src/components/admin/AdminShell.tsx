@@ -9,7 +9,7 @@ import { LogoMark } from '@/components/ui/Logo';
 import {
   IconBox,
   IconSpark, IconChart, IconClose, IconDoc, IconMenu, IconSettings,
-  IconTag, IconTruck, IconUsers, IconExternal,
+  IconTag, IconTruck, IconUsers, IconExternal, IconRuler,
 } from '@/components/ui/Icons';
 
 interface NavGroup {
@@ -52,6 +52,7 @@ export function AdminShell({
       items: [
         { href: '/admin/productos', label: 'Productos', icon: IconTag },
         { href: '/admin/inventario', label: 'Inventario', icon: IconBox, badge: lowStock },
+        { href: '/admin/categorias', label: 'Categorías', icon: IconRuler },
         { href: '/admin/cupones', label: 'Cupones', icon: IconTag },
       ],
     },
@@ -59,6 +60,7 @@ export function AdminShell({
       title: 'Contenido',
       items: [
         { href: '/admin/inicio', label: 'Inicio', icon: IconSpark },
+        { href: '/admin/menu', label: 'Menú', icon: IconMenu },
         { href: '/admin/blog', label: 'Blog', icon: IconDoc },
       ],
     },
