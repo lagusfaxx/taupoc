@@ -79,10 +79,13 @@ function AddButton({
   disabled,
   comingSoon,
   pending,
+  otroColor,
 }: {
   disabled: boolean;
   comingSoon: boolean;
   pending: boolean;
+  /** Talla elegida que no está en este color, pero sí en otro. */
+  otroColor: string | null;
 }) {
   return (
     <button
@@ -95,7 +98,15 @@ function AddButton({
         'disabled:cursor-not-allowed disabled:bg-ink-600 disabled:text-chalk-faint',
       )}
     >
-      {comingSoon ? 'Próximamente' : pending ? 'Agregando…' : disabled ? 'Selecciona una talla' : 'Agregar al carrito'}
+      {comingSoon
+        ? 'Próximamente'
+        : pending
+          ? 'Agregando…'
+          : otroColor
+            ? `Elige un color con talla ${otroColor}`
+            : disabled
+              ? 'Selecciona una talla'
+              : 'Agregar al carrito'}
     </button>
   );
 }
@@ -112,6 +123,7 @@ function ColorPicker({
   activeId,
   onPick,
   hrefFor,
+  sizeWanted,
   className,
 }: {
   colors: ViewColor[];
@@ -119,16 +131,26 @@ function ColorPicker({
   onPick: (id: string) => void;
   /** Con fichas por color cada muestra es un enlace a la ficha de ese color. */
   hrefFor?: (color: ViewColor) => string;
+  /** Talla que busca el visitante: las muestras sin esa talla quedan tachadas. */
+  sizeWanted: string | null;
   className?: string;
 }) {
   if (colors.length <= 1) return null;
   const color = colors.find((c) => c.id === activeId) ?? colors[0];
+  const conLaTalla = sizeWanted
+    ? colors.filter((c) => c.variants.some((v) => v.size === sizeWanted && v.available > 0)).length
+    : 0;
 
   return (
     <fieldset className={className}>
       <legend className="mb-3 flex w-full flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className="font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim">
           Color
+          {sizeWanted ? (
+            <span className="ml-2 normal-case tracking-normal text-chalk-faint">
+              · talla {sizeWanted} en {conLaTalla} de {colors.length}
+            </span>
+          ) : null}
         </span>
         <span className="text-[13px] text-chalk">
           {color?.name}
@@ -154,14 +176,23 @@ function ColorPicker({
         {colors.map((c) => {
           const stock = c.variants.reduce((s, v) => s + v.available, 0);
           const selected = c.id === color?.id;
-          const etiqueta = `Color ${colorLabel(c)}${stock === 0 ? ' (agotado)' : ''}`;
+          // Con una talla buscada, lo que importa de cada color es si la
+          // tiene: así el visitante ve de una cuáles le sirven, en vez de ir
+          // abriendo color por color para averiguarlo.
+          const sinLaTalla =
+            sizeWanted != null &&
+            !c.variants.some((v) => v.size === sizeWanted && v.available > 0);
+          const descartado = stock === 0 || sinLaTalla;
+          const etiqueta = `Color ${colorLabel(c)}${
+            stock === 0 ? ' (agotado)' : sinLaTalla ? ` (sin talla ${sizeWanted})` : ''
+          }`;
           const titulo = `${colorLabel(c)}${c.stripCode ? ` · vivo ${c.stripCode}` : ''}`;
           const clase = cn(
             'relative block h-10 w-10 border-2 transition-all duration-150',
             selected ? 'border-chalk' : 'border-line hover:border-chalk-faint',
           );
           const tachado =
-            stock === 0 ? (
+            descartado ? (
               <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
                 {/* Sin bajar la opacidad: atenuar el swatch falsearía el
                     colorway, y el código del fabricante es parte de la ficha. */}
@@ -208,23 +239,42 @@ function ColorPicker({
 export function ProductView({
   product,
   initialColorSlug,
+  initialSize,
 }: {
   product: ProductViewData;
   /** Color con el que abre la ficha, cuando el enlace ya trae uno elegido. */
   initialColorSlug?: string | null;
+  /** Talla con la que abre la ficha: la trae el enlace al cambiar de color. */
+  initialSize?: string | null;
 }) {
   const router = useRouter();
   const inicial =
     product.colors.find((c) => c.slug === initialColorSlug) ?? product.colors[0] ?? null;
   const [colorId, setColorId] = useState(inicial?.id ?? '');
+  // Con fichas por color, el enlace de cada muestra se lleva la talla buscada:
+  // así cambiar de color no pierde lo que el visitante ya eligió.
   const hrefDeColor = product.colorPages
-    ? (c: ViewColor) => `/producto/${product.slug}-${c.slug}`
+    ? (c: ViewColor) =>
+        `/producto/${product.slug}-${c.slug}${
+          tallaBuscada ? `?talla=${encodeURIComponent(tallaBuscada)}` : ''
+        }`
     : undefined;
   // Un accesorio de talla única no obliga a elegir nada: se preselecciona
   // para que el botón de compra quede activo de entrada.
   const unicaVariante =
     product.esAccesorio && inicial?.variants.length === 1 ? (inicial.variants[0] ?? null) : null;
   const [variantId, setVariantId] = useState<string | null>(unicaVariante?.id ?? null);
+  /**
+   * La talla que busca el visitante, independiente del color.
+   *
+   * Antes la talla vivía dentro del color elegido, así que para saber si su
+   * talla existía había que entrar color por color. Guardándola aparte, la
+   * ficha puede responder la pregunta al revés: elegida la talla, se marca
+   * qué colores la tienen.
+   */
+  const [tallaBuscada, setTallaBuscada] = useState<string | null>(
+    unicaVariante?.size ?? initialSize ?? null,
+  );
   const [state, setState] = useState<CartActionState | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -290,16 +340,47 @@ export function ProductView({
 
   const colorStock = color?.variants.reduce((s, v) => s + v.available, 0) ?? 0;
 
-  // Al cambiar de color se conserva la talla si sigue existiendo con stock.
+  /**
+   * Todas las tallas del modelo, con dónde hay stock de cada una.
+   *
+   * Se arma sobre los colores completos y no sobre el elegido: es lo que
+   * permite decir "esta talla no está en este color, pero sí en estos otros"
+   * sin que el visitante tenga que ir abriéndolos.
+   */
+  const tallas = useMemo(() => {
+    const orden = new Map<string, number>();
+    for (const c of product.colors) {
+      for (const v of c.variants) {
+        if (!orden.has(v.size)) orden.set(v.size, Number(v.size) || orden.size);
+      }
+    }
+
+    return [...orden.keys()]
+      .sort((a, b) => (orden.get(a) ?? 0) - (orden.get(b) ?? 0))
+      .map((size) => {
+        const aqui = color?.variants.find((v) => v.size === size) ?? null;
+        return {
+          size,
+          /** La variante de esta talla en el color que se está viendo. */
+          variant: aqui,
+          enEsteColor: (aqui?.available ?? 0) > 0,
+          otrosColores: product.colors.filter(
+            (c) =>
+              c.id !== color?.id && c.variants.some((v) => v.size === size && v.available > 0),
+          ),
+        };
+      });
+  }, [product.colors, color]);
+
+  const tallaActual = tallaBuscada ? tallas.find((t) => t.size === tallaBuscada) ?? null : null;
+
+  // Al cambiar de color se conserva la talla buscada si ese color la tiene.
   useEffect(() => {
     if (!color) return;
     const current = color.variants.find((v) => v.id === variantId);
     if (current) return;
-    const previousSize = product.colors
-      .flatMap((c) => c.variants)
-      .find((v) => v.id === variantId)?.size;
-    const match = previousSize
-      ? color.variants.find((v) => v.size === previousSize && v.available > 0)
+    const match = tallaBuscada
+      ? color.variants.find((v) => v.size === tallaBuscada && v.available > 0)
       : null;
     setVariantId(match?.id ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -319,9 +400,29 @@ export function ProductView({
     return () => observador.disconnect();
   }, []);
 
+  /**
+   * Elegir una talla, haya o no stock en este color.
+   *
+   * Que no haya acá no es un callejón sin salida: la talla queda elegida, las
+   * muestras de color marcan cuáles la tienen y debajo de la grilla aparecen
+   * los colores donde sí está.
+   */
   function selectSize(size: string) {
+    setTallaBuscada(size);
     const match = color?.variants.find((v) => v.size === size);
-    if (match && match.available > 0) setVariantId(match.id);
+    setVariantId(match && match.available > 0 ? match.id : null);
+  }
+
+  /** Cambia al color indicado conservando la talla buscada. */
+  function irAColor(c: ViewColor) {
+    // `hrefDeColor` ya arrastra la talla en la dirección.
+    if (hrefDeColor) {
+      router.push(hrefDeColor(c));
+      return;
+    }
+    setColorId(c.id);
+    const match = c.variants.find((v) => v.size === tallaBuscada && v.available > 0);
+    setVariantId(match?.id ?? null);
   }
 
   return (
@@ -338,6 +439,7 @@ export function ProductView({
           activeId={color?.id}
           onPick={setColorId}
           hrefFor={hrefDeColor}
+          sizeWanted={tallaBuscada}
           className="mt-5 lg:hidden"
         />
       </div>
@@ -414,6 +516,7 @@ export function ProductView({
             activeId={color?.id}
             onPick={setColorId}
             hrefFor={hrefDeColor}
+            sizeWanted={tallaBuscada}
             className="mb-7 hidden lg:block"
           />
 
@@ -442,30 +545,50 @@ export function ProductView({
               </p>
             ) : (
             <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
-              {color?.variants.map((v) => {
-                const selected = v.id === variant?.id;
-                const out = v.available <= 0;
+              {tallas.map((t) => {
+                const selected = t.size === tallaBuscada;
+                const enOtro = !t.enEsteColor && t.otrosColores.length > 0;
+                const agotada = !t.enEsteColor && t.otrosColores.length === 0;
+                const quedan = t.variant?.available ?? 0;
                 return (
                   <button
-                    key={v.id}
+                    key={t.size}
                     type="button"
-                    disabled={out}
-                    onClick={() => setVariantId(v.id)}
+                    disabled={agotada}
+                    onClick={() => selectSize(t.size)}
                     aria-pressed={selected}
-                    aria-label={`Talla ${v.size}${out ? ' agotada' : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
+                    aria-label={`Talla ${t.size}${
+                      agotada
+                        ? ' agotada en todos los colores'
+                        : enOtro
+                          ? `, no está en este color pero sí en otros ${t.otrosColores.length}`
+                          : quedan <= SHOW_UNITS_LEFT
+                            ? `, quedan ${quedan}`
+                            : ''
+                    }`}
                     className={cn(
                       'relative flex h-12 items-center justify-center border font-display text-[15px] font-semibold tracking-wide transition-all duration-150',
-                      selected
+                      selected && t.enEsteColor
                         ? 'accent-border accent-text bg-ink-800'
-                        : out
-                          ? 'cursor-not-allowed border-line-soft text-chalk-faint/40'
-                          : 'border-line text-chalk hover:border-chalk-faint',
+                        : selected && enOtro
+                          ? 'border-dashed accent-border accent-text'
+                          : agotada
+                            ? 'cursor-not-allowed border-line-soft text-chalk-faint/40'
+                            : enOtro
+                              ? 'border-dashed border-line-bright text-chalk-dim hover:border-chalk-faint hover:text-chalk'
+                              : 'border-line text-chalk hover:border-chalk-faint',
                     )}
                   >
-                    {v.size}
-                    {out ? (
+                    {t.size}
+                    {agotada ? (
                       <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 rotate-[-20deg] bg-line-bright" aria-hidden />
-                    ) : v.available <= SHOW_UNITS_LEFT ? (
+                    ) : enOtro ? (
+                      // Un punto hueco: la talla existe, pero en otro color.
+                      <span
+                        className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full border border-chalk-faint"
+                        aria-hidden
+                      />
+                    ) : quedan <= SHOW_UNITS_LEFT ? (
                       <span className="absolute right-1 top-1 h-1.5 w-1.5 bg-signal-warn" aria-hidden />
                     ) : null}
                   </button>
@@ -473,6 +596,47 @@ export function ProductView({
               })}
             </div>
             )}
+
+            {/* La talla elegida no está en este color: acá están los que sí la
+                tienen. Es el paso que antes obligaba a abrir color por color. */}
+            {tallaActual && !tallaActual.enEsteColor && tallaActual.otrosColores.length > 0 ? (
+              <div className="mt-3 border accent-border bg-ink-900 p-3.5">
+                <p className="text-[13.5px] text-chalk-dim">
+                  La talla <strong className="text-chalk">{tallaActual.size}</strong> no está en{' '}
+                  {color ? colorLabel(color) : 'este color'}. Sí en{' '}
+                  {tallaActual.otrosColores.length === 1
+                    ? 'este color:'
+                    : `estos ${tallaActual.otrosColores.length} colores:`}
+                </p>
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {tallaActual.otrosColores.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => irAColor(c)}
+                      className="flex items-center gap-2 border border-line bg-ink-800 py-1.5 pl-1.5 pr-3 text-[13px] text-chalk transition-colors hover:border-chalk-faint"
+                    >
+                      <span
+                        className="h-6 w-6 shrink-0 border border-line-bright"
+                        style={{ background: c.hex }}
+                        aria-hidden
+                      />
+                      {colorLabel(c)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {tallaActual && !tallaActual.enEsteColor && tallaActual.otrosColores.length === 0 ? (
+              <p className="mt-3 border border-line bg-ink-900 px-3.5 py-3 text-[13.5px] text-chalk-dim">
+                La talla <strong className="text-chalk">{tallaActual.size}</strong> está agotada en
+                todos los colores.{' '}
+                <Link href="/contacto" className="underline underline-offset-2 hover:text-chalk">
+                  Avísame cuando llegue
+                </Link>
+              </p>
+            ) : null}
 
             {/* Estado de stock en vivo */}
             <p ref={liveRef} aria-live="polite" className="mt-3 min-h-[20px] text-[13px]">
@@ -491,7 +655,7 @@ export function ProductView({
                 <span className="text-chalk-faint">
                   Este color está agotado. Prueba con otro o escríbenos para avisarte de la reposición.
                 </span>
-              ) : (
+              ) : tallaActual && !tallaActual.enEsteColor ? null : (
                 <span className="text-chalk-faint">
                   {product.esAccesorio
                     ? 'Selecciona una opción.'
@@ -502,7 +666,16 @@ export function ProductView({
           </fieldset>
 
           <div ref={compraRef} className="mt-6 space-y-3">
-            <AddButton disabled={!variant} comingSoon={product.comingSoon} pending={enviando} />
+            <AddButton
+              disabled={!variant}
+              comingSoon={product.comingSoon}
+              pending={enviando}
+              otroColor={
+                tallaActual && !tallaActual.enEsteColor && tallaActual.otrosColores.length > 0
+                  ? tallaActual.size
+                  : null
+              }
+            />
 
             {state ? (
               <p

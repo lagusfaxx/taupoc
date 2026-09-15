@@ -308,7 +308,13 @@ export default async function ProductPage({
       </nav>
 
       <div className="container py-8 lg:py-14">
-        <ProductView product={viewData} initialColorSlug={color?.slug ?? preseleccion?.slug ?? null} />
+        <ProductView
+          product={viewData}
+          initialColorSlug={color?.slug ?? preseleccion?.slug ?? null}
+          // `?talla=` la pone la propia ficha al mandar a otro color: sin esto
+          // el visitante tendría que volver a elegir la talla en cada color.
+          initialSize={typeof query.talla === 'string' ? query.talla : null}
+        />
       </div>
 
       {/* Descripción y ficha técnica */}
