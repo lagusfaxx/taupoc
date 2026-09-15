@@ -115,6 +115,15 @@ export function AdminShell({
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      // Sin esto, las quince entradas de la barra se prefetchan
+                      // apenas se ven. Cada página del panel es dinámica, así
+                      // que cada prefetch es un render completo con sus
+                      // consultas, y los quince se disparan a la vez: el
+                      // navegador solo abre unas seis conexiones por dominio,
+                      // así que el clic de verdad queda en la cola detrás de
+                      // ellos y la página tarda en abrir —o parece que hay que
+                      // hacer clic dos veces—.
+                      prefetch={false}
                       aria-current={active ? 'page' : undefined}
                       className={cn(
                         'relative flex items-center gap-3 px-5 py-2.5 text-[13.5px] transition-colors',

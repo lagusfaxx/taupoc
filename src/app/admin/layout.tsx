@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getCurrentUser, isStaff } from '@/lib/auth';
 import { prisma } from '@/lib/db';
-import { getLowStock } from '@/lib/inventory';
+import { countLowStock } from '@/lib/inventory';
 import { getSettings } from '@/lib/settings';
 import { AdminShell } from '@/components/admin/AdminShell';
 
@@ -26,7 +26,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     getSettings(),
     prisma.order.count({ where: { status: { in: ['PAID', 'PROCESSING'] } } }),
     prisma.quoteRequest.count({ where: { status: 'NEW' } }),
-    getLowStock(200).then((rows) => rows.length),
+    countLowStock(),
   ]);
 
   return (

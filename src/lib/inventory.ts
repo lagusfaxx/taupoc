@@ -110,6 +110,31 @@ export interface LowStockRow {
  * Variantes que se están agotando. Un SKU en cero no entra acá: para el negocio
  * es "agotado", no "por reponer", y se filtra desde la vista de inventario.
  */
+/**
+ * Cuántas variantes están bajo su umbral. Solo el número.
+ *
+ * El marco del panel lo muestra como distintivo en cada página, y para eso
+ * traía quinientas variantes con sus relaciones y las filtraba en memoria en
+ * cada navegación. Una cuenta en la base hace lo mismo sin mover las filas: el
+ * umbral por variante manda, y cuando es cero vale el de los ajustes.
+ */
+export async function countLowStock(): Promise<number> {
+  const settings = await getSettings();
+  const filas = await prisma.$queryRaw<{ total: bigint }[]>`
+    SELECT COUNT(*) AS total
+    FROM "Variant" v
+    JOIN "Product" p ON p.id = v."productId"
+    WHERE v.active
+      AND p.status = 'ACTIVE'
+      AND v.stock > 0
+      AND v.stock <= CASE
+        WHEN v."lowStockThreshold" > 0 THEN v."lowStockThreshold"
+        ELSE ${settings.lowStockThreshold}
+      END
+  `;
+  return Number(filas[0]?.total ?? 0);
+}
+
 export async function getLowStock(limit = 100): Promise<LowStockRow[]> {
   const settings = await getSettings();
   const variants = await prisma.variant.findMany({

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { IconClose, IconSearch } from '@/components/ui/Icons';
 
@@ -14,9 +15,13 @@ const SUGGESTIONS = [
 
 export function SearchTrigger() {
   const [open, setOpen] = useState(false);
+  const [montado, setMontado] = useState(false);
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // El portal necesita el document, que en el servidor no existe.
+  useEffect(() => setMontado(true), []);
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -53,7 +58,14 @@ export function SearchTrigger() {
         <IconSearch className="h-[19px] w-[19px]" />
       </button>
 
-      {open ? (
+      {open && montado
+        ? // El buscador se monta colgando de <body>. El encabezado lleva
+          // backdrop-blur, y un elemento con filtro de fondo pasa a ser el
+          // bloque contenedor de sus hijos fijos: dentro de él, `fixed
+          // inset-0` no era la pantalla sino la franja del encabezado, así que
+          // el panel quedaba encajado en esos 72 píxeles. Es el mismo problema
+          // que ya tenía el menú del teléfono.
+          createPortal(
         <div className="fixed inset-0 z-[70]">
           <div className="absolute inset-0 bg-ink/85 backdrop-blur-sm" onClick={() => setOpen(false)} aria-hidden />
           <div className="relative mx-auto mt-[12vh] w-[92%] max-w-2xl animate-rise-in">
@@ -92,8 +104,10 @@ export function SearchTrigger() {
               </div>
             </form>
           </div>
-        </div>
-      ) : null}
+        </div>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

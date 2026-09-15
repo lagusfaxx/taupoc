@@ -74,6 +74,12 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
     <article className="group flex flex-col" style={{ ['--accent' as string]: product.accentHex }}>
       <Link
         href={href}
+        // La grilla trae veinte tarjetas y cada ficha es una página dinámica:
+        // con el prefetch de Next, mirar el catálogo dispara veinte renders
+        // completos en el servidor y el clic de verdad queda haciendo cola
+        // detrás. La ficha ya tiene su propio esqueleto de carga, así que se
+        // abre igual de rápido sin adelantarla.
+        prefetch={false}
         className={cn(
           'relative block overflow-hidden border bg-ink-800',
           elite ? 'accent-border' : 'border-line',
@@ -111,7 +117,7 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
 
       <div className="flex flex-1 flex-col pt-3.5">
         <h3 className="font-display text-[16px] leading-tight tracking-tight text-chalk">
-          <Link href={href} className="hover:accent-text">
+          <Link href={href} prefetch={false} className="hover:accent-text">
             {product.name}
           </Link>
         </h3>
