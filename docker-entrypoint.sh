@@ -47,5 +47,12 @@ if [ "${RUN_SEED}" = "true" ]; then
   npx tsx prisma/seed.ts || echo "⚠ El seed no se completó; la aplicación arranca igual."
 fi
 
+# Las líneas y su comparador no son carga inicial: el seed no corre sobre una
+# tienda que ya tiene catálogo, así que sin esto una tienda en uso se queda sin
+# el sello de gama y sin el comparador. Solo escribe la tabla de líneas y sus
+# filas de comparación; no toca productos, fotos, stock ni precios.
+echo "→ Actualizando líneas de producto…"
+npx tsx prisma/backfill-lines.ts || echo "⚠ No se pudieron actualizar las líneas; la aplicación arranca igual."
+
 echo "→ Iniciando TAUPOC Chile en el puerto ${PORT:-3000}"
 exec "$@"
