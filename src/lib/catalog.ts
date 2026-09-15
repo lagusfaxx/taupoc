@@ -29,6 +29,36 @@ const CARD_INCLUDE = {
 
 type ProductWithCard = Prisma.ProductGetPayload<{ include: typeof CARD_INCLUDE }>;
 
+/** Unidades que se pueden vender: lo reservado ya está comprometido. */
+function disponibles(variant: { stock: number; reserved: number }): number {
+  return Math.max(0, variant.stock - variant.reserved);
+}
+
+/**
+ * Deja del producto solo los colores que tienen unidades en esas tallas.
+ *
+ * En la base cada producto tiene una fila por talla y color aunque esté en
+ * cero: así funciona la matriz de inventario del panel. Por eso preguntar en
+ * la consulta si "existe una variante de esa talla" da verdadero para todo el
+ * catálogo y el filtro no filtra nada. Lo que decide es si esa talla tiene
+ * unidades, y eso —`stock - reserved` sobre los colores publicados— se resuelve
+ * acá, donde ya están cargadas, en vez de pedir otra consulta.
+ *
+ * Devuelve `null` cuando ningún color queda en pie: el producto no se ofrece
+ * en esa talla y no entra en la grilla.
+ */
+function conTallaDisponible(
+  product: ProductWithCard,
+  sizes: string[] | null,
+): ProductWithCard | null {
+  const colors = product.colors.filter((color) =>
+    color.variants.some(
+      (v) => (sizes == null || sizes.includes(v.size)) && disponibles(v) > 0,
+    ),
+  );
+  return colors.length > 0 ? { ...product, colors } : null;
+}
+
 export function toCardData(product: ProductWithCard): ProductCardData {
   const colors = product.colors.map((color) => ({
     id: color.id,
@@ -37,11 +67,11 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     slug: color.slug,
     hex: color.hex,
     imageUrl: color.images[0]?.url ?? null,
-    stock: color.variants.reduce((s, v) => s + Math.max(0, v.stock - v.reserved), 0),
+    stock: color.variants.reduce((s, v) => s + disponibles(v), 0),
   }));
 
   const allVariants = product.colors.flatMap((c) => c.variants);
-  const totalStock = allVariants.reduce((s, v) => s + Math.max(0, v.stock - v.reserved), 0);
+  const totalStock = allVariants.reduce((s, v) => s + disponibles(v), 0);
   return {
     id: product.id,
     slug: product.slug,
@@ -148,20 +178,14 @@ export async function getCatalog(filters: CatalogFilters = {}) {
     ...(filters.colors?.length
       ? { colors: { some: { slug: { in: filters.colors }, active: true } } }
       : {}),
+    // Prefiltro barato: descarta en la base lo que seguro no califica. La
+    // condición exacta —unidades libres en un color publicado— se aplica
+    // después sobre las variantes ya cargadas.
     ...(filters.sizes?.length
-      ? {
-          variants: {
-            some: {
-              size: { in: filters.sizes },
-              active: true,
-              ...(filters.inStockOnly ? { stock: { gt: 0 } } : {}),
-            },
-          },
-        }
-      : {}),
-    ...(filters.inStockOnly && !filters.sizes?.length
-      ? { variants: { some: { stock: { gt: 0 }, active: true } } }
-      : {}),
+      ? { variants: { some: { size: { in: filters.sizes }, active: true, stock: { gt: 0 } } } }
+      : filters.inStockOnly
+        ? { variants: { some: { active: true, stock: { gt: 0 } } } }
+        : {}),
   };
 
   const products = await prisma.product.findMany({
@@ -170,7 +194,17 @@ export async function getCatalog(filters: CatalogFilters = {}) {
     orderBy: orderFor(filters.sort),
   });
 
-  return products.map(toCardData);
+  // Filtrar por talla es preguntar por unidades en esa talla, no por que la
+  // talla exista en la matriz. Se descartan los colores sin stock en ella
+  // para que, con la grilla dividida por color, no aparezca una ficha que no
+  // se puede comprar en lo que se pidió.
+  const sizes = filters.sizes?.length ? filters.sizes : null;
+  if (sizes == null && !filters.inStockOnly) return products.map(toCardData);
+
+  return products.flatMap((product) => {
+    const filtrado = conTallaDisponible(product, sizes);
+    return filtrado ? [toCardData(filtrado)] : [];
+  });
 }
 
 export async function getFeatured(limit = 4) {
@@ -274,8 +308,16 @@ export const getLineComparison = cache(async function getLineComparison(
   });
 });
 
-/** Facetas para la barra de filtros, calculadas sobre el catálogo visible. */
-export async function getCatalogFacets() {
+/**
+ * Facetas para la barra de filtros, calculadas sobre el catálogo visible.
+ *
+ * `gender` es el del catálogo que se está mirando. Sin él, las tallas se
+ * marcarían con el stock de todo el catálogo: la 22 agotada en jammers pero
+ * disponible en knee suits se ofrecería en el filtro de hombre para devolver
+ * cero resultados, que es justo lo que hace parecer que el filtro no sirve.
+ */
+export async function getCatalogFacets({ gender }: { gender?: Gender } = {}) {
+  const forGender = gender ? { gender } : {};
   const [lines, categories, colors, variants, priceRange] = await Promise.all([
     prisma.productLine.findMany({
       where: { active: true, products: { some: { status: { in: VISIBLE } } } },
@@ -291,10 +333,15 @@ export async function getCatalogFacets() {
       where: { active: true, product: { status: { in: VISIBLE } } },
       select: { slug: true, name: true, hex: true },
     }),
-    prisma.variant.groupBy({
-      by: ['size'],
-      where: { active: true, product: { status: { in: VISIBLE } } },
-      _sum: { stock: true },
+    // Sin `groupBy`: lo que decide es `stock - reserved`, y eso no se puede
+    // sumar en la base. Son unos cientos de filas de dos enteros.
+    prisma.variant.findMany({
+      where: {
+        active: true,
+        color: { active: true },
+        product: { status: { in: VISIBLE }, ...forGender },
+      },
+      select: { size: true, stock: true, reserved: true },
     }),
     prisma.product.aggregate({
       where: { status: { in: VISIBLE } },
@@ -307,14 +354,19 @@ export async function getCatalogFacets() {
   const colorMap = new Map<string, { slug: string; name: string; hex: string }>();
   for (const c of colors) if (!colorMap.has(c.slug)) colorMap.set(c.slug, c);
 
+  const stockPorTalla = new Map<string, number>();
+  for (const v of variants) {
+    stockPorTalla.set(v.size, (stockPorTalla.get(v.size) ?? 0) + disponibles(v));
+  }
+
   return {
     lines,
     categories,
     colors: [...colorMap.values()].sort((a, b) => a.name.localeCompare(b.name, 'es')),
-    // Se informa qué tallas tienen stock para poder deshabilitar el resto en
-    // el filtro: una talla sin unidades solo produce búsquedas vacías.
-    sizes: variants
-      .map((v) => ({ size: v.size, inStock: (v._sum.stock ?? 0) > 0 }))
+    // Se informa qué tallas tienen unidades para poder deshabilitar el resto
+    // en el filtro: una talla sin stock solo produce búsquedas vacías.
+    sizes: [...stockPorTalla]
+      .map(([size, unidades]) => ({ size, inStock: unidades > 0 }))
       .sort((a, b) => Number(a.size) - Number(b.size)),
     minPrice: priceRange._min.basePrice ?? 0,
     maxPrice: priceRange._max.basePrice ?? 0,
