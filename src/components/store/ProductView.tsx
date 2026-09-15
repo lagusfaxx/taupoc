@@ -745,7 +745,11 @@ export function ProductView({
                   {formatCLP(price)}
                 </p>
                 <p className="mt-1 truncate text-[12px] text-chalk-faint">
-                  {variant ? `Talla ${variant.size} · ${color ? colorLabel(color) : ''}` : 'Elige tu talla'}
+                  {variant
+                    ? `Talla ${variant.size} · ${color ? colorLabel(color) : ''}`
+                    : tallaActual && !tallaActual.enEsteColor && tallaActual.otrosColores.length > 0
+                      ? `Talla ${tallaActual.size} · en otro color`
+                      : 'Elige tu talla'}
                 </p>
               </div>
 
@@ -765,7 +769,9 @@ export function ProductView({
                   }
                   className="h-12 shrink-0 border border-line-bright px-6 font-display text-[12px] font-bold uppercase tracking-widest text-chalk clip-notch-sm"
                 >
-                  Ver tallas
+                  {tallaActual && !tallaActual.enEsteColor && tallaActual.otrosColores.length > 0
+                    ? 'Ver colores'
+                    : 'Ver tallas'}
                 </button>
               )}
             </div>
