@@ -330,10 +330,18 @@ export const getLineComparison = cache(async function getLineComparison(
  * portada—, que no se enteran solos de que una línea se apagó.
  */
 export const getHiddenLinkFilter = cache(async function getHiddenLinkFilter() {
-  const [hidden, comparison] = await Promise.all([
-    prisma.productLine.findMany({ where: { NOT: VISIBLE_LINE }, select: { slug: true } }),
-    getLineComparison(),
-  ]);
+  let hidden: { slug: string }[];
+  let comparison: LineComparisonColumn[];
+  try {
+    [hidden, comparison] = await Promise.all([
+      prisma.productLine.findMany({ where: { NOT: VISIBLE_LINE }, select: { slug: true } }),
+      getLineComparison(),
+    ]);
+  } catch {
+    // El pie y el menú lo usan en todas las páginas, también las que se
+    // prerenderizan en el build, donde no hay base: sin datos no se oculta nada.
+    return () => false;
+  }
   const hiddenSlugs = new Set(hidden.map((line) => line.slug));
 
   return function isHidden(href: string | null | undefined): boolean {
