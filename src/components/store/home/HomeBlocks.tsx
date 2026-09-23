@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getFeatured } from '@/lib/catalog';
+import { fillRowWithColors, getFeatured } from '@/lib/catalog';
 import type { HomeBlockData } from '@/lib/home';
 import { cn } from '@/lib/utils';
 import { ProductCard } from '@/components/store/ProductCard';
@@ -174,11 +174,13 @@ async function Products({
   first: boolean;
 }) {
   // Sin selección manual la franja muestra los destacados del catálogo.
-  const products =
+  const elegidos =
     block.products.length > 0
       ? block.products
       : await getFeatured(Math.max(2, Math.min(8, block.columns)));
-  if (products.length === 0) return null;
+  if (elegidos.length === 0) return null;
+  // Con menos modelos que columnas la franja se completa con sus colores.
+  const products = fillRowWithColors(elegidos, block.columns in COLUMNS ? block.columns : 4);
 
   return (
     <section className={cn(borde(first), BACKGROUNDS[block.background])}>

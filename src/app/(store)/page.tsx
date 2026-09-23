@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
-import { VISIBLE_LINE, getFeatured, getLineComparison } from '@/lib/catalog';
+import { VISIBLE_LINE, fillRowWithColors, getFeatured, getLineComparison } from '@/lib/catalog';
 import { getHomeBlocks } from '@/lib/home';
 import { buildMetadata, jsonLd, absoluteUrl, SITE_NAME } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
@@ -98,7 +98,7 @@ export default async function HomePage() {
  * instalación nueva no queda en blanco.
  */
 async function PortadaPorDefecto() {
-  const [featured, lines, comparacion] = await Promise.all([
+  const [destacados, lines, comparacion] = await Promise.all([
     getFeatured(4),
     prisma.productLine.findMany({
       where: { ...VISIBLE_LINE, slug: { in: ['r-skin', 'vel-skin'] } },
@@ -107,6 +107,9 @@ async function PortadaPorDefecto() {
     }),
     getLineComparison(),
   ]);
+
+  // Con menos de cuatro modelos a la vista la grilla se completa con sus colores.
+  const featured = fillRowWithColors(destacados, 4);
 
   // Las portadas de categoría salen del propio catálogo, tomando un colorway
   // distinto en cada bloque para que los cuatro no se vean iguales.
