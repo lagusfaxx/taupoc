@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getLineComparison } from '@/lib/catalog';
 import { buildMetadata } from '@/lib/seo';
 import { LineCompare } from '@/components/store/LineCompare';
@@ -22,6 +23,8 @@ export const metadata: Metadata = buildMetadata({
  */
 export default async function LinesPage() {
   const columns = await getLineComparison();
+  // Con una línea apagada no queda nada que comparar.
+  if (columns.length < 2) redirect('/catalogo');
 
   return (
     <>

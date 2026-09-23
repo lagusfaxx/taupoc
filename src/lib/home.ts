@@ -1,6 +1,6 @@
 import 'server-only';
 import { prisma } from './db';
-import { getFeatured, getProductsByIds } from './catalog';
+import { getFeatured, getHiddenLinkFilter, getProductsByIds } from './catalog';
 import type { ProductCardData } from '@/components/store/ProductCard';
 
 /**
@@ -30,7 +30,7 @@ export async function getHomeBlocks() {
   const productIds = [
     ...new Set(blocks.flatMap((block) => block.items.map((item) => item.productId).filter(Boolean))),
   ] as string[];
-  const products = await getProductsByIds(productIds);
+  const [products, isHidden] = await Promise.all([getProductsByIds(productIds), getHiddenLinkFilter()]);
   const byId = new Map(products.map((product) => [product.id, product]));
 
   return blocks.map((block) => ({
@@ -42,7 +42,9 @@ export async function getHomeBlocks() {
     // Las mismas filas sirven de tarjeta en un bloque de accesos y de lámina
     // en un banner con varias; cambia qué campos usa cada uno al mostrarlas.
     cards: block.items
-      .filter((item) => !item.productId)
+      // Un acceso a una línea apagada desde el panel no se muestra: llevaría a
+      // un catálogo vacío.
+      .filter((item) => !item.productId && !isHidden(item.href))
       .map((item) => ({
         id: item.id,
         eyebrow: item.eyebrow ?? '',

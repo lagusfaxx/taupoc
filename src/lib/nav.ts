@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { prisma } from './db';
+import { getHiddenLinkFilter } from './catalog';
 
 export interface NavChild {
   label: string;
@@ -62,27 +63,40 @@ export async function defaultNav(): Promise<NavItem[]> {
  * renderizan en el mismo árbol.
  */
 export const getNav = cache(async function getNav(): Promise<NavItem[]> {
-  const items = await prisma.menuItem.findMany({
-    where: { parentId: null, active: true },
-    orderBy: { position: 'asc' },
-    include: {
-      children: { where: { active: true }, orderBy: { position: 'asc' } },
-    },
-  });
+  const [items, isHidden] = await Promise.all([
+    prisma.menuItem.findMany({
+      where: { parentId: null, active: true },
+      orderBy: { position: 'asc' },
+      include: {
+        children: { where: { active: true }, orderBy: { position: 'asc' } },
+      },
+    }),
+    getHiddenLinkFilter(),
+  ]);
 
   // Sin menú guardado manda el de por defecto. Es también la salida de
   // emergencia: borrar todas las filas devuelve la navegación original.
-  if (items.length === 0) return defaultNav();
+  const nav: NavItem[] =
+    items.length === 0
+      ? await defaultNav()
+      : items.map((item) => ({
+          label: item.label,
+          href: item.href,
+          children: item.children.length
+            ? item.children.map((child) => ({
+                label: child.label,
+                href: child.href,
+                note: child.note ?? undefined,
+              }))
+            : undefined,
+        }));
 
-  return items.map((item) => ({
-    label: item.label,
-    href: item.href,
-    children: item.children.length
-      ? item.children.map((child) => ({
-          label: child.label,
-          href: child.href,
-          note: child.note ?? undefined,
-        }))
-      : undefined,
-  }));
+  // Una línea apagada desde el panel sale del menú sin tener que editarlo: al
+  // volver a publicarla, el enlace reaparece solo.
+  return nav
+    .filter((item) => !isHidden(item.href))
+    .map((item) => {
+      const children = item.children?.filter((child) => !isHidden(child.href));
+      return { ...item, children: children?.length ? children : undefined };
+    });
 });
