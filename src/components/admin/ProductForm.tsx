@@ -214,7 +214,12 @@ export function ProductForm({
         <div className="space-y-5">
           <Card title="Estado y visibilidad">
             <div className="space-y-4">
-              <Select label="Estado" name="status" defaultValue={product.status || 'DRAFT'}>
+              <Select
+                label="Estado"
+                name="status"
+                defaultValue={product.status || 'DRAFT'}
+                help="Si todos los productos de una línea quedan en borrador o archivados, la línea desaparece de la tienda: menú, portada y comparador."
+              >
                 <option value="DRAFT">Borrador — no visible</option>
                 <option value="ACTIVE">Activo — a la venta</option>
                 <option value="COMING_SOON">Próximamente — visible sin comprar</option>

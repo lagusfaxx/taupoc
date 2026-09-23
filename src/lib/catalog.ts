@@ -135,6 +135,19 @@ export interface CatalogFilters {
 
 const VISIBLE: ProductStatus[] = ['ACTIVE', 'COMING_SOON'];
 
+/**
+ * Una línea está a la vista solo si tiene algún producto a la vista.
+ *
+ * Así se apaga una línea entera desde el panel: pasar sus productos a
+ * borrador saca también el acceso de la portada, el enlace del menú y del pie
+ * y su columna del comparador. Sin esto la línea seguía anunciándose como
+ * "próximamente" aunque no tuviera nada que vender.
+ */
+export const VISIBLE_LINE: Prisma.ProductLineWhereInput = {
+  active: true,
+  products: { some: { status: { in: VISIBLE } } },
+};
+
 function orderFor(sort: CatalogFilters['sort']): Prisma.ProductOrderByWithRelationInput[] {
   switch (sort) {
     case 'precio-asc':
@@ -266,7 +279,7 @@ export const getLineComparison = cache(async function getLineComparison(
   gender?: Gender,
 ): Promise<LineComparisonColumn[]> {
   const lines = await prisma.productLine.findMany({
-    where: { active: true, metrics: { some: {} } },
+    where: { ...VISIBLE_LINE, metrics: { some: {} } },
     orderBy: [{ tier: 'asc' }, { sortOrder: 'asc' }],
     include: {
       metrics: { orderBy: { sortOrder: 'asc' } },
@@ -306,6 +319,35 @@ export const getLineComparison = cache(async function getLineComparison(
       })),
     };
   });
+});
+
+/**
+ * Decide si un enlace apunta a algo que la tienda no está mostrando: una
+ * línea sin productos a la vista (`/catalogo?linea=vel-skin`) o la página de
+ * líneas cuando no hay dos para comparar.
+ *
+ * Es para los enlaces que se escriben a mano en el panel —menú, accesos de la
+ * portada—, que no se enteran solos de que una línea se apagó.
+ */
+export const getHiddenLinkFilter = cache(async function getHiddenLinkFilter() {
+  const [hidden, comparison] = await Promise.all([
+    prisma.productLine.findMany({ where: { NOT: VISIBLE_LINE }, select: { slug: true } }),
+    getLineComparison(),
+  ]);
+  const hiddenSlugs = new Set(hidden.map((line) => line.slug));
+
+  return function isHidden(href: string | null | undefined): boolean {
+    if (!href) return false;
+    let url: URL;
+    try {
+      url = new URL(href, 'http://tienda.local');
+    } catch {
+      return false;
+    }
+    if (url.pathname === '/lineas') return comparison.length < 2;
+    const linea = url.searchParams.get('linea');
+    return linea !== null && hiddenSlugs.has(linea);
+  };
 });
 
 /**

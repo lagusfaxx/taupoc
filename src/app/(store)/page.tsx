@@ -3,7 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
-import { getFeatured, getLineComparison } from '@/lib/catalog';
+import { VISIBLE_LINE, getFeatured, getLineComparison } from '@/lib/catalog';
 import { getHomeBlocks } from '@/lib/home';
 import { buildMetadata, jsonLd, absoluteUrl, SITE_NAME } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
@@ -101,7 +101,7 @@ async function PortadaPorDefecto() {
   const [featured, lines, comparacion] = await Promise.all([
     getFeatured(4),
     prisma.productLine.findMany({
-      where: { active: true, slug: { in: ['r-skin', 'vel-skin'] } },
+      where: { ...VISIBLE_LINE, slug: { in: ['r-skin', 'vel-skin'] } },
       orderBy: { sortOrder: 'asc' },
       select: { slug: true, name: true },
     }),

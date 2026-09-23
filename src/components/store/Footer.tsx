@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getSettings } from '@/lib/settings';
+import { getHiddenLinkFilter } from '@/lib/catalog';
 import { Logo } from '@/components/ui/Logo';
 import { IconInstagram, IconWhatsapp } from '@/components/ui/Icons';
 
@@ -37,7 +38,7 @@ const COLUMNS = [
 ];
 
 export async function Footer() {
-  const settings = await getSettings();
+  const [settings, isHidden] = await Promise.all([getSettings(), getHiddenLinkFilter()]);
   const year = new Date().getFullYear();
 
   return (
@@ -100,7 +101,7 @@ export async function Footer() {
             <nav key={col.title} aria-label={col.title}>
               <h2 className="eyebrow mb-4">{col.title}</h2>
               <ul className="space-y-2.5">
-                {col.links.map((link) => (
+                {col.links.filter((link) => !isHidden(link.href)).map((link) => (
                   <li key={link.href + link.label}>
                     <Link href={link.href} className="text-[14px] text-chalk-dim transition-colors hover:text-chalk">
                       {link.label}
