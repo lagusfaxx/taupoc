@@ -112,6 +112,40 @@ export function splitCardsByColor(cards: ProductCardData[]): ProductCardData[] {
   );
 }
 
+/**
+ * Completa una franja que tiene menos modelos que columnas.
+ *
+ * Con una línea apagada la portada quedaba con dos tarjetas y medio ancho de
+ * pantalla vacío. Si faltan modelos, cada color pasa a ser su propia tarjeta,
+ * alternando entre modelos (jammer, knee suit, jammer…) y con los colores con
+ * stock primero, hasta llenar filas completas: como mucho `rows` filas.
+ */
+export function fillRowWithColors(
+  cards: ProductCardData[],
+  columns: number,
+  rows = 2,
+): ProductCardData[] {
+  if (cards.length === 0 || cards.length >= columns) return cards;
+
+  const porModelo = cards.map((card) =>
+    splitCardsByColor([card]).sort((a, b) => {
+      const stock = (c: ProductCardData) =>
+        c.colors.find((color) => color.slug === c.colorSlug)?.stock ?? c.totalStock;
+      return Number(stock(b) > 0) - Number(stock(a) > 0);
+    }),
+  );
+
+  const intercaladas: ProductCardData[] = [];
+  for (let i = 0; porModelo.some((grupo) => i < grupo.length); i++) {
+    for (const grupo of porModelo) if (grupo[i]) intercaladas.push(grupo[i]);
+  }
+
+  // Filas completas: una fila a medias es justo lo que se quiere evitar.
+  const tope = Math.min(intercaladas.length, columns * rows);
+  const completas = tope >= columns ? tope - (tope % columns) : tope;
+  return intercaladas.slice(0, completas);
+}
+
 /** Promedio y total de un puñado de notas ya filtradas a publicadas. */
 export function resumenDeNotas(reviews: { rating: number }[]): { average: number; count: number } {
   if (reviews.length === 0) return { average: 0, count: 0 };
