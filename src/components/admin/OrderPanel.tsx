@@ -1,9 +1,9 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
-  refundOrder, saveOrderNote, saveTracking, updateOrderStatus,
+  refundOrder, saveOrderNote, saveTracking, updateOrderStatus, updateOrderItem,
 } from '@/actions/admin/orders';
 import type { AdminState } from '@/actions/admin/products';
 import { ORDER_STATUS_LABEL } from '@/lib/order-labels';
@@ -135,6 +135,132 @@ export function OrderNoteForm({ orderId, note }: { orderId: string; note: string
         />
         <Submit label="Guardar nota" variant="outline" />
       </form>
+    </Card>
+  );
+}
+
+export type OrderItemRow = {
+  id: string;
+  productId: string | null;
+  productName: string;
+  colorName: string;
+  size: string;
+  sku: string;
+};
+
+export type AvailableVariant = {
+  id: string;
+  productId: string;
+  productName: string;
+  colorName: string;
+  colorCode: string | null;
+  size: string;
+  sku: string;
+  stock: number;
+};
+
+function ItemEditRow({
+  orderId,
+  item,
+  variants,
+}: {
+  orderId: string;
+  item: OrderItemRow;
+  variants: AvailableVariant[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [state, action] = useActionState<AdminState | null, FormData>(updateOrderItem, null);
+
+  const productVariants = variants.filter((v) => v.productId === item.productId);
+
+  return (
+    <div className="border-b border-line-soft last:border-0">
+      <div className="flex items-start justify-between gap-3 px-5 py-3">
+        <div className="min-w-0">
+          <p className="text-[13px] text-chalk">{item.productName}</p>
+          <p className="text-[12px] text-chalk-faint">{item.colorName} · Talla {item.size}</p>
+          <p className="font-mono text-[11px] text-chalk-faint">{item.sku}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className={cn(
+            'mt-0.5 shrink-0 h-8 px-3 border font-display text-[10.5px] uppercase tracking-widest transition',
+            open
+              ? 'border-chalk text-chalk'
+              : 'border-line-bright text-chalk-dim hover:border-chalk hover:text-chalk',
+          )}
+        >
+          {open ? 'Cancelar' : 'Cambiar'}
+        </button>
+      </div>
+      {open ? (
+        <div className="bg-ink-800/30 px-5 pb-4 pt-1">
+          {state ? (
+            <p
+              role="status"
+              className={cn(
+                'mb-3 border px-3 py-2 text-[12.5px]',
+                state.ok
+                  ? 'border-signal-ok/40 bg-signal-ok/10 text-signal-ok'
+                  : 'border-signal-bad/40 bg-signal-bad/10 text-signal-bad',
+              )}
+            >
+              {state.message}
+            </p>
+          ) : null}
+          <form action={action} className="flex flex-wrap items-end gap-2">
+            <input type="hidden" name="orderId" value={orderId} />
+            <input type="hidden" name="itemId" value={item.id} />
+            <div className="flex-1 min-w-0">
+              <label className="mb-1.5 block font-display text-[10px] uppercase tracking-widest text-chalk-faint">
+                Nueva variante
+              </label>
+              <select
+                name="variantId"
+                required
+                defaultValue=""
+                className="h-9 w-full border border-line bg-ink-900 px-2 text-[13px] text-chalk focus:border-[var(--accent)] focus:outline-none"
+              >
+                <option value="" disabled>Seleccionar…</option>
+                {productVariants.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.colorName}{v.colorCode ? ` (${v.colorCode})` : ''} · T.{v.size}
+                    {v.stock > 0 ? ` — ${v.stock} u.` : ' — sin stock'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Submit label="Aplicar" />
+          </form>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function OrderItemsForm({
+  orderId,
+  items,
+  availableVariants,
+}: {
+  orderId: string;
+  items: OrderItemRow[];
+  availableVariants: AvailableVariant[];
+}) {
+  const editableItems = items.filter(
+    (item) => item.productId && availableVariants.some((v) => v.productId === item.productId),
+  );
+
+  if (editableItems.length === 0) return null;
+
+  return (
+    <Card title="Cambiar productos" description="Reemplaza la variante de cualquier ítem del pedido.">
+      <div className="-mx-5 -mt-4">
+        {editableItems.map((item) => (
+          <ItemEditRow key={item.id} orderId={orderId} item={item} variants={availableVariants} />
+        ))}
+      </div>
     </Card>
   );
 }

@@ -16,7 +16,8 @@ import { Card } from '@/components/admin/Card';
 import { Table, Td, Th, Tr } from '@/components/admin/Table';
 import { Badge } from '@/components/ui/Badge';
 import {
-  OrderNoteForm, OrderStatusForm, RefundForm, TrackingForm,
+  OrderNoteForm, OrderStatusForm, RefundForm, TrackingForm, OrderItemsForm,
+  type AvailableVariant,
 } from '@/components/admin/OrderPanel';
 import { IconPrint } from '@/components/ui/Icons';
 
@@ -37,9 +38,32 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
   });
   if (!order) notFound();
 
-  const otherOrders = await prisma.order.count({
-    where: { email: order.email, id: { not: order.id } },
-  });
+  const productIds = [...new Set(order.items.map((i) => i.productId).filter(Boolean))] as string[];
+
+  const [otherOrders, rawVariants] = await Promise.all([
+    prisma.order.count({ where: { email: order.email, id: { not: order.id } } }),
+    productIds.length > 0
+      ? prisma.variant.findMany({
+          where: { productId: { in: productIds }, active: true },
+          include: {
+            product: { select: { id: true, name: true } },
+            color: { select: { id: true, name: true, code: true } },
+          },
+          orderBy: [{ color: { name: 'asc' } }, { size: 'asc' }],
+        })
+      : [],
+  ]);
+
+  const availableVariants: AvailableVariant[] = rawVariants.map((v) => ({
+    id: v.id,
+    productId: v.productId,
+    productName: v.product.name,
+    colorName: v.color.name,
+    colorCode: v.color.code,
+    size: v.size,
+    sku: v.sku,
+    stock: v.stock,
+  }));
 
   return (
     <>
@@ -213,6 +237,18 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         </div>
 
         <div className="min-w-0 space-y-5">
+          <OrderItemsForm
+            orderId={order.id}
+            items={order.items.map((item) => ({
+              id: item.id,
+              productId: item.productId,
+              productName: item.productName,
+              colorName: item.colorName,
+              size: item.size,
+              sku: item.sku,
+            }))}
+            availableVariants={availableVariants}
+          />
           <OrderStatusForm orderId={order.id} status={order.status} />
           <TrackingForm
             orderId={order.id}
