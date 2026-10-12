@@ -195,6 +195,63 @@ export async function saveOrderNote(_prev: AdminState | null, formData: FormData
   return { ok: true, message: 'Nota guardada.' };
 }
 
+export async function updateOrderItem(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const orderId = String(formData.get('orderId') ?? '').trim();
+  const itemId = String(formData.get('itemId') ?? '').trim();
+  const variantId = String(formData.get('variantId') ?? '').trim();
+
+  if (!orderId || !itemId || !variantId) {
+    return { ok: false, message: 'Datos incompletos.' };
+  }
+
+  const [currentItem, newVariant] = await Promise.all([
+    prisma.orderItem.findUnique({ where: { id: itemId } }),
+    prisma.variant.findUnique({
+      where: { id: variantId },
+      include: {
+        product: true,
+        color: { include: { images: { where: { isPrimary: true }, take: 1 } } },
+      },
+    }),
+  ]);
+
+  if (!currentItem || currentItem.orderId !== orderId) {
+    return { ok: false, message: 'Ítem no encontrado en este pedido.' };
+  }
+  if (!newVariant) {
+    return { ok: false, message: 'Variante no encontrada.' };
+  }
+
+  const imageUrl = newVariant.color.images[0]?.url ?? currentItem.imageUrl;
+  const unitPrice = newVariant.priceOverride ?? newVariant.product.basePrice;
+
+  await prisma.orderItem.update({
+    where: { id: itemId },
+    data: {
+      variantId: newVariant.id,
+      productId: newVariant.productId,
+      productName: newVariant.product.name,
+      colorName: newVariant.color.name,
+      size: newVariant.size,
+      sku: newVariant.sku,
+      imageUrl,
+      unitPrice,
+      lineTotal: unitPrice * currentItem.quantity,
+    },
+  });
+
+  await logOrderEvent({
+    orderId,
+    type: 'item_change',
+    message: `Producto cambiado: ${currentItem.productName} ${currentItem.colorName} T.${currentItem.size} → ${newVariant.product.name} ${newVariant.color.name} T.${newVariant.size}.`,
+    actor: admin.email,
+  });
+
+  revalidateOrder(orderId);
+  return { ok: true, message: 'Producto actualizado.' };
+}
+
 /** Reembolso a través de Mercado Pago. Total si no se indica monto. */
 export async function refundOrder(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
   const admin = await requireAdmin();

@@ -31,9 +31,9 @@ export const RSKIN_COLORS: ColorSpec[] = [
   { name: 'Rojo', slug: 'rojo-4184', code: '4184', hex: '#C8102E', accentHex: '#FF4A57', stripCode: '0524', stripHex: null, active: true },
   { name: 'Rosado', slug: 'rosado-30049', code: '30049', hex: '#E8467C', accentHex: '#FF5CA3', stripCode: '0443', stripHex: null, active: true },
 
+  { name: 'Naranja', slug: 'naranja-2150', code: '2150', hex: '#FF5A1F', accentHex: '#FF7A48', stripCode: null, stripHex: null, active: true },
   { name: 'Aqua', slug: 'aqua', code: null, hex: '#00E0B8', accentHex: '#00E0B8', stripCode: null, stripHex: null, active: false },
   { name: 'Verde Lima', slug: 'verde-lima', code: null, hex: '#B6E600', accentHex: '#C8F52C', stripCode: null, stripHex: null, active: false },
-  { name: 'Naranja', slug: 'naranja', code: null, hex: '#FF5A1F', accentHex: '#FF7A48', stripCode: null, stripHex: null, active: false },
   { name: 'Amarillo', slug: 'amarillo', code: null, hex: '#FFC400', accentHex: '#FFD84D', stripCode: null, stripHex: null, active: false },
   { name: 'Turquesa', slug: 'turquesa', code: null, hex: '#0891A8', accentHex: '#2CC2DA', stripCode: null, stripHex: null, active: false },
   { name: 'Vino', slug: 'vino', code: null, hex: '#7A1030', accentHex: '#D64B72', stripCode: null, stripHex: null, active: false },
@@ -55,12 +55,12 @@ export const INITIAL_STOCK: Record<string, Record<string, string[]>> = {
     '22': ['9192', '60289', '50008'],
     '24': ['9192', '60047', '50008'],
     '26': ['9192', '4184', '6093'],
-    '28': ['9192', '60289', '6093'],
+    '28': ['9192', '60289', '2150'],
   },
   TS704: {
     '22': ['9192', '30049', '50008'],
     '24': ['9192', '0015-0028', '50008'],
-    '26': ['9192', '4184', '6093'],
+    '26': ['9192', '4184', '6093', '60047'],
     '28': ['9192', '60289', '60047'],
   },
 };
