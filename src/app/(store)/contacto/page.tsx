@@ -9,7 +9,7 @@ import { IconInstagram, IconWhatsapp } from '@/components/ui/Icons';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = buildMetadata({
-  title: 'Contacto',
+  title: 'Contacto — tallas, pedidos y clubes',
   description:
     'Consultas de talla, estado de pedidos, cambios y cotizaciones para clubes. Te respondemos dentro ' +
     'de 24 horas hábiles.',

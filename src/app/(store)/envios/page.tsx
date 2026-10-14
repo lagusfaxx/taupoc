@@ -13,8 +13,8 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({
   title: 'Envíos y plazos de entrega',
   description:
-    'Despachamos a todo Chile con Chilexpress, Starken y Correos de Chile. Retiro sin costo en Santiago ' +
-    'y entrega en torneo. Plazos, tarifas y cobertura por región.',
+    'Despacho a todo Chile con Chilexpress, Starken y Correos de Chile, retiro sin costo en Santiago ' +
+    'y entrega en torneo. Plazos y tarifas por región.',
   path: '/envios',
 });
 

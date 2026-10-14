@@ -12,8 +12,8 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({
   title: 'Guía de tallas de trajes de competición',
   description:
-    'Cómo medirse y elegir la talla de un traje de competición: medidas en centímetros, equivalencias ' +
-    'CN, USA, UK, AUS y NZ, y por qué los trajes de carrera se usan 1 a 2 tallas por debajo.',
+    'Cómo medirse y elegir la talla de un traje de competición: medidas en cm, equivalencias ' +
+    'internacionales y por qué se usa 1 a 2 tallas menos.',
   path: '/guia-de-tallas',
 });
 

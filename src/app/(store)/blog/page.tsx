@@ -15,8 +15,8 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({
   title: 'Blog — guías técnicas, normativa y resultados',
   description:
-    'Guías de talla, normativa de World Aquatics, cuidado del traje y resultados de nuestros atletas. ' +
-    'Contenido para nadadores de competencia, entrenadores y apoderados.',
+    'Guías de talla, normativa World Aquatics, cuidado del traje y resultados. Para nadadores de ' +
+    'competencia, entrenadores y apoderados.',
   path: '/blog',
 });
 

@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({
   title: 'R-SKIN o VEL-SKIN — en qué se diferencian',
   description:
-    'Las dos líneas de competición TAUPOC comparadas dato a dato: peso, compresión, absorción de ' +
-    'agua, retorno elástico y vida útil. Cuál conviene según cómo compites.',
+    'Las dos líneas TAUPOC comparadas dato a dato: peso, compresión, absorción de agua, retorno ' +
+    'elástico y vida útil. Cuál conviene según cómo compites.',
   path: '/lineas',
 });
 
@@ -36,7 +36,7 @@ export default async function LinesPage() {
         </ol>
       </nav>
 
-      <LineCompare columns={columns} activeSlug={null} />
+      <LineCompare columns={columns} activeSlug={null} asPageTitle />
 
       <section className="border-t border-line bg-ink-900">
         <div className="container flex flex-col gap-6 py-12 sm:flex-row sm:items-center sm:justify-between lg:py-14">

@@ -5,6 +5,9 @@ import { LegalPage } from '@/components/store/LegalPage';
 
 export const metadata: Metadata = buildMetadata({
   title: 'Términos y condiciones',
+  description:
+    'Condiciones de compra en TAUPOC Chile: precios en CLP con IVA, pago con Mercado Pago, stock, ' +
+    'homologación World Aquatics, envíos, cambios y cupones.',
   path: '/terminos',
 });
 

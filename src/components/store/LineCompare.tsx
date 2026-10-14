@@ -19,12 +19,16 @@ import type { LineComparisonColumn } from '@/lib/catalog';
 export function LineCompare({
   columns,
   activeSlug,
+  asPageTitle = false,
 }: {
   columns: LineComparisonColumn[];
   /** Línea de la ficha que se está mirando: su columna queda marcada. */
   activeSlug: string | null;
+  /** En /lineas la comparación es la página entera y su título va como h1. */
+  asPageTitle?: boolean;
 }) {
   if (columns.length < 2) return null;
+  const Heading = asPageTitle ? 'h1' : 'h2';
 
   // Las filas se enfrentan por etiqueta. Manda el orden de la primera línea, y
   // una fila que no exista en alguna columna se muestra igual, con un guion.
@@ -39,9 +43,9 @@ export function LineCompare({
     <section id="comparar" className="scroll-mt-20 border-t border-line bg-ink">
       <div className="container py-14 lg:py-20">
         <p className="eyebrow-accent mb-4">Cuál de las dos</p>
-        <h2 className="max-w-2xl text-balance font-display text-[26px] leading-tight tracking-tightest text-chalk sm:text-[34px]">
+        <Heading className="max-w-2xl text-balance font-display text-[26px] leading-tight tracking-tightest text-chalk sm:text-[34px]">
           {columns.map((c) => c.name).join(' o ')}: en qué se diferencian
-        </h2>
+        </Heading>
         <p className="mt-3 max-w-xl text-[14.5px] leading-relaxed text-chalk-dim">
           Los dos trajes están homologados por World Aquatics y en la foto se ven casi iguales. La
           diferencia está en el tejido, y se mide.

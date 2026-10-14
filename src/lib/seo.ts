@@ -12,6 +12,10 @@ export function absoluteUrl(pathname = '/'): string {
   return `${siteUrl()}${pathname.startsWith('/') ? pathname : `/${pathname}`}`;
 }
 
+// La plantilla del layout raíz agrega esto al final de cada título.
+const TITLE_SUFFIX = ` · ${SITE_NAME}`;
+const TITLE_MAX = 60;
+
 export function buildMetadata(params: {
   title: string;
   description?: string;
@@ -19,6 +23,8 @@ export function buildMetadata(params: {
   image?: string | null;
   type?: 'website' | 'article';
   noIndex?: boolean;
+  /** Con `noIndex`: deja que los buscadores sigan los enlaces de la página. */
+  follow?: boolean;
   publishedTime?: string;
 }): Metadata {
   const url = absoluteUrl(params.path ?? '/');
@@ -29,11 +35,16 @@ export function buildMetadata(params: {
   const image = absoluteUrl(params.image ?? '/api/og');
   const description = params.description ?? SITE_DESCRIPTION;
 
+  // Si con la marca el título pasa de lo que Google muestra, va sin ella: se
+  // corta igual, y es mejor que se corte la marca que el nombre del producto.
+  const title =
+    params.title.length + TITLE_SUFFIX.length > TITLE_MAX ? { absolute: params.title } : params.title;
+
   return {
-    title: params.title,
+    title,
     description,
     alternates: { canonical: url },
-    robots: params.noIndex ? { index: false, follow: false } : undefined,
+    robots: params.noIndex ? { index: false, follow: params.follow ?? false } : undefined,
     openGraph: {
       title: params.title,
       description,

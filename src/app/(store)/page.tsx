@@ -13,10 +13,10 @@ import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
 
 export const metadata: Metadata = buildMetadata({
-  title: 'Trajes de competición homologados World Aquatics',
+  title: 'TAUPOC Chile — Trajes de competición World Aquatics',
   description:
-    'Distribuidor oficial TAUPOC en Chile. Jammers y knee suits de competición homologados por ' +
-    'World Aquatics. Despacho a todo el país y retiro sin costo en Santiago.',
+    'Distribuidor oficial TAUPOC en Chile: jammers y knee suits homologados por World Aquatics. ' +
+    'Despacho a todo el país y retiro sin costo en Santiago.',
   path: '/',
 });
 
