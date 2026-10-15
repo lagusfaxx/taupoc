@@ -291,8 +291,8 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
 ### Avisos masivos y vista del cliente
 
 En **Pedidos**, filtra la lista y selecciona hasta 25 pedidos por lote. **Enviar
-avisos** manda un correo individual según el estado actual: en preparación,
-despachado o entregado. Para avisar de un despacho se necesita un número de
+avisos** manda un correo individual según el estado actual: recibido, pagado, en preparación,
+despachado, entregado, cancelado o reembolsado. Todos los pedidos se pueden seleccionar. Para avisar de un despacho se necesita un número de
 seguimiento y entrega a domicilio. Esta acción no modifica estados ni stock;
 reenviarla genera un nuevo correo. El resultado distingue los mensajes aceptados
 por el proveedor de los omitidos o fallidos, y registra los aceptados en el

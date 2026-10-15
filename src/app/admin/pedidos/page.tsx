@@ -127,7 +127,7 @@ export default async function AdminOrdersPage({
           <tbody>
             {orders.map((order) => (
               <Tr key={order.id}>
-                <Td><BulkOrderCheckbox id={order.id} number={order.number} disabled={!(['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status)) || (order.status === 'SHIPPED' && (order.isPickup || !order.trackingNumber))} /></Td>
+                <Td><BulkOrderCheckbox id={order.id} number={order.number} /></Td>
                 <Td>
                   <Link href={`/admin/pedidos/${order.id}`} className="font-medium text-chalk hover:accent-text">
                     {order.number}
