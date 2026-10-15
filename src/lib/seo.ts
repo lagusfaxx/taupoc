@@ -33,7 +33,9 @@ export function buildMetadata(params: {
     title: params.title,
     description,
     alternates: { canonical: url },
-    robots: params.noIndex ? { index: false, follow: false } : undefined,
+    // noindex, follow: la página no se indexa, pero Google sigue usando sus links
+    // (en los filtros del catálogo son los que llevan a las fichas).
+    robots: params.noIndex ? { index: false, follow: true } : undefined,
     openGraph: {
       title: params.title,
       description,

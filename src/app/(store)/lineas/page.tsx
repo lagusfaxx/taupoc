@@ -36,7 +36,7 @@ export default async function LinesPage() {
         </ol>
       </nav>
 
-      <LineCompare columns={columns} activeSlug={null} />
+      <LineCompare columns={columns} activeSlug={null} headingLevel="h1" />
 
       <section className="border-t border-line bg-ink-900">
         <div className="container flex flex-col gap-6 py-12 sm:flex-row sm:items-center sm:justify-between lg:py-14">
