@@ -9,6 +9,7 @@ import { logOrderEvent, ORDER_STATUS_LABEL } from '@/lib/orders';
 import { commitStockForOrder, restoreStockForOrder } from '@/lib/inventory';
 import { trackingUrlFor } from '@/lib/shipping';
 import {
+  mailTransport,
   sendOrderShipped,
   sendOrderPaid,
   sendOrderProcessing,
@@ -60,7 +61,7 @@ async function mailPayload(orderId: string) {
  * Los que no aparecen no avisan: PENDING ya lo cubre el correo de pedido
  * recibido que sale del propio checkout.
  */
-const AVISO_POR_ESTADO: Partial<Record<OrderStatus, (order: OrderMailData) => Promise<void>>> = {
+const AVISO_POR_ESTADO: Partial<Record<OrderStatus, (order: OrderMailData) => Promise<unknown>>> = {
   PROCESSING: sendOrderProcessing,
   SHIPPED: sendOrderShipped,
   DELIVERED: sendOrderDelivered,
@@ -302,4 +303,43 @@ export async function refundOrder(_prev: AdminState | null, formData: FormData):
     ok: true,
     message: isPartial ? 'Reembolso parcial procesado.' : 'Reembolso total procesado.',
   };
+}
+
+/** Avisos operativos explícitos: nunca cambian el estado ni el inventario. */
+export async function sendBulkOrderUpdates(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const parsed = z.array(z.string().min(1)).min(1).max(25).safeParse(formData.getAll('orderIds'));
+  if (!parsed.success) return { ok: false, message: 'Selecciona entre 1 y 25 pedidos.' };
+  if (mailTransport() === 'none') return { ok: false, message: 'Configura Resend o SMTP en Ajustes antes de enviar correos.' };
+  const ids = [...new Set(parsed.data)];
+  const results: string[] = [];
+  let sent = 0;
+  for (const id of ids) {
+    const order = await prisma.order.findUnique({ where: { id } });
+    if (!order) { results.push('Pedido no encontrado.'); continue; }
+    const sender = order.status === 'PROCESSING' ? sendOrderProcessing
+      : order.status === 'SHIPPED' ? sendOrderShipped
+      : order.status === 'DELIVERED' ? sendOrderDelivered : null;
+    if (!sender || (order.status === 'SHIPPED' && (order.isPickup || !order.trackingNumber))) {
+      results.push(`${order.number}: omitido; requiere preparación, entrega o despacho con seguimiento.`);
+      continue;
+    }
+    try {
+      const payload = await mailPayload(id);
+      const result = payload ? await sender(payload, { force: true }) : undefined;
+      if (!result || result.skipped) {
+        results.push(`${order.number}: no enviado; revisa la configuración del correo.`);
+      } else {
+        sent++;
+        results.push(`${order.number}: aceptado por el proveedor.`);
+        await logOrderEvent({ orderId: id, type: 'email_sent', message: `Aviso de ${ORDER_STATUS_LABEL[order.status].toLowerCase()} aceptado por el proveedor.`, actor: admin.email });
+      }
+    } catch {
+      results.push(`${order.number}: error al procesar el aviso; revisa su historial antes de reintentar.`);
+    }
+    // Respetar el límite habitual de dos solicitudes por segundo de Resend.
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    revalidateOrder(id);
+  }
+  return { ok: sent === ids.length, message: `${sent} de ${ids.length} correos aceptados por el proveedor. ${results.join(' ')}` };
 }

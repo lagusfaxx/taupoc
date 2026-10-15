@@ -378,7 +378,7 @@ export async function sendOrderProcessing(order: OrderMailData, opts?: EnvioOpts
       `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿Necesitas cambiar la talla o la dirección? Escríbenos ahora, mientras el pedido siga en preparación.</p>` +
       button(`${b.siteUrl}/cuenta/pedidos`, 'Ver mi pedido'),
   });
-  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} en preparación · TAUPOC Chile`, html });
+  return await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} en preparación · TAUPOC Chile`, html });
 }
 
 export async function sendOrderShipped(order: OrderMailData, opts?: EnvioOpts) {
@@ -405,7 +405,7 @@ export async function sendOrderShipped(order: OrderMailData, opts?: EnvioOpts) {
       deliveryBlock(order) +
       button(`${b.siteUrl}/cuenta/pedidos`, 'Ver detalle'),
   });
-  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} despachado · TAUPOC Chile`, html });
+  return await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} despachado · TAUPOC Chile`, html });
 }
 
 export async function sendOrderDelivered(order: OrderMailData, opts?: EnvioOpts) {
@@ -427,7 +427,7 @@ export async function sendOrderDelivered(order: OrderMailData, opts?: EnvioOpts)
       `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿La talla no calzó? Tienes 10 días para el cambio, con el traje sin uso y con etiqueta. <a href="${b.siteUrl}/devoluciones" style="color:${ACCENT};text-decoration:none;">Ver política de cambios</a></p>` +
       button(`${b.siteUrl}/catalogo`, 'Ver el catálogo'),
   });
-  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} entregado · TAUPOC Chile`, html });
+  return await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} entregado · TAUPOC Chile`, html });
 }
 
 export async function sendOrderCancelled(order: OrderMailData, opts?: EnvioOpts) {
