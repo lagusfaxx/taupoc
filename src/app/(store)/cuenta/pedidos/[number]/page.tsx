@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
-import { requireUser } from '@/lib/auth';
+import { requireUser, isStaff } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { formatCLP } from '@/lib/money';
 import { formatDate, formatDateTime } from '@/lib/utils';
@@ -22,15 +22,17 @@ export async function generateMetadata({ params }: { params: Promise<{ number: s
 export default async function OrderDetailPage({ params }: { params: Promise<{ number: string }> }) {
   const user = await requireUser();
   const { number } = await params;
+  const preview = isStaff(user.role);
 
   const order = await prisma.order.findFirst({
-    where: { number, OR: [{ userId: user.id }, { email: user.email }] },
+    where: { number, ...(preview ? {} : { OR: [{ userId: user.id }, { email: user.email }] }) },
     include: { items: true, events: { orderBy: { createdAt: 'asc' } } },
   });
   if (!order) notFound();
 
   return (
     <div className="space-y-8">
+      {preview ? <p role="status" className="border border-line p-4 text-sm">Vista del cliente · {order.number}. <Link href={`/admin/pedidos/${order.id}`} className="underline">Volver al panel</Link></p> : null}
       <Link href="/cuenta/pedidos" className="inline-block font-display text-[11px] uppercase tracking-widest text-chalk-faint hover:text-chalk">
         ← Mis pedidos
       </Link>
@@ -137,7 +139,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
         <div className="surface p-5">
           <h3 className="font-display text-[11px] uppercase tracking-mega text-chalk-faint">Historial</h3>
           <ol className="mt-3 space-y-3">
-            {order.events.map((event) => (
+            {order.events.filter((event) => ['created', 'status_change', 'tracking'].includes(event.type)).map((event) => (
               <li key={event.id} className="border-l border-line pl-3.5 text-[13px]">
                 <p className="text-chalk-dim">{event.message}</p>
                 <p className="mt-0.5 text-[11.5px] text-chalk-faint">{formatDateTime(event.createdAt)}</p>

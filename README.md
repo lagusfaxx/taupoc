@@ -288,6 +288,22 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
   cotizaciones y ventas, con separador y codificación compatibles con Excel en
   español.
 
+### Avisos masivos y vista del cliente
+
+En **Pedidos**, filtra la lista y selecciona hasta 25 pedidos por lote. **Enviar
+avisos** manda un correo individual según el estado actual: en preparación,
+despachado o entregado. Para avisar de un despacho se necesita un número de
+seguimiento y entrega a domicilio. Esta acción no modifica estados ni stock;
+reenviarla genera un nuevo correo. El resultado distingue los mensajes aceptados
+por el proveedor de los omitidos o fallidos, y registra los aceptados en el
+historial del pedido. Requiere Resend o SMTP configurado; la aceptación del
+proveedor no garantiza entrega en la bandeja de entrada.
+
+En el detalle del pedido, **Ver seguimiento como cliente** abre la misma pantalla
+que ve el comprador. Solo administradores y personal pueden consultar pedidos
+ajenos; los clientes conservan acceso exclusivamente a los suyos. Las notas
+internas y los registros de envío de correos no aparecen en el historial público.
+
 ---
 
 ## Correos transaccionales

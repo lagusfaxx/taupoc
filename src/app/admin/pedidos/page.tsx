@@ -9,6 +9,7 @@ import { buildMetadata } from '@/lib/seo';
 import {
   ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, orderStatusTone, paymentStatusTone,
 } from '@/lib/orders';
+import { BulkOrderMail, BulkOrderCheckbox } from '@/components/admin/BulkOrderMail';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { Toolbar } from '@/components/admin/Toolbar';
 import { Pagination } from '@/components/admin/Pagination';
@@ -108,10 +109,12 @@ export default async function AdminOrdersPage({
         ]}
       />
 
+      <BulkOrderMail>
       <div className="min-w-0 border border-line bg-ink-900">
         <Table minWidth={900}>
           <thead>
             <tr>
+              <Th>Avisar</Th>
               <Th>Pedido</Th>
               <Th>Cliente</Th>
               <Th>Entrega</Th>
@@ -124,6 +127,7 @@ export default async function AdminOrdersPage({
           <tbody>
             {orders.map((order) => (
               <Tr key={order.id}>
+                <Td><BulkOrderCheckbox id={order.id} number={order.number} disabled={!(['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status)) || (order.status === 'SHIPPED' && (order.isPickup || !order.trackingNumber))} /></Td>
                 <Td>
                   <Link href={`/admin/pedidos/${order.id}`} className="font-medium text-chalk hover:accent-text">
                     {order.number}
@@ -148,7 +152,7 @@ export default async function AdminOrdersPage({
             ))}
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-[13.5px] text-chalk-faint">
+                <td colSpan={8} className="px-4 py-12 text-center text-[13.5px] text-chalk-faint">
                   No hay pedidos que coincidan con la búsqueda.
                 </td>
               </tr>
@@ -156,6 +160,8 @@ export default async function AdminOrdersPage({
           </tbody>
         </Table>
       </div>
+
+      </BulkOrderMail>
 
       <Pagination page={page} pageCount={Math.ceil(total / PER_PAGE)} total={total} />
     </>

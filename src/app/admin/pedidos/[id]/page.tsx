@@ -77,6 +77,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             <Badge tone={paymentStatusTone(order.paymentStatus)}>
               Pago: {PAYMENT_STATUS_LABEL[order.paymentStatus]}
             </Badge>
+            <Link href={`/cuenta/pedidos/${order.number}`} target="_blank" className="text-sm underline">Ver seguimiento como cliente ↗</Link>
             <Link
               href={`/admin/pedidos/${order.id}/packing`}
               target="_blank"
