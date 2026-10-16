@@ -290,14 +290,14 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
 
 ### Avisos masivos y vista del cliente
 
-En **Pedidos**, filtra la lista y selecciona hasta 25 pedidos por lote. **Enviar
-avisos** manda un correo individual según el estado actual: recibido, pagado, en preparación,
-despachado, entregado, cancelado o reembolsado. Todos los pedidos se pueden seleccionar. Para avisar de un despacho se necesita un número de
-seguimiento y entrega a domicilio. Esta acción no modifica estados ni stock;
-reenviarla genera un nuevo correo. El resultado distingue los mensajes aceptados
-por el proveedor de los omitidos o fallidos, y registra los aceptados en el
-historial del pedido. Requiere Resend o SMTP configurado; la aceptación del
-proveedor no garantiza entrega en la bandeja de entrada.
+En **Pedidos**, selecciona hasta 25 pedidos de cualquier estado y redacta un
+correo con **Asunto** y **Mensaje**. Puedes escribir texto o pegar HTML, revisar
+la vista previa y pulsar **Enviar correo**. Se manda un mensaje individual al
+correo de cada pedido; no se aplican plantillas según el estado ni se modifica
+el pedido o su inventario. El resultado muestra los envíos aceptados y fallidos,
+y los aceptados quedan en el historial. Reenviar genera otro correo.
+Requiere Resend o SMTP configurado en el despliegue. La aceptación del proveedor
+no garantiza entrega en la bandeja de entrada.
 
 En el detalle del pedido, **Ver seguimiento como cliente** abre la misma pantalla
 que ve el comprador. Solo administradores y personal pueden consultar pedidos
