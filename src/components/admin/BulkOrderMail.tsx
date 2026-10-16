@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/Button';
 
 const Selection = createContext<{ selected: Set<string>; toggle: (id: string) => void }>({ selected: new Set(), toggle: () => {} });
 
-export function BulkOrderCheckbox({ id, number, disabled }: { id: string; number: string; disabled: boolean }) {
+export function BulkOrderCheckbox({ id, number }: { id: string; number: string }) {
   const { selected, toggle } = useContext(Selection);
-  return <input type="checkbox" name="orderIds" value={id} aria-label={`Enviar aviso de ${number}`} disabled={disabled} checked={selected.has(id)} onChange={() => toggle(id)} />;
+  return <input type="checkbox" name="orderIds" value={id} aria-label={`Enviar aviso de ${number}`} checked={selected.has(id)} onChange={() => toggle(id)} />;
 }
 
 export function BulkOrderMail({ children }: { children: ReactNode }) {
@@ -32,7 +32,7 @@ export function BulkOrderMail({ children }: { children: ReactNode }) {
       <fieldset disabled={pending}>
         <div className="mb-4 space-y-3 border border-line p-4">
           <h2 className="font-display text-lg text-chalk">Avisos masivos de pedidos</h2>
-          <p className="text-sm text-chalk-faint">Selecciona hasta 25 pedidos de esta página. Cada cliente recibirá un correo individual con el estado actual: en preparación, despachado con seguimiento o entregado. Los avisos se pueden reenviar; el estado del pedido no cambia.</p>
+          <p className="text-sm text-chalk-faint">Selecciona hasta 25 pedidos de esta página. Cada cliente recibirá un correo individual con el estado actual: recibido, pagado, en preparación, despachado, entregado, cancelado o reembolsado. Si falta seguimiento para un despacho, se indicará en el resultado. Los avisos se pueden reenviar; el estado del pedido no cambia.</p>
           <Button type="button" variant="outline" size="sm" className="mr-3" onClick={(event) => {
             const boxes = event.currentTarget.form?.querySelectorAll<HTMLInputElement>('input[name="orderIds"]:not(:disabled)');
             if (!boxes) return;

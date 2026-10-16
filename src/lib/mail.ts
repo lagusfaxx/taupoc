@@ -340,7 +340,7 @@ export async function sendOrderPlaced(order: OrderMailData, opts?: EnvioOpts) {
       deliveryBlock(order) +
       button(`${b.siteUrl}/cuenta/pedidos`, 'Ver mi pedido'),
   });
-  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} recibido · TAUPOC Chile`, html });
+  return await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} recibido · TAUPOC Chile`, html });
 }
 
 export async function sendOrderPaid(order: OrderMailData, opts?: EnvioOpts) {
@@ -359,7 +359,7 @@ export async function sendOrderPaid(order: OrderMailData, opts?: EnvioOpts) {
       deliveryBlock(order) +
       button(`${b.siteUrl}/cuenta/pedidos`, 'Seguir mi pedido'),
   });
-  await sendMail({ to: opts?.to ?? order.email, subject: `Pago confirmado · Pedido ${order.number}`, html });
+  return await sendMail({ to: opts?.to ?? order.email, subject: `Pago confirmado · Pedido ${order.number}`, html });
 }
 
 export async function sendOrderProcessing(order: OrderMailData, opts?: EnvioOpts) {
@@ -451,7 +451,7 @@ export async function sendOrderCancelled(order: OrderMailData, opts?: EnvioOpts)
       `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿Fue un error o quieres retomarlo? Respóndenos este correo y lo vemos.</p>` +
       button(`${b.siteUrl}/contacto`, 'Escríbenos'),
   });
-  await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} cancelado · TAUPOC Chile`, html });
+  return await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} cancelado · TAUPOC Chile`, html });
 }
 
 export async function sendOrderRefunded(order: OrderMailData, opts?: EnvioOpts) {
@@ -475,7 +475,7 @@ export async function sendOrderRefunded(order: OrderMailData, opts?: EnvioOpts) 
       `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">Si pasado ese plazo no lo ves reflejado, escríbenos con el número de pedido y lo revisamos contigo.</p>` +
       button(`${b.siteUrl}/contacto`, 'Escríbenos'),
   });
-  await sendMail({ to: opts?.to ?? order.email, subject: `Reembolso emitido · Pedido ${order.number}`, html });
+  return await sendMail({ to: opts?.to ?? order.email, subject: `Reembolso emitido · Pedido ${order.number}`, html });
 }
 
 // ── Avisos internos ───────────────────────────────────────────

@@ -10,6 +10,7 @@ import { commitStockForOrder, restoreStockForOrder } from '@/lib/inventory';
 import { trackingUrlFor } from '@/lib/shipping';
 import {
   mailTransport,
+  sendOrderPlaced,
   sendOrderShipped,
   sendOrderPaid,
   sendOrderProcessing,
@@ -317,11 +318,15 @@ export async function sendBulkOrderUpdates(_prev: AdminState | null, formData: F
   for (const id of ids) {
     const order = await prisma.order.findUnique({ where: { id } });
     if (!order) { results.push('Pedido no encontrado.'); continue; }
-    const sender = order.status === 'PROCESSING' ? sendOrderProcessing
+    const sender = order.status === 'PENDING' ? sendOrderPlaced
+      : order.status === 'PAID' ? sendOrderPaid
+      : order.status === 'CANCELLED' ? sendOrderCancelled
+      : order.status === 'REFUNDED' ? sendOrderRefunded
+      : order.status === 'PROCESSING' ? sendOrderProcessing
       : order.status === 'SHIPPED' ? sendOrderShipped
       : order.status === 'DELIVERED' ? sendOrderDelivered : null;
     if (!sender || (order.status === 'SHIPPED' && (order.isPickup || !order.trackingNumber))) {
-      results.push(`${order.number}: omitido; requiere preparación, entrega o despacho con seguimiento.`);
+      results.push(`${order.number}: omitido; el aviso de despacho requiere entrega a domicilio y número de seguimiento.`);
       continue;
     }
     try {
