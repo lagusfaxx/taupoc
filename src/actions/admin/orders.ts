@@ -10,7 +10,7 @@ import { commitStockForOrder, restoreStockForOrder } from '@/lib/inventory';
 import { trackingUrlFor } from '@/lib/shipping';
 import {
   mailTransport,
-  sendOrderPlaced,
+  sendMail,
   sendOrderShipped,
   sendOrderPaid,
   sendOrderProcessing,
@@ -306,11 +306,20 @@ export async function refundOrder(_prev: AdminState | null, formData: FormData):
   };
 }
 
-/** Avisos operativos explícitos: nunca cambian el estado ni el inventario. */
-export async function sendBulkOrderUpdates(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+/** Correo personalizado a los destinatarios de pedidos seleccionados. */
+export async function sendBulkOrderEmail(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
   const admin = await requireAdmin();
   const parsed = z.array(z.string().min(1)).min(1).max(25).safeParse(formData.getAll('orderIds'));
   if (!parsed.success) return { ok: false, message: 'Selecciona entre 1 y 25 pedidos.' };
+  const message = z.object({
+    subject: z.string().trim().min(1, 'Escribe un asunto.').max(200).refine((value) => !/[\r\n]/.test(value), 'El asunto debe ocupar una sola línea.'),
+    content: z.string().trim().min(1, 'Escribe el mensaje.').max(100000, 'El mensaje es demasiado largo.'),
+    format: z.enum(['text', 'html']),
+  }).safeParse(Object.fromEntries(formData));
+  if (!message.success) return { ok: false, message: message.error.issues[0]?.message ?? 'Revisa el mensaje.' };
+  const { subject, content, format } = message.data;
+  const escape = (value: string) => value.replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
+  const html = format === 'html' ? content : `<div style="white-space:pre-wrap;font-family:Arial,sans-serif">${escape(content)}</div>`;
   if (mailTransport() === 'none') return { ok: false, message: 'Configura Resend o SMTP en Ajustes antes de enviar correos.' };
   const ids = [...new Set(parsed.data)];
   const results: string[] = [];
@@ -318,26 +327,14 @@ export async function sendBulkOrderUpdates(_prev: AdminState | null, formData: F
   for (const id of ids) {
     const order = await prisma.order.findUnique({ where: { id } });
     if (!order) { results.push('Pedido no encontrado.'); continue; }
-    const sender = order.status === 'PENDING' ? sendOrderPlaced
-      : order.status === 'PAID' ? sendOrderPaid
-      : order.status === 'CANCELLED' ? sendOrderCancelled
-      : order.status === 'REFUNDED' ? sendOrderRefunded
-      : order.status === 'PROCESSING' ? sendOrderProcessing
-      : order.status === 'SHIPPED' ? sendOrderShipped
-      : order.status === 'DELIVERED' ? sendOrderDelivered : null;
-    if (!sender || (order.status === 'SHIPPED' && (order.isPickup || !order.trackingNumber))) {
-      results.push(`${order.number}: omitido; el aviso de despacho requiere entrega a domicilio y número de seguimiento.`);
-      continue;
-    }
     try {
-      const payload = await mailPayload(id);
-      const result = payload ? await sender(payload, { force: true }) : undefined;
+      const result = await sendMail({ to: order.email, subject, html, ...(format === 'text' ? { text: content } : {}) });
       if (!result || result.skipped) {
         results.push(`${order.number}: no enviado; revisa la configuración del correo.`);
       } else {
         sent++;
         results.push(`${order.number}: aceptado por el proveedor.`);
-        await logOrderEvent({ orderId: id, type: 'email_sent', message: `Aviso de ${ORDER_STATUS_LABEL[order.status].toLowerCase()} aceptado por el proveedor.`, actor: admin.email });
+        await logOrderEvent({ orderId: id, type: 'email_sent', message: `Correo personalizado «${subject}» aceptado por el proveedor.`, actor: admin.email });
       }
     } catch {
       results.push(`${order.number}: error al procesar el aviso; revisa su historial antes de reintentar.`);
