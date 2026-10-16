@@ -290,8 +290,8 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
 
 ### Avisos masivos y vista del cliente
 
-En **Pedidos**, selecciona hasta 25 pedidos de cualquier estado y redacta un
-correo con **Asunto** y **Mensaje**. Puedes escribir texto o pegar HTML, revisar
+En **Pedidos**, selecciona hasta 25 pedidos de cualquier estado y pulsa **Redactar correo**
+en la barra inferior de la lista. Se abre una ventana para escribir un correo con **Asunto** y **Mensaje**. Puedes escribir texto o pegar HTML, revisar
 la vista previa y pulsar **Enviar correo**. Se manda un mensaje individual al
 correo de cada pedido; no se aplican plantillas según el estado ni se modifica
 el pedido o su inventario. El resultado muestra los envíos aceptados y fallidos,
