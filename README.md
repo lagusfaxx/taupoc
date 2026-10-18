@@ -306,6 +306,49 @@ internas y los registros de envío de correos no aparecen en el historial públi
 
 ---
 
+## Servidor MCP: Claude administra la tienda
+
+`/api/mcp` expone la tienda como servidor [MCP](https://modelcontextprotocol.io),
+para que Claude edite productos, precios y stock, cambie estados, responda
+cotizaciones, mande correos y lea las estadísticas conversando.
+
+**Activarlo.** Define `MCP_TOKEN` en Coolify (genera uno con
+`openssl rand -hex 32`, mínimo 24 caracteres) y redespliega. Sin esa variable el
+endpoint responde 503 y no hace nada.
+
+**Conectarlo a Claude.**
+
+- **claude.ai / app de Claude** — *Ajustes → Conectores → Agregar conector
+  personalizado*, con la URL `https://taupoc.cl/api/mcp/<MCP_TOKEN>`. El token va
+  en la URL porque los conectores personalizados no permiten fijar cabeceras.
+- **Claude Code** —
+  `claude mcp add --transport http taupoc https://taupoc.cl/api/mcp --header "Authorization: Bearer <MCP_TOKEN>"`.
+
+Quien tenga el token administra la tienda completa: trátalo como la clave del
+admin. Para revocarlo, cambia `MCP_TOKEN` y redespliega.
+
+| Herramienta | Qué hace |
+| --- | --- |
+| `resumen_tienda`, `estadisticas` | Ventas del día, semana y mes; por periodo: ingresos, ticket promedio, ventas diarias, productos, tallas, colores, regiones, cupones, embudo y comparación con el periodo anterior. |
+| `buscar_productos`, `ver_producto` | Catálogo y ficha completa con cada SKU, su stock y su precio. |
+| `editar_producto` | Cualquier campo: nombre, descripción, precio, estado, SEO, ficha técnica, homologación. |
+| `cambiar_precio` | Precios en lote, por producto o por SKU, absolutos o en porcentaje. |
+| `cambiar_estado_producto` | Publicar, borrador, próximamente o archivar, en lote. |
+| `inventario`, `cambiar_stock`, `movimientos_inventario` | Stock bajo y agotado; ajustes absolutos o relativos con motivo; historial. |
+| `buscar_pedidos`, `ver_pedido`, `cambiar_estado_pedido`, `cargar_seguimiento`, `nota_pedido` | Pedidos con las mismas reglas del panel: el stock se mueve y el cliente recibe su correo. |
+| `listar_cotizaciones`, `responder_cotizacion`, `actualizar_cotizacion` | Responde al club por correo con el diseño de la tienda y deja la respuesta en la nota interna. |
+| `enviar_correo` | Correo libre a una o varias direcciones, en texto o HTML, con o sin la marca. |
+| `buscar_clientes`, `listar_cupones` | Clientes con lo que han comprado; cupones y sus usos. |
+| `describir_esquema`, `consulta_sql` | Cualquier otra pregunta, con SQL de solo lectura. |
+| `ver_bitacora` | Todo lo que cambió el servidor MCP, con sus argumentos. |
+
+Los cambios se aplican al instante, sin pedir confirmación. Cada uno queda en la
+tabla `McpLog`, y los de stock y pedidos además en sus historiales, firmados
+como `Claude (MCP)`. Reembolsar dinero en Mercado Pago y borrar datos siguen
+siendo solo del panel.
+
+---
+
 ## Correos transaccionales
 
 Se envían automáticamente al cliente: pedido recibido, pago confirmado y pedido
