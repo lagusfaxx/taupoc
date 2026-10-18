@@ -904,3 +904,25 @@ model HomeBlockItem {
 
   @@index([blockId, position])
 }
+
+// ─────────────────────────────────────────────────────────────
+// Servidor MCP
+// ─────────────────────────────────────────────────────────────
+
+/// Una llamada a una herramienta del servidor MCP (`/api/mcp`).
+///
+/// Las herramientas que cambian datos se aplican al instante; esta bitácora
+/// es lo que permite saber después qué hizo el asistente y con qué datos.
+model McpLog {
+  id         String   @id @default(cuid())
+  tool       String
+  args       Json?
+  ok         Boolean  @default(true)
+  /// Resumen del resultado o el error, recortado.
+  result     String?
+  durationMs Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([tool])
+}

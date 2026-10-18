@@ -33,6 +33,8 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       MAIL_FROM: ${MAIL_FROM}
       ADMIN_ALERT_EMAIL: ${ADMIN_ALERT_EMAIL}
+      # Activa el servidor MCP en /api/mcp. Vacío lo deja apagado.
+      MCP_TOKEN: ${MCP_TOKEN:-}
       UPLOAD_DIR: /app/public/uploads
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}

@@ -661,3 +661,46 @@ export async function sendTestMail(
 
   return { enviado: true };
 }
+
+/**
+ * Correo libre con la identidad de la tienda: respuesta a una cotización,
+ * aviso puntual a un cliente, lo que haga falta fuera de las plantillas.
+ *
+ * El contenido llega como texto plano —se respetan los saltos de línea— o
+ * como HTML ya armado. Con `branded` en falso el HTML sale tal cual, sin
+ * encabezado ni pie, para quien quiera controlar el diseño completo.
+ */
+export async function sendCustomMail(opts: {
+  to: string;
+  subject: string;
+  content: string;
+  format: 'text' | 'html';
+  title?: string;
+  eyebrow?: string;
+  replyTo?: string;
+  branded?: boolean;
+}) {
+  const inner =
+    opts.format === 'html'
+      ? opts.content
+      : `<div style="white-space:pre-wrap;">${esc(opts.content)}</div>`;
+
+  let html = inner;
+  if (opts.branded !== false) {
+    const b = await brand();
+    html = layout({
+      title: opts.subject,
+      preheader: opts.format === 'text' ? opts.content.slice(0, 140) : opts.subject,
+      brand: b,
+      body: (opts.title ? heading(opts.eyebrow ?? b.storeName, ACCENT, esc(opts.title)) : '') + inner,
+    });
+  }
+
+  return await sendMail({
+    to: opts.to,
+    subject: opts.subject,
+    html,
+    ...(opts.format === 'text' ? { text: opts.content } : {}),
+    ...(opts.replyTo ? { replyTo: opts.replyTo } : {}),
+  });
+}
