@@ -926,3 +926,38 @@ model McpLog {
   @@index([createdAt])
   @@index([tool])
 }
+
+// ─────────────────────────────────────────────────────────────
+// Cola de impresión
+// ─────────────────────────────────────────────────────────────
+
+enum PrintJobStatus {
+  PENDING
+  PRINTED
+  FAILED
+  CANCELLED
+}
+
+/// Documento esperando al agente de impresión que corre en el PC de la
+/// tienda. Claude lo encola por MCP; el agente lo descarga, lo manda a la
+/// impresora y avisa cómo le fue.
+model PrintJob {
+  id        String         @id @default(cuid())
+  /// "packing_slip" por ahora.
+  kind      String
+  title     String
+  /// Lo que contiene el PDF (números de pedido).
+  refs      String[]
+  copies    Int            @default(1)
+  pdf       Bytes
+  status    PrintJobStatus @default(PENDING)
+  attempts  Int            @default(0)
+  error     String?
+  createdAt DateTime       @default(now())
+  /// Última vez que el agente lo descargó; si no avisa en 10 minutos vuelve a la cola.
+  claimedAt DateTime?
+  printedAt DateTime?
+
+  @@index([status, createdAt])
+  @@index([kind])
+}

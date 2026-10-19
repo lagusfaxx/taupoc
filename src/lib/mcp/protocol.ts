@@ -49,8 +49,11 @@ function digest(value: string): Buffer {
  * (`/api/mcp/<token>`). Lo segundo existe porque los conectores
  * personalizados de claude.ai no permiten fijar cabeceras.
  */
-export function checkToken(provided: string | null | undefined): 'ok' | 'disabled' | 'denied' {
-  const expected = process.env.MCP_TOKEN?.trim();
+export function checkToken(
+  provided: string | null | undefined,
+  envVar: 'MCP_TOKEN' | 'PRINT_AGENT_TOKEN' = 'MCP_TOKEN',
+): 'ok' | 'disabled' | 'denied' {
+  const expected = process.env[envVar]?.trim();
   if (!expected || expected.length < 24) return 'disabled';
   if (!provided) return 'denied';
   return timingSafeEqual(digest(provided.trim()), digest(expected)) ? 'ok' : 'denied';

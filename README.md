@@ -341,11 +341,32 @@ admin. Para revocarlo, cambia `MCP_TOKEN` y redespliega.
 | `buscar_clientes`, `listar_cupones` | Clientes con lo que han comprado; cupones y sus usos. |
 | `describir_esquema`, `consulta_sql` | Cualquier otra pregunta, con SQL de solo lectura. |
 | `ver_bitacora` | Todo lo que cambió el servidor MCP, con sus argumentos. |
+| `packing_slips_pendientes`, `imprimir_packing_slips`, `cola_impresion`, `cancelar_impresion` | Packing slips en PDF de los pedidos por preparar, enviados a la impresora de la tienda (ver abajo). |
 
 Los cambios se aplican al instante, sin pedir confirmación. Cada uno queda en la
 tabla `McpLog`, y los de stock y pedidos además en sus historiales, firmados
 como `Claude (MCP)`. Reembolsar dinero en Mercado Pago y borrar datos siguen
 siendo solo del panel.
+
+### Imprimir packing slips en la impresora de la tienda
+
+`imprimir_packing_slips` arma en PDF el packing slip (el mismo de
+*Pedido → Packing slip*) de cada pedido pagado por preparar que todavía no se
+imprimió, y lo deja en una cola (`PrintJob`). Un agente que corre en el PC con
+la impresora la revisa cada pocos segundos y lo imprime. Es el mismo agente que
+imprime las etiquetas de Mercado Libre de Wacaco, así que basta con decirle a
+Claude *"imprime las etiquetas pendientes de TAUPOC y Mercado Libre"*.
+
+1. Define `PRINT_AGENT_TOKEN` en Coolify (`openssl rand -hex 32`, distinto de
+   `MCP_TOKEN`) y redespliega. Sin esa variable las herramientas de impresión
+   quedan apagadas.
+2. Instala el agente en el PC: está en el repositorio de Wacaco, carpeta
+   `print-agent/`, con sus instrucciones.
+
+Un pedido cuenta como impreso cuando su packing slip salió por esta vía;
+imprimir no cambia su estado. El agente usa `GET /api/print-agent/jobs`,
+`GET /api/print-agent/jobs/<id>` (PDF) y `POST /api/print-agent/jobs/<id>`
+(resultado), con `Authorization: Bearer <PRINT_AGENT_TOKEN>`.
 
 ---
 
