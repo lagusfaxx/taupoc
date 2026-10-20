@@ -44,21 +44,22 @@ export interface Landing {
 }
 
 export const LANDINGS = {
-  // "Fastskin" es el nombre de la línea de Speedo, pero en Chile se usa como
-  // nombre genérico del traje de carrera. La página lo explica sin presentar
-  // TAUPOC como si fuera esa línea.
+  // En Chile "fast skin" es el nombre común del traje de competencia: la gente
+  // cree que así se llama el traje y lo busca escrito de varias formas. La
+  // página habla en esos términos; la mención a Speedo queda solo en el FAQ,
+  // para no presentar TAUPOC como su línea Fastskin.
   fastSkin: {
     path: '/fast-skin',
-    title: 'Fast skin de competencia para hombre y mujer',
+    title: 'Fast skin (fastskin) de competencia hombre y mujer',
     description:
       'Fast skin de competencia homologado World Aquatics: jammers y knee suits TAUPOC con stock en ' +
       'Chile. Tallas 20 a 36.',
     eyebrow: 'Fast skin',
     h1: 'Fast skin: trajes de competencia homologados',
     intro:
-      'En la piscina se le dice fast skin a cualquier traje de carrera de compresión: el jammer de hombre y ' +
-      'el knee suit de mujer que se usan solo para competir. Acá tienes fast skins TAUPOC homologados por ' +
-      'World Aquatics, con stock en Chile y el código de aprobación de cada modelo a la vista.',
+      'Fast skin, fastskin o fas skin: así se le dice en Chile al traje de baño de competencia, el jammer de ' +
+      'hombre y el knee suit de mujer que se usan para competir. Acá tienes fast skins TAUPOC homologados ' +
+      'por World Aquatics, con stock en Chile y el código de aprobación de cada modelo a la vista.',
     productsTitle: 'Fast skins disponibles',
     sections: [
       {
@@ -67,10 +68,9 @@ export const LANDINGS = {
           'Fast skin significa "piel rápida". Es un traje de competencia de tejido técnico, de baja absorción ' +
             'de agua y con costuras termoselladas, que comprime la musculatura y ordena la posición del cuerpo ' +
             'en el agua. El resultado es menos arrastre en cada brazada y en cada vuelta.',
-          'El nombre viene de Fastskin, la línea de trajes de carrera de Speedo, y se volvió genérico: hoy los ' +
-            'nadadores le dicen fast skin a los trajes de carrera de cualquier marca. Lo que define si sirve ' +
-            'para competir no es el nombre sino que el modelo esté en la lista de trajes aprobados de World ' +
-            'Aquatics.',
+          'Nadadores, entrenadores y apoderados le dicen fast skin a todos los trajes de competencia, sea cual ' +
+            'sea la marca. Lo que define si un fast skin sirve para un torneo federado no es el nombre sino que ' +
+            'el modelo esté en la lista de trajes aprobados de World Aquatics.',
         ],
       },
       {
@@ -107,11 +107,16 @@ export const LANDINGS = {
           'homologado por World Aquatics, que se usa solo para competir.',
       },
       {
+        q: '¿Se escribe fast skin o fastskin?',
+        a:
+          'Se usan las dos, y también fas skin o fass skin. Todas se refieren a lo mismo: el traje de baño de ' +
+          'competencia de compresión.',
+      },
+      {
         q: '¿Fast skin es una marca?',
         a:
-          'Fastskin es el nombre de la línea de trajes de carrera de Speedo, pero los nadadores lo usan para ' +
-          'hablar de cualquier traje de competencia. Los trajes TAUPOC son fast skins de otra marca, también ' +
-          'homologados por World Aquatics.',
+          'El nombre viene de la línea Fastskin de Speedo, pero hoy se usa para cualquier traje de competencia. ' +
+          'Los trajes TAUPOC son fast skins de otra marca, también homologados por World Aquatics.',
       },
       {
         q: '¿Cuánto dura un fast skin?',

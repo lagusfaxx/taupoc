@@ -19,6 +19,8 @@ export const metadata: Metadata = {
     'traje de baño de competencia para niña',
     'trajes de competición homologados World Aquatics',
     'fast skin',
+    'fastskin',
+    'fas skin',
     'fast skin de competencia',
     'fast skin hombre',
     'fast skin mujer',
