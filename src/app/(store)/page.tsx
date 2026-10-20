@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
 import { VISIBLE_LINE, fillRowWithColors, getFeatured, getLineComparison } from '@/lib/catalog';
 import { getHomeBlocks } from '@/lib/home';
+import { LANDINGS } from '@/lib/landings';
 import { buildMetadata, jsonLd, absoluteUrl, SITE_NAME } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
 import { LineCompareTeaser } from '@/components/store/LineCompareTeaser';
@@ -13,10 +14,10 @@ import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
 
 export const metadata: Metadata = buildMetadata({
-  title: 'Trajes de competición homologados World Aquatics',
+  title: 'Trajes de baño de competencia homologados',
   description:
-    'Distribuidor oficial TAUPOC en Chile. Jammers y knee suits de competición homologados por ' +
-    'World Aquatics. Despacho a todo el país y retiro sin costo en Santiago.',
+    'Trajes de baño de competencia TAUPOC homologados World Aquatics: jammers y knee suits. Envío a ' +
+    'todo Chile y retiro sin costo en Santiago.',
   path: '/',
 });
 
@@ -88,7 +89,60 @@ export default async function HomePage() {
       ) : (
         <PortadaPorDefecto />
       )}
+
+      <IntroCompetencia />
     </>
+  );
+}
+
+const ACCESOS = [
+  { href: LANDINGS.mujer.path, label: 'Traje de baño de competencia mujer' },
+  { href: LANDINGS.hombre.path, label: 'Traje de baño de competencia hombre' },
+  { href: LANDINGS.juveniles.path, label: 'Trajes para niñas, niños y juveniles' },
+  { href: LANDINGS.ponerse.path, label: 'Cómo ponerse un traje de competencia' },
+  { href: '/guia-de-tallas', label: 'Guía de tallas' },
+  { href: '/marca#homologacion', label: 'Qué es la homologación World Aquatics' },
+];
+
+/**
+ * Texto de la portada que no depende de los bloques del panel. La portada es
+ * la página con más autoridad del sitio: desde acá se enlazan las páginas que
+ * deben posicionar, con texto que dice qué vende la tienda.
+ */
+function IntroCompetencia() {
+  return (
+    <section className="border-t border-line">
+      <div className="container grid gap-10 py-12 lg:grid-cols-[1.2fr_1fr] lg:gap-16 lg:py-16">
+        <div>
+          <h2 className="font-display text-[24px] leading-tight tracking-tightest text-chalk sm:text-[30px]">
+            Trajes de baño de competencia en Chile
+          </h2>
+          <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
+            Somos el distribuidor oficial de TAUPOC en Chile. Vendemos jammers para hombre y knee suits
+            para mujer homologados por World Aquatics, en tallas 20 a 36: desde nadadores juveniles de
+            140 cm hasta adultos. Cada traje tiene su código de aprobación publicado en la ficha, para que
+            lo verifiques en la lista oficial antes de competir.
+          </p>
+          <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
+            Despachamos a todo el país, puedes retirar sin costo en Santiago y te asesoramos con la talla
+            antes de comprar.
+          </p>
+        </div>
+        <ul className="divide-y divide-line border-y border-line self-start">
+          {ACCESOS.map((a) => (
+            <li key={a.href}>
+              <Link
+                href={a.href}
+                className="group flex items-center justify-between gap-4 py-3.5 text-[14.5px] text-chalk-dim transition-colors hover:text-chalk"
+              >
+                {a.label}
+                <IconArrow className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
   );
 }
 

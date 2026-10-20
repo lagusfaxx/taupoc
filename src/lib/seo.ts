@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const SITE_NAME = 'TAUPOC Chile';
 export const SITE_DESCRIPTION =
-  'Distribuidor oficial TAUPOC en Chile. Trajes de competición homologados por World Aquatics, con despacho a todo el país.';
+  'Distribuidor oficial TAUPOC en Chile. Trajes de baño de competencia homologados por World Aquatics, con despacho a todo el país.';
 
 export function siteUrl(): string {
   return (process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/$/, '');
@@ -33,7 +33,9 @@ export function buildMetadata(params: {
     title: params.title,
     description,
     alternates: { canonical: url },
-    robots: params.noIndex ? { index: false, follow: false } : undefined,
+    // noindex, follow: la página no se indexa, pero sus enlaces a las fichas
+    // se siguen igual (los filtros del catálogo enlazan a todos los productos).
+    robots: params.noIndex ? { index: false, follow: true } : undefined,
     openGraph: {
       title: params.title,
       description,

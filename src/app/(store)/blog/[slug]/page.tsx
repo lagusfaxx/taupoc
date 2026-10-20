@@ -18,14 +18,18 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const post = await prisma.post.findFirst({ where: { slug, status: 'PUBLISHED' } });
   if (!post) return buildMetadata({ title: 'Nota no encontrada', noIndex: true });
 
-  return buildMetadata({
-    title: post.seoTitle ?? post.title,
+  const title = post.seoTitle ?? post.title;
+  const metadata = buildMetadata({
+    title,
     description: post.seoDescription ?? post.excerpt,
     path: `/blog/${post.slug}`,
     image: post.coverUrl,
     type: 'article',
     publishedTime: post.publishedAt?.toISOString(),
   });
+  // Con la marca agregada (" · TAUPOC Chile", 15 caracteres) un título largo
+  // se corta en el buscador. Pasado el ancho se publica solo el de la nota.
+  return title.length + 15 > 60 ? { ...metadata, title: { absolute: title } } : metadata;
 }
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {

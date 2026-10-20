@@ -12,6 +12,7 @@ import {
 } from '@/lib/catalog';
 import { colorLabel } from '@/lib/colors';
 import { getSettings } from '@/lib/settings';
+import { LANDINGS } from '@/lib/landings';
 import { buildMetadata, jsonLd, absoluteUrl } from '@/lib/seo';
 import { ProductView, type ProductViewData } from '@/components/store/ProductView';
 import { ProductCard } from '@/components/store/ProductCard';
@@ -94,10 +95,10 @@ export async function generateMetadata({
 
     return buildMetadata({
       title: `${product.name} ${product.modelCode} ${colorLabel(color)}`,
+      // Lo que decide el clic va primero: qué es, que está homologado y la talla.
       description:
-        `${product.name} de competición TAUPOC en ${color.name}` +
-        `${color.code ? ` (colorway ${color.code})` : ''}. ` +
-        `${product.approvalCode ? `Homologación ${product.approvalBody} ${product.approvalCode}. ` : ''}` +
+        `${product.name} ${color.name}: traje de competencia TAUPOC` +
+        `${product.approvalCode ? ` homologado ${product.approvalBody} ${product.approvalCode}` : ''}. ` +
         `${rango} con stock en Chile.`,
       path: resolved.canonicalPath,
       image: color.images[0]?.url ?? product.images[0]?.url ?? null,
@@ -108,7 +109,9 @@ export async function generateMetadata({
     title: product.seoTitle ?? `${product.name} ${product.modelCode}`,
     description:
       product.seoDescription ??
-      `${product.name} de competición TAUPOC. Homologación ${product.approvalBody} ${product.approvalCode ?? ''}. Tallas 20 a 36 con stock en Chile.`,
+      `${product.name}: traje de competencia TAUPOC` +
+        `${product.approvalCode ? ` homologado ${product.approvalBody} ${product.approvalCode}` : ''}. ` +
+        'Tallas 20 a 36 con stock en Chile.',
     path: resolved.canonicalPath,
     image: product.colors[0]?.images[0]?.url ?? product.images[0]?.url ?? null,
   });
@@ -275,12 +278,20 @@ export default async function ProductPage({
     },
   };
 
+  // Los trajes cuelgan de la página de competencia de su género: es la que
+  // posiciona la búsqueda, y así cada ficha le pasa enlaces y viceversa.
+  const migaPadre =
+    esAccesorio ? { name: 'Catálogo', href: '/catalogo' }
+    : product.gender === 'MALE' ? { name: 'Competencia hombre', href: LANDINGS.hombre.path }
+    : product.gender === 'FEMALE' ? { name: 'Competencia mujer', href: LANDINGS.mujer.path }
+    : { name: 'Catálogo', href: '/catalogo' };
+
   const breadcrumb = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
       { '@type': 'ListItem', position: 1, name: 'Inicio', item: absoluteUrl('/') },
-      { '@type': 'ListItem', position: 2, name: 'Catálogo', item: absoluteUrl('/catalogo') },
+      { '@type': 'ListItem', position: 2, name: migaPadre.name, item: absoluteUrl(migaPadre.href) },
       { '@type': 'ListItem', position: 3, name: pageTitle, item: absoluteUrl(pagePath) },
     ],
   };
@@ -301,7 +312,7 @@ export default async function ProductPage({
         <ol className="container flex items-center gap-2 py-3.5 text-[12px] text-chalk-faint">
           <li><Link href="/" className="hover:text-chalk">Inicio</Link></li>
           <li aria-hidden>/</li>
-          <li><Link href="/catalogo" className="hover:text-chalk">Catálogo</Link></li>
+          <li><Link href={migaPadre.href} className="hover:text-chalk">{migaPadre.name}</Link></li>
           <li aria-hidden>/</li>
           <li className="truncate text-chalk-dim">{pageTitle}</li>
         </ol>

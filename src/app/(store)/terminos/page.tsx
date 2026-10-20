@@ -5,6 +5,9 @@ import { LegalPage } from '@/components/store/LegalPage';
 
 export const metadata: Metadata = buildMetadata({
   title: 'Términos y condiciones',
+  description:
+    'Condiciones de compra en taupoc.cl: precios, medios de pago, envíos, cambios y devoluciones, ' +
+    'homologación y uso de cupones.',
   path: '/terminos',
 });
 

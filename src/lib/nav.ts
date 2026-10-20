@@ -35,8 +35,9 @@ export async function defaultNav(): Promise<NavItem[]> {
       label: 'Competición',
       href: '/catalogo',
       children: [
-        { label: 'Hombre — Jammers', href: '/catalogo?genero=MALE', note: 'Homologados World Aquatics' },
-        { label: 'Mujer — Knee suits', href: '/catalogo?genero=FEMALE', note: 'Homologados World Aquatics' },
+        { label: 'Hombre — Jammers', href: '/traje-de-bano-de-competencia-hombre', note: 'Homologados World Aquatics' },
+        { label: 'Mujer — Knee suits', href: '/traje-de-bano-de-competencia-mujer', note: 'Homologados World Aquatics' },
+        { label: 'Niñas, niños y juveniles', href: '/trajes-de-competencia-juveniles', note: 'Tallas 20 a 24' },
         ...lines
           .filter((l) => l.slug !== 'accesorios')
           .map((l) => ({
