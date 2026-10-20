@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
+import { headers } from 'next/headers';
 import { getSettings } from '@/lib/settings';
+import { metaPixelBootstrap } from '@/lib/meta-pixel';
 import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from '@/lib/seo';
 import './globals.css';
 
@@ -51,11 +53,18 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Leer la solicitud antes de los ajustes impide fijar el ID al compilar.
+  const pathname = (await headers()).get('x-pathname') ?? '';
   const settings = await getSettings();
+  const pixelId = settings.metaPixelId.trim();
+  const pixelScript = pathname === '/admin' || pathname.startsWith('/admin/')
+    ? null
+    : metaPixelBootstrap(pixelId);
 
   return (
     <html lang="es-CL" className="dark">
       <head>
+        {pixelScript ? <script id="meta-pixel" dangerouslySetInnerHTML={{ __html: pixelScript }} /> : null}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Hoja de estilos de fuentes cargada por enlace y no con next/font:
@@ -68,6 +77,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body>
+        {pixelScript ? (
+          <noscript>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img height="1" width="1" style={{ display: 'none' }} alt=""
+              src={`https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1`} />
+          </noscript>
+        ) : null}
         <a
           href="#contenido"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:accent-bg focus:px-4 focus:py-2 focus:font-display focus:text-xs focus:uppercase focus:tracking-widest"
@@ -77,7 +93,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
         {children}
 
-        {/* Analítica configurable desde el panel: si no hay ID, no se carga nada. */}
+        {/* Analítica de Google configurable desde el panel: sin ID no se carga. */}
         {settings.gtmId ? (
           <Script id="gtm" strategy="afterInteractive">
             {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});

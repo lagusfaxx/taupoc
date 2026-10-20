@@ -1,5 +1,6 @@
 import 'server-only';
 import { prisma } from './db';
+import { DEFAULT_META_PIXEL_ID, resolveMetaPixelId } from './meta-pixel';
 
 /**
  * Configuración editable desde el panel. Se guarda en la tabla Setting
@@ -74,7 +75,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   catalogSplitByColor: true,
 
   gaMeasurementId: '',
-  metaPixelId: '',
+  metaPixelId: DEFAULT_META_PIXEL_ID,
   gtmId: '',
 
   notifyOrderEmail: true,
@@ -92,7 +93,7 @@ export async function getSettings(): Promise<SiteSettings> {
   try {
     const row = await prisma.setting.findUnique({ where: { key: SETTINGS_KEY } });
     const stored = (row?.value ?? {}) as Partial<SiteSettings>;
-    const data = { ...DEFAULT_SETTINGS, ...stored };
+    const data = { ...DEFAULT_SETTINGS, ...stored, metaPixelId: resolveMetaPixelId(stored.metaPixelId) };
     cache = { data, at: Date.now() };
     return data;
   } catch {
@@ -103,7 +104,11 @@ export async function getSettings(): Promise<SiteSettings> {
 
 export async function saveSettings(patch: Partial<SiteSettings>): Promise<SiteSettings> {
   const current = await getSettings();
-  const next = { ...current, ...patch };
+  const next = {
+    ...current,
+    ...patch,
+    metaPixelId: resolveMetaPixelId(patch.metaPixelId ?? current.metaPixelId),
+  };
   await prisma.setting.upsert({
     where: { key: SETTINGS_KEY },
     create: { key: SETTINGS_KEY, value: next as object },

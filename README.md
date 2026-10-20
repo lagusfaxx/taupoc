@@ -290,8 +290,18 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
 
 ### Meta Pixel
 
-En **Ajustes → Analítica**, guarda solo el ID numérico del píxel. Se carga en
-la tienda y registra `PageView` en cada navegación, `ViewContent` al abrir una
+El píxel `1302438768639889` está instalado por defecto con el código base oficial
+en el HTML inicial de la tienda: se inicializa y envía `PageView` antes de la
+hidratación de React. El respaldo `noscript` usa el mismo ID. El panel de
+administración queda fuera de la medición.
+
+En **Ajustes → Analítica** puedes reemplazarlo con otro ID numérico; un valor
+vacío usa el píxel predeterminado. Las configuraciones antiguas con un valor
+inválido también usan el predeterminado. El ID se lee en cada solicitud,
+sin fijarlo durante la compilación.
+
+La navegación reutiliza el píxel ya inicializado y evita duplicar la visita al
+hidratar. Registra `PageView` en cada navegación, `ViewContent` al abrir una
 ficha, `Search` al buscar, `AddToCart` después de agregar unidades correctamente
 e `InitiateCheckout` al abrir el checkout con productos. Los importes se envían
 como pesos enteros con moneda `CLP`; los identificadores de contenido corresponden
