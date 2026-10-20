@@ -6,6 +6,7 @@ import { updateSettings } from '@/actions/admin/settings';
 import type { AdminState } from '@/actions/admin/products';
 import type { SiteSettings } from '@/lib/settings';
 import { formatNumber } from '@/lib/money';
+import { DEFAULT_META_PIXEL_ID } from '@/lib/meta-pixel';
 import { cn } from '@/lib/utils';
 import { Card } from './Card';
 import { AdminTabs } from './AdminTabs';
@@ -148,7 +149,7 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
             content: (
               <Card
                 title="Google Analytics y Meta Pixel"
-                description="Si dejas un campo vacío, ese script no se carga en la tienda."
+                description="Los campos de Google vacíos no cargan scripts. Meta usa el píxel de la tienda por defecto."
               >
                 <div className="grid gap-4 lg:grid-cols-3">
                   <Input
@@ -168,10 +169,10 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                     label="Meta Pixel"
                     name="metaPixelId"
                     defaultValue={settings.metaPixelId}
-                    placeholder="123456789012345"
+                    placeholder={DEFAULT_META_PIXEL_ID}
                     inputMode="numeric"
                     pattern="[0-9]*"
-                    help="Solo el ID numérico del píxel de Facebook e Instagram."
+                    help={`Píxel predeterminado: ${DEFAULT_META_PIXEL_ID}. Puedes reemplazarlo con otro ID numérico; vacío usa el predeterminado.`}
                   />
                 </div>
                 <p className="mt-4 text-[12.5px] leading-relaxed text-chalk-faint">

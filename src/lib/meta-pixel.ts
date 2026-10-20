@@ -8,6 +8,13 @@ export type MetaEventName =
 
 export type MetaEventData = Record<string, unknown>;
 
+export const DEFAULT_META_PIXEL_ID = '1302438768639889';
+
+export function resolveMetaPixelId(value: unknown): string {
+  const pixelId = typeof value === 'string' ? value.trim() : '';
+  return isMetaPixelId(pixelId) ? pixelId : DEFAULT_META_PIXEL_ID;
+}
+
 interface PixelFunction {
   (...args: unknown[]): void;
   callMethod?: (...args: unknown[]) => void;
@@ -21,6 +28,7 @@ declare global {
   interface Window {
     fbq?: PixelFunction;
     _fbq?: PixelFunction;
+    __taupocMetaPixel?: { pixelId: string; pageView: string };
   }
 }
 
@@ -29,6 +37,20 @@ const purchases = new Set<string>();
 
 export function isMetaPixelId(value: string): boolean {
   return /^\d+$/.test(value);
+}
+
+/** Código base oficial, incluido en el HTML para funcionar antes de React. */
+export function metaPixelBootstrap(value: string): string | null {
+  const pixelId = value.trim();
+  if (!isMetaPixelId(pixelId)) return null;
+  return `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init',${JSON.stringify(pixelId)});
+fbq('track','PageView');
+window.__taupocMetaPixel={pixelId:${JSON.stringify(pixelId)},pageView:window.location.pathname+(window.location.search?'?'+new URLSearchParams(window.location.search).toString():'')};`;
 }
 
 /** La cola oficial conserva eventos aunque fbevents.js todavía esté cargando. */
@@ -52,7 +74,7 @@ function initialize(pixelId: string): PixelFunction {
   }
 
   if (!initialized.has(pixelId)) {
-    window.fbq('init', pixelId);
+    if (window.__taupocMetaPixel?.pixelId !== pixelId) window.fbq('init', pixelId);
     initialized.add(pixelId);
   }
   return window.fbq;
@@ -90,6 +112,16 @@ export function trackMetaEvent(
     // Un bloqueador o un error de analítica nunca debe interrumpir la compra.
     return false;
   }
+}
+
+/** Reconoce la visita enviada desde el HTML y evita repetirla al hidratar. */
+export function trackMetaPageView(pixelId: string, url: string): boolean {
+  if (typeof window === 'undefined' || !isMetaPixelId(pixelId)) return false;
+  const previous = window.__taupocMetaPixel;
+  if (previous?.pixelId === pixelId && previous.pageView === url) return true;
+  if (!trackMetaEvent(pixelId, 'PageView')) return false;
+  window.__taupocMetaPixel = { pixelId, pageView: url };
+  return true;
 }
 
 export function metaCartData(cart: {

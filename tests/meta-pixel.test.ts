@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { afterEach, test } from 'node:test';
-import { metaCartData, trackMetaEvent } from '../src/lib/meta-pixel';
+import { runInNewContext } from 'node:vm';
+import { DEFAULT_META_PIXEL_ID, metaCartData, metaPixelBootstrap, resolveMetaPixelId, trackMetaEvent, trackMetaPageView } from '../src/lib/meta-pixel';
 
 function browser(storageBlocked = false) {
   const scripts: { src?: string; async?: boolean }[] = [];
   const storage = new Map<string, string>();
   const mockWindow = {
+    location: { pathname: '/', search: '' },
     localStorage: {
       getItem(key: string) {
         if (storageBlocked) throw new Error('Storage blocked');
@@ -22,6 +24,9 @@ function browser(storageBlocked = false) {
     value: {
       createElement: () => ({}),
       head: { appendChild: (script: { src?: string }) => scripts.push(script) },
+      getElementsByTagName: () => [{ parentNode: {
+        insertBefore: (script: { src?: string }) => scripts.push(script),
+      } }],
     },
     configurable: true,
   });
@@ -31,6 +36,82 @@ function browser(storageBlocked = false) {
 afterEach(() => {
   Reflect.deleteProperty(globalThis, 'window');
   Reflect.deleteProperty(globalThis, 'document');
+});
+
+function executeBootstrap(pixelId: string, env: ReturnType<typeof browser>) {
+  runInNewContext(metaPixelBootstrap(pixelId)!, {
+    window: env.window,
+    document: globalThis.document,
+    URLSearchParams,
+    get fbq() { return env.window.fbq; },
+  });
+}
+
+function queuedEvents(env: ReturnType<typeof browser>) {
+  // El snippet oficial guarda objetos arguments; el respaldo usa arrays.
+  return Array.from(env.window.fbq?.queue ?? [], (args) => Array.from(args));
+}
+
+function eventName(call: unknown[]) {
+  return call[0] === 'track' ? call[1] : call[2];
+}
+
+test('instala el píxel solicitado incluso con ajustes antiguos vacíos o inválidos', () => {
+  assert.equal(DEFAULT_META_PIXEL_ID, '1302438768639889');
+  for (const value of [undefined, null, '', ' ', '<script>fbq(...)</script>']) {
+    assert.equal(resolveMetaPixelId(value), '1302438768639889');
+  }
+  assert.equal(resolveMetaPixelId(' 123456789 '), '123456789');
+});
+
+test('el HTML solo recibe un snippet cuando hay un ID numérico, sin interpolar código del panel', () => {
+  for (const id of ['', ' ', 'abc', "123');alert(1)", '<script>bad()</script>']) {
+    assert.equal(metaPixelBootstrap(id), null);
+  }
+  assert.ok(metaPixelBootstrap(' 200001 ')?.includes('fbq(\'init\',"200001")'));
+});
+
+test('inicializa el píxel y PageView antes de ejecutar React o cualquier evento de producto', () => {
+  const env = browser();
+  executeBootstrap('200002', env);
+  assert.equal(env.scripts.length, 1);
+  assert.equal(env.scripts[0].src, 'https://connect.facebook.net/en_US/fbevents.js');
+  assert.deepEqual(queuedEvents(env), [
+    ['init', '200002'],
+    ['track', 'PageView'],
+  ]);
+});
+
+test('la hidratación reutiliza el píxel del HTML sin duplicar script, init ni PageView', () => {
+  const env = browser();
+  executeBootstrap('200003', env);
+  trackMetaPageView('200003', '/');
+  trackMetaPageView('200003', '/');
+  trackMetaEvent('200003', 'ViewContent', { content_ids: ['product-1'] });
+  const calls = queuedEvents(env);
+  assert.equal(env.scripts.length, 1);
+  assert.equal(calls.filter((call) => call[0] === 'init').length, 1);
+  assert.equal(calls.filter((call) => eventName(call) === 'PageView').length, 1);
+  assert.equal(calls.filter((call) => call[2] === 'ViewContent').length, 1);
+  trackMetaPageView('200003', '/checkout');
+  trackMetaPageView('200003', '/');
+  assert.equal(queuedEvents(env).filter((call) => eventName(call) === 'PageView').length, 3);
+});
+
+test('no duplica la visita inicial cuando la búsqueda contiene espacios codificados', () => {
+  const env = browser();
+  Object.assign(env.window.location, { pathname: '/catalogo', search: '?q=traje%20negro' });
+  executeBootstrap('200004', env);
+  trackMetaPageView('200004', '/catalogo?q=traje+negro');
+  assert.equal(queuedEvents(env).filter((call) => eventName(call) === 'PageView').length, 1);
+});
+
+test('si el documento inicial no tenía píxel, la navegación puede inicializarlo como respaldo', () => {
+  const env = browser();
+  assert.equal(trackMetaPageView('200005', '/catalogo'), true);
+  assert.equal(env.scripts.length, 1);
+  assert.equal(queuedEvents(env).filter((call) => call[0] === 'init').length, 1);
+  assert.equal(queuedEvents(env).filter((call) => call[2] === 'PageView').length, 1);
 });
 
 test('sin navegador o con ID vacío/inválido no carga ni envía eventos', () => {
