@@ -77,6 +77,7 @@ test('inicializa el píxel y PageView antes de ejecutar React o cualquier evento
   assert.equal(env.scripts.length, 1);
   assert.equal(env.scripts[0].src, 'https://connect.facebook.net/en_US/fbevents.js');
   assert.deepEqual(queuedEvents(env), [
+    ['set', 'autoConfig', false, '200002'],
     ['init', '200002'],
     ['track', 'PageView'],
   ]);
@@ -133,6 +134,7 @@ test('conserva eventos tempranos y carga el script e inicializa el píxel una so
   assert.equal(env.scripts[0].src, 'https://connect.facebook.net/en_US/fbevents.js');
   assert.equal(env.scripts[0].async, true);
   assert.deepEqual(env.window.fbq?.queue, [
+    ['set', 'autoConfig', false, '100001'],
     ['init', '100001'],
     ['trackSingle', '100001', 'PageView', {}],
     ['trackSingle', '100001', 'ViewContent', { content_ids: ['product-1'], currency: 'CLP', value: 139900 }],
