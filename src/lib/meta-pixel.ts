@@ -50,6 +50,7 @@ n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
 fbq.disablePushState=true;
+fbq('set','autoConfig',false,${JSON.stringify(pixelId)});
 fbq('init',${JSON.stringify(pixelId)});
 fbq('track','PageView');
 window.__taupocMetaPixel={pixelId:${JSON.stringify(pixelId)},pageView:window.location.pathname+(window.location.search?'?'+new URLSearchParams(window.location.search).toString():'')};`;
@@ -78,7 +79,11 @@ function initialize(pixelId: string): PixelFunction {
   }
 
   if (!initialized.has(pixelId)) {
-    if (window.__taupocMetaPixel?.pixelId !== pixelId) window.fbq('init', pixelId);
+    if (window.__taupocMetaPixel?.pixelId !== pixelId) {
+      // Los eventos se envían a mano; la detección automática de Meta los duplicaría.
+      window.fbq('set', 'autoConfig', false, pixelId);
+      window.fbq('init', pixelId);
+    }
     initialized.add(pixelId);
   }
   return window.fbq;
