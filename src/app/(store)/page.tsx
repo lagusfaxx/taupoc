@@ -96,6 +96,7 @@ export default async function HomePage() {
 }
 
 const ACCESOS = [
+  { href: LANDINGS.fastSkin.path, label: 'Fast skin de competencia' },
   { href: LANDINGS.mujer.path, label: 'Traje de baño de competencia mujer' },
   { href: LANDINGS.hombre.path, label: 'Traje de baño de competencia hombre' },
   { href: LANDINGS.juveniles.path, label: 'Trajes para niñas, niños y juveniles' },
@@ -118,8 +119,8 @@ function IntroCompetencia() {
             Trajes de baño de competencia en Chile
           </h2>
           <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-            Somos el distribuidor oficial de TAUPOC en Chile. Vendemos jammers para hombre y knee suits
-            para mujer homologados por World Aquatics, en tallas 20 a 36: desde nadadores juveniles de
+            Somos el distribuidor oficial de TAUPOC en Chile. Vendemos fast skins de competencia —jammers
+            para hombre y knee suits para mujer— homologados por World Aquatics, en tallas 20 a 36: desde nadadores juveniles de
             140 cm hasta adultos. Cada traje tiene su código de aprobación publicado en la ficha, para que
             lo verifiques en la lista oficial antes de competir.
           </p>

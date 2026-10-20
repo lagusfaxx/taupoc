@@ -37,6 +37,7 @@ export async function defaultNav(): Promise<NavItem[]> {
       children: [
         { label: 'Hombre — Jammers', href: '/traje-de-bano-de-competencia-hombre', note: 'Homologados World Aquatics' },
         { label: 'Mujer — Knee suits', href: '/traje-de-bano-de-competencia-mujer', note: 'Homologados World Aquatics' },
+        { label: 'Fast skin', href: '/fast-skin', note: 'Qué es y modelos homologados' },
         { label: 'Niñas, niños y juveniles', href: '/trajes-de-competencia-juveniles', note: 'Tallas 20 a 24' },
         ...lines
           .filter((l) => l.slug !== 'accesorios')

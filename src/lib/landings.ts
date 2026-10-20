@@ -44,6 +44,96 @@ export interface Landing {
 }
 
 export const LANDINGS = {
+  // "Fastskin" es el nombre de la línea de Speedo, pero en Chile se usa como
+  // nombre genérico del traje de carrera. La página lo explica sin presentar
+  // TAUPOC como si fuera esa línea.
+  fastSkin: {
+    path: '/fast-skin',
+    title: 'Fast skin de competencia para hombre y mujer',
+    description:
+      'Fast skin de competencia homologado World Aquatics: jammers y knee suits TAUPOC con stock en ' +
+      'Chile. Tallas 20 a 36.',
+    eyebrow: 'Fast skin',
+    h1: 'Fast skin: trajes de competencia homologados',
+    intro:
+      'En la piscina se le dice fast skin a cualquier traje de carrera de compresión: el jammer de hombre y ' +
+      'el knee suit de mujer que se usan solo para competir. Acá tienes fast skins TAUPOC homologados por ' +
+      'World Aquatics, con stock en Chile y el código de aprobación de cada modelo a la vista.',
+    productsTitle: 'Fast skins disponibles',
+    sections: [
+      {
+        title: 'Qué es un fast skin',
+        paragraphs: [
+          'Fast skin significa "piel rápida". Es un traje de competencia de tejido técnico, de baja absorción ' +
+            'de agua y con costuras termoselladas, que comprime la musculatura y ordena la posición del cuerpo ' +
+            'en el agua. El resultado es menos arrastre en cada brazada y en cada vuelta.',
+          'El nombre viene de Fastskin, la línea de trajes de carrera de Speedo, y se volvió genérico: hoy los ' +
+            'nadadores le dicen fast skin a los trajes de carrera de cualquier marca. Lo que define si sirve ' +
+            'para competir no es el nombre sino que el modelo esté en la lista de trajes aprobados de World ' +
+            'Aquatics.',
+        ],
+      },
+      {
+        title: 'Fast skin hombre y fast skin mujer',
+        paragraphs: ['La norma de World Aquatics define hasta dónde puede cubrir el traje:'],
+        bullets: [
+          'Fast skin hombre: el jammer, de la cintura a la rodilla.',
+          'Fast skin mujer: el knee suit, cubre el torso sin pasar del hombro ni de la rodilla.',
+          'Sin cierres, broches ni piezas rígidas, y sin aportar flotación.',
+        ],
+      },
+      {
+        title: 'Fast skin o traje de entrenamiento',
+        paragraphs: [
+          'Un traje de entrenamiento es de poliéster y aguanta el cloro de todos los días. Un fast skin pierde ' +
+            'compresión con el uso, así que se reserva para las carreras: bien cuidado rinde entre 25 y 30 ' +
+            'carreras.',
+        ],
+      },
+      {
+        title: 'Cómo elegir la talla de un fast skin',
+        paragraphs: [
+          'Un fast skin se usa una o dos tallas por debajo de la talla de cuerpo: si entra cómodo, no comprime. ' +
+            'En 50 y 100 metros se baja dos tallas; en 800, 1500 y aguas abiertas, una. En un primer traje de ' +
+            'carrera conviene bajar solo una.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        q: '¿Qué es un fast skin?',
+        a:
+          'Es como se le dice al traje de natación de competencia: un traje de compresión de tejido técnico, ' +
+          'homologado por World Aquatics, que se usa solo para competir.',
+      },
+      {
+        q: '¿Fast skin es una marca?',
+        a:
+          'Fastskin es el nombre de la línea de trajes de carrera de Speedo, pero los nadadores lo usan para ' +
+          'hablar de cualquier traje de competencia. Los trajes TAUPOC son fast skins de otra marca, también ' +
+          'homologados por World Aquatics.',
+      },
+      {
+        q: '¿Cuánto dura un fast skin?',
+        a:
+          'Entre 25 y 30 carreras si se usa solo para competir, se enjuaga en agua fría y se seca a la sombra, ' +
+          'extendido.',
+      },
+      {
+        q: '¿Puedo competir en un torneo federado con un fast skin TAUPOC?',
+        a:
+          'Sí. Cada modelo tiene su código de homologación publicado en la ficha, y puedes verificarlo en la ' +
+          'lista oficial de trajes aprobados de World Aquatics.',
+      },
+    ],
+    related: [
+      '/traje-de-bano-de-competencia-hombre',
+      '/traje-de-bano-de-competencia-mujer',
+      '/trajes-de-competencia-juveniles',
+      '/como-ponerse-un-traje-de-competencia',
+    ],
+  },
+
   competencia: {
     path: '/trajes-de-bano-de-competencia',
     title: 'Trajes de baño de competencia en Chile',
@@ -125,6 +215,7 @@ export const LANDINGS = {
       },
     ],
     related: [
+      '/fast-skin',
       '/traje-de-bano-de-competencia-mujer',
       '/traje-de-bano-de-competencia-hombre',
       '/trajes-de-competencia-juveniles',
@@ -141,7 +232,7 @@ export const LANDINGS = {
     eyebrow: 'Competencia mujer',
     h1: 'Traje de baño de competencia para mujer',
     intro:
-      'El traje de competencia femenino es el knee suit: cubre el torso y llega hasta la rodilla, con ' +
+      'El traje de competencia femenino —el fast skin de mujer— es el knee suit: cubre el torso y llega hasta la rodilla, con ' +
       'tejido de compresión y costuras termoselladas. Todos los modelos de esta página están homologados ' +
       'por World Aquatics y se pueden usar en cualquier campeonato federado.',
     gender: 'FEMALE',
@@ -200,6 +291,7 @@ export const LANDINGS = {
       },
     ],
     related: [
+      '/fast-skin',
       '/trajes-de-bano-de-competencia',
       '/traje-de-bano-de-competencia-hombre',
       '/trajes-de-competencia-juveniles',
@@ -216,7 +308,7 @@ export const LANDINGS = {
     eyebrow: 'Competencia hombre',
     h1: 'Traje de baño de competencia para hombre',
     intro:
-      'En natación masculina el traje de competencia es el jammer: va de la cintura a la rodilla, comprime ' +
+      'En natación masculina el traje de competencia —el fast skin de hombre— es el jammer: va de la cintura a la rodilla, comprime ' +
       'la musculatura y reduce el arrastre. Todos los modelos de esta página están homologados por World ' +
       'Aquatics y tienen stock en Chile.',
     gender: 'MALE',
@@ -266,6 +358,7 @@ export const LANDINGS = {
       },
     ],
     related: [
+      '/fast-skin',
       '/trajes-de-bano-de-competencia',
       '/traje-de-bano-de-competencia-mujer',
       '/trajes-de-competencia-juveniles',
@@ -410,6 +503,7 @@ export const LANDINGS = {
       },
     ],
     related: [
+      '/fast-skin',
       '/guia-de-tallas',
       '/trajes-de-bano-de-competencia',
       '/traje-de-bano-de-competencia-mujer',
@@ -420,6 +514,7 @@ export const LANDINGS = {
 
 /** Nombre corto de cada página para los enlaces cruzados. */
 export const LANDING_LINKS: Record<string, string> = {
+  '/fast-skin': 'Fast skin de competencia',
   '/trajes-de-bano-de-competencia': 'Trajes de baño de competencia',
   '/traje-de-bano-de-competencia-mujer': 'Traje de competencia mujer',
   '/traje-de-bano-de-competencia-hombre': 'Traje de competencia hombre',

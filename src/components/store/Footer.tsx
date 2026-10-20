@@ -8,6 +8,7 @@ const COLUMNS = [
   {
     title: 'Competición',
     links: [
+      { label: 'Fast skin de competencia', href: '/fast-skin' },
       { label: 'Trajes de baño de competencia', href: '/trajes-de-bano-de-competencia' },
       { label: 'Competencia mujer — knee suits', href: '/traje-de-bano-de-competencia-mujer' },
       { label: 'Competencia hombre — jammers', href: '/traje-de-bano-de-competencia-hombre' },
