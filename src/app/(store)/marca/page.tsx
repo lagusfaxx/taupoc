@@ -18,6 +18,29 @@ export const metadata: Metadata = buildMetadata({
   path: '/marca',
 });
 
+// Se muestra en la página y va en el JSON-LD con el mismo texto: Google exige
+// que lo marcado como FAQ esté visible.
+const FAQ = [
+  {
+    q: '¿Qué significa que un traje esté homologado por World Aquatics?',
+    a:
+      'Significa que el modelo fue evaluado y aprobado por World Aquatics y figura en su lista pública ' +
+      'de trajes aprobados. Solo esos modelos pueden usarse en competencia oficial.',
+  },
+  {
+    q: '¿Cómo verifico el código de homologación de mi traje?',
+    a:
+      'El código está impreso en el traje y publicado en la ficha de cada producto. Puedes buscarlo en ' +
+      'la lista oficial de trajes aprobados de World Aquatics.',
+  },
+  {
+    q: '¿Qué pasa si compito con un traje no homologado?',
+    a:
+      'El juez árbitro puede impedir la partida o descalificar al nadador. No hay apelación posible ' +
+      'en el momento de la carrera.',
+  },
+];
+
 const RULES = [
   { title: 'Espesor máximo', body: 'El material no puede superar el espesor permitido en ningún punto del traje.' },
   { title: 'Flotabilidad nula', body: 'El traje no puede aportar empuje adicional al nadador. Se mide en laboratorio.' },
@@ -37,38 +60,11 @@ export default async function BrandPage() {
   const faq = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: '¿Qué significa que un traje esté homologado por World Aquatics?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text:
-            'Significa que el modelo fue evaluado y aprobado por World Aquatics y figura en su lista pública ' +
-            'de trajes aprobados. Solo esos modelos pueden usarse en competencia oficial.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: '¿Cómo verifico el código de homologación de mi traje?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text:
-            'El código está impreso en el traje y publicado en la ficha de cada producto. Puedes buscarlo en ' +
-            'la lista oficial de trajes aprobados de World Aquatics.',
-        },
-      },
-      {
-        '@type': 'Question',
-        name: '¿Qué pasa si compito con un traje no homologado?',
-        acceptedAnswer: {
-          '@type': 'Answer',
-          text:
-            'El juez árbitro puede impedir la partida o descalificar al nadador. No hay apelación posible ' +
-            'en el momento de la carrera.',
-        },
-      },
-    ],
+    mainEntity: FAQ.map((f) => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
   };
 
   return (
@@ -222,6 +218,22 @@ export default async function BrandPage() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section className="border-b border-line">
+        <div className="container py-16 lg:py-20">
+          <h2 className="font-display text-[26px] leading-tight tracking-tightest text-chalk sm:text-[32px]">
+            Preguntas frecuentes sobre la homologación
+          </h2>
+          <dl className="mt-7 max-w-3xl divide-y divide-line border-y border-line">
+            {FAQ.map((f) => (
+              <div key={f.q} className="py-5">
+                <dt className="font-display text-[15px] font-semibold tracking-tight text-chalk">{f.q}</dt>
+                <dd className="mt-2 text-[14.5px] leading-relaxed text-chalk-dim">{f.a}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 

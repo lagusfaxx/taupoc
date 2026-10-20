@@ -8,10 +8,12 @@ const COLUMNS = [
   {
     title: 'Competición',
     links: [
-      { label: 'Jammers hombre', href: '/catalogo?genero=MALE' },
-      { label: 'Knee suits mujer', href: '/catalogo?genero=FEMALE' },
-      { label: 'Línea R-SKIN', href: '/catalogo?linea=r-skin' },
-      { label: 'Línea VEL-SKIN', href: '/catalogo?linea=vel-skin' },
+      { label: 'Fast skin de competencia', href: '/fast-skin' },
+      { label: 'Trajes de baño de competencia', href: '/trajes-de-bano-de-competencia' },
+      { label: 'Competencia mujer — knee suits', href: '/traje-de-bano-de-competencia-mujer' },
+      { label: 'Competencia hombre — jammers', href: '/traje-de-bano-de-competencia-hombre' },
+      { label: 'Niñas, niños y juveniles', href: '/trajes-de-competencia-juveniles' },
+      { label: 'R-SKIN o VEL-SKIN', href: '/lineas' },
       { label: 'Ver todo', href: '/catalogo' },
     ],
   },
@@ -19,9 +21,10 @@ const COLUMNS = [
     title: 'Ayuda',
     links: [
       { label: 'Guía de tallas', href: '/guia-de-tallas' },
+      { label: 'Cómo ponerse el traje', href: '/como-ponerse-un-traje-de-competencia' },
       { label: 'Envíos y plazos', href: '/envios' },
       { label: 'Cambios y devoluciones', href: '/devoluciones' },
-      { label: 'Cuidado del traje', href: '/blog/como-elegir-la-talla-de-tu-traje-de-competicion' },
+      { label: 'Cómo elegir la talla', href: '/blog/como-elegir-la-talla-de-tu-traje-de-competicion' },
       { label: 'Contacto', href: '/contacto' },
     ],
   },

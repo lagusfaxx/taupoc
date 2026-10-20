@@ -11,8 +11,8 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({
   title: 'R-SKIN o VEL-SKIN — en qué se diferencian',
   description:
-    'Las dos líneas de competición TAUPOC comparadas dato a dato: peso, compresión, absorción de ' +
-    'agua, retorno elástico y vida útil. Cuál conviene según cómo compites.',
+    'R-SKIN y VEL-SKIN comparadas dato a dato: peso, compresión, absorción de agua y vida útil. ' +
+    'Cuál conviene según cómo compites.',
   path: '/lineas',
 });
 
@@ -35,6 +35,19 @@ export default async function LinesPage() {
           <li className="text-chalk-dim">Las líneas</li>
         </ol>
       </nav>
+
+      <section className="bg-ink-900">
+        <div className="container pb-2 pt-12 lg:pt-16">
+          <p className="eyebrow-accent mb-3">Las líneas</p>
+          <h1 className="max-w-3xl text-balance font-display text-[34px] leading-[1] tracking-tightest text-chalk sm:text-[48px]">
+            {columns.map((c) => c.name).join(' o ')}: qué traje de competencia elegir
+          </h1>
+          <p className="mt-6 max-w-2xl text-pretty text-[16px] leading-relaxed text-chalk-dim">
+            Las dos líneas están homologadas por World Aquatics y en la foto se ven casi iguales. Abajo
+            están enfrentadas fila por fila, con el dato de cada una, para que sepas qué pagas de más.
+          </p>
+        </div>
+      </section>
 
       <LineCompare columns={columns} activeSlug={null} />
 

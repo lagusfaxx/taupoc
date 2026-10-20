@@ -5,6 +5,9 @@ import { LegalPage } from '@/components/store/LegalPage';
 
 export const metadata: Metadata = buildMetadata({
   title: 'Política de privacidad',
+  description:
+    'Qué datos personales recoge TAUPOC Chile al comprar o escribirnos, para qué los usamos y cómo ' +
+    'pedir que los corrijamos o eliminemos.',
   path: '/privacidad',
 });
 

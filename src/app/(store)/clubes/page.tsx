@@ -6,8 +6,8 @@ import { IconBox, IconRuler, IconTruck, IconUsers } from '@/components/ui/Icons'
 export const metadata: Metadata = buildMetadata({
   title: 'Clubes y equipos — cotización por volumen',
   description:
-    'Precios por volumen para clubes de natación en Chile desde 10 unidades, con asesoría de tallas ' +
-    'para el plantel completo y entrega coordinada en sede o torneo.',
+    'Trajes de competencia para clubes de natación en Chile: precio por volumen desde 10 unidades y ' +
+    'asesoría de tallas para el plantel.',
   path: '/clubes',
 });
 
