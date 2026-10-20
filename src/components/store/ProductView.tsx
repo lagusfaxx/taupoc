@@ -11,6 +11,7 @@ import { Price } from '@/components/ui/Price';
 import { RatingSummary } from '@/components/ui/Stars';
 import { announceCart, flyToCart } from './CartLink';
 import { ProductGallery, type GalleryImage } from './ProductGallery';
+import { MetaEvent, useMetaPixel } from './MetaPixel';
 import { SizeChart, type SizeChartRowData } from './SizeChart';
 import { IconCheck, IconExternal, IconShield, IconTruck } from '@/components/ui/Icons';
 
@@ -214,6 +215,7 @@ export function ProductView({
   initialColorSlug?: string | null;
 }) {
   const router = useRouter();
+  const track = useMetaPixel();
   const inicial =
     product.colors.find((c) => c.slug === initialColorSlug) ?? product.colors[0] ?? null;
   const [colorId, setColorId] = useState(inicial?.id ?? '');
@@ -258,6 +260,7 @@ export function ProductView({
       const resultado = await addToCart(null, datos);
       setState(resultado);
       if (resultado.ok) {
+        if (resultado.analytics) track('AddToCart', resultado.analytics);
         if (origen) flyToCart({ origin: origen, imageUrl: imagen });
         if (typeof resultado.count === 'number') {
           announceCart(resultado.count, { origin: origen, imageUrl: imagen });
@@ -329,6 +332,13 @@ export function ProductView({
       className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:gap-14 xl:gap-20"
       style={{ ['--accent' as string]: accent, ['--accent-contrast' as string]: readableOn(accent) }}
     >
+      <MetaEvent event="ViewContent" eventKey={`${product.id}:${initialColorSlug ?? ''}`} data={{
+        content_ids: [product.id],
+        content_name: product.name,
+        content_type: 'product',
+        value: inicial?.variants[0]?.price ?? product.basePrice,
+        currency: 'CLP',
+      }} />
       <div className="lg:sticky lg:top-24 lg:self-start">
         <ProductGallery images={images} colorName={color?.name ?? ''} productName={product.name} />
 

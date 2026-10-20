@@ -10,6 +10,7 @@ import { ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL } from '@/lib/orders';
 import { ButtonLink } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { IconAlert, IconCheck, IconTruck } from '@/components/ui/Icons';
+import { PaymentTracking } from '@/components/store/PaymentTracking';
 
 export const dynamic = 'force-dynamic';
 
@@ -57,6 +58,24 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
 
   return (
     <div className="container py-14 lg:py-20">
+      <PaymentTracking
+        orderId={order.id}
+        approved={approved}
+        pending={!noGateway && !!order.mpPreferenceId && ['PENDING', 'IN_PROCESS'].includes(order.paymentStatus)}
+        data={{
+          content_type: 'product',
+          content_ids: [...new Set(order.items.map((item) => item.productId ?? item.sku))],
+          contents: order.items.map((item) => ({
+            id: item.productId ?? item.sku,
+            quantity: item.quantity,
+            item_price: item.unitPrice,
+          })),
+          num_items: order.items.reduce((sum, item) => sum + item.quantity, 0),
+          value: order.total,
+          currency: order.currency,
+          order_id: order.number,
+        }}
+      />
       <div className="mx-auto max-w-2xl">
         <div className="surface p-7 sm:p-10">
           <div className="flex items-start gap-4">

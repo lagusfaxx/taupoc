@@ -7,6 +7,8 @@ import { prisma } from '@/lib/db';
 import { buildMetadata } from '@/lib/seo';
 import { CheckoutForm } from '@/components/store/CheckoutForm';
 import { mpConfigured, mpMode } from '@/lib/mercadopago';
+import { MetaEvent } from '@/components/store/MetaPixel';
+import { metaCartData } from '@/lib/meta-pixel';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,6 +32,7 @@ export default async function CheckoutPage() {
 
   return (
     <div className="container py-10 lg:py-16">
+      <MetaEvent event="InitiateCheckout" data={metaCartData(cart)} />
       <h1 className="font-display text-[30px] leading-none tracking-tightest text-chalk sm:text-[40px]">
         Finalizar compra
       </h1>
