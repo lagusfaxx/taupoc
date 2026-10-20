@@ -169,11 +169,15 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                     name="metaPixelId"
                     defaultValue={settings.metaPixelId}
                     placeholder="123456789012345"
-                    help="ID del píxel de Facebook e Instagram."
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    help="Solo el ID numérico del píxel de Facebook e Instagram."
                   />
                 </div>
                 <p className="mt-4 text-[12.5px] leading-relaxed text-chalk-faint">
-                  Los scripts se cargan después de la interacción para no afectar la velocidad de carga.
+                  Meta Pixel registra visitas, vistas de producto, búsquedas, productos agregados al carrito,
+                  inicios de compra y compras con pago confirmado, con montos en CLP.
+                  Comprueba la recepción en Administrador de eventos de Meta → Probar eventos.
                   Recuerda declarar el uso de cookies en la política de privacidad.
                 </p>
               </Card>

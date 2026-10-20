@@ -288,6 +288,30 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
   cotizaciones y ventas, con separador y codificación compatibles con Excel en
   español.
 
+### Meta Pixel
+
+En **Ajustes → Analítica**, guarda solo el ID numérico del píxel. Se carga en
+la tienda y registra `PageView` en cada navegación, `ViewContent` al abrir una
+ficha, `Search` al buscar, `AddToCart` después de agregar unidades correctamente
+e `InitiateCheckout` al abrir el checkout con productos. Los importes se envían
+como pesos enteros con moneda `CLP`; los identificadores de contenido corresponden
+al ID del producto en la tienda.
+
+`Purchase` se envía en el resultado del checkout cuando el servidor confirma
+`APPROVED`, con el total del pedido y un identificador estable para evitar
+duplicados al recargar. Si el retorno se adelanta al webhook, la página consulta
+el estado cada cinco segundos durante un minuto. La deduplicación se conserva
+en ese navegador; con almacenamiento bloqueado solo dura durante la carga actual.
+Los pagos que se acreditan después de ese plazo requieren volver a abrir el
+resultado. Esta integración usa eventos de navegador; no envía Conversion API.
+
+Para comprobarlo tras desplegar, abre **Administrador de eventos de Meta →
+Probar eventos**, visita la tienda y recorre el flujo. Un pedido pendiente o
+rechazado no debe producir `Purchase`. Evita instalar el mismo píxel también
+desde Google Tag Manager para que no se dupliquen los eventos. Los bloqueadores
+del navegador pueden impedir la recepción. Las pruebas locales del envío se
+ejecutan con `npm run test:meta`.
+
 ### Avisos masivos y vista del cliente
 
 En **Pedidos**, selecciona hasta 25 pedidos de cualquier estado y redacta un

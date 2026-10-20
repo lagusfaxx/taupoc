@@ -28,7 +28,7 @@ const schema = z.object({
   catalogSplitByColor: z.string().optional(),
 
   gaMeasurementId: z.string().optional(),
-  metaPixelId: z.string().optional(),
+  metaPixelId: z.string().trim().regex(/^\d*$/, 'Ingresa solo el ID numérico del píxel de Meta.').optional(),
   gtmId: z.string().optional(),
 
   notifyOrderEmail: z.string().optional(),

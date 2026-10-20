@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { getOrCreateCart, readCartToken } from '@/lib/cart';
 import { evaluateCoupon } from '@/lib/pricing';
 import { getSession } from '@/lib/auth';
+import type { MetaEventData } from '@/lib/meta-pixel';
 
 export interface CartActionState {
   ok: boolean;
@@ -18,6 +19,8 @@ export interface CartActionState {
    * el refresco del servidor llegue a tiempo.
    */
   count?: number;
+  /** Datos del incremento real, con el precio confirmado por el servidor. */
+  analytics?: MetaEventData;
 }
 
 const MAX_PER_LINE = 10;
@@ -41,7 +44,7 @@ export async function addToCart(
 
   const variant = await prisma.variant.findUnique({
     where: { id: parsed.data.variantId },
-    include: { product: { select: { status: true, name: true } }, color: { select: { name: true } } },
+    include: { product: { select: { status: true, name: true, basePrice: true } }, color: { select: { name: true } } },
   });
 
   if (!variant || !variant.active || variant.product.status !== 'ACTIVE') {
@@ -84,6 +87,20 @@ export async function addToCart(
     ok: true,
     added: true,
     count: await countUnits(cart.id),
+    ...(quantity > (existing?.quantity ?? 0) ? {
+      analytics: {
+        content_ids: [variant.productId],
+        content_name: variant.product.name,
+        content_type: 'product',
+        contents: [{
+          id: variant.productId,
+          quantity: quantity - (existing?.quantity ?? 0),
+          item_price: variant.priceOverride ?? variant.product.basePrice,
+        }],
+        value: (quantity - (existing?.quantity ?? 0)) * (variant.priceOverride ?? variant.product.basePrice),
+        currency: 'CLP',
+      },
+    } : {}),
     message: `${variant.product.name} · ${variant.color.name} · Talla ${variant.size} agregado.`,
   };
 }

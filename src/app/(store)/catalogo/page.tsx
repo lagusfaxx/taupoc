@@ -15,6 +15,7 @@ import { CatalogShell } from '@/components/store/CatalogFilters';
 import { Empty } from '@/components/ui/Empty';
 import { ButtonLink } from '@/components/ui/Button';
 import { IconBox } from '@/components/ui/Icons';
+import { MetaEvent } from '@/components/store/MetaPixel';
 
 export const dynamic = 'force-dynamic';
 
@@ -114,6 +115,9 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(itemList)} />
+      {one(params.q)?.trim() ? (
+        <MetaEvent event="Search" eventKey={one(params.q)?.trim()} data={{ search_string: one(params.q)?.trim() }} />
+      ) : null}
 
       <div className="border-b border-line">
         <div className="container py-7">
