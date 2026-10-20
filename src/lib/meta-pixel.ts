@@ -18,6 +18,7 @@ export function resolveMetaPixelId(value: unknown): string {
 interface PixelFunction {
   (...args: unknown[]): void;
   callMethod?: (...args: unknown[]) => void;
+  disablePushState?: boolean;
   queue: unknown[][];
   push: PixelFunction;
   loaded: boolean;
@@ -48,6 +49,7 @@ n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script',
 'https://connect.facebook.net/en_US/fbevents.js');
+fbq.disablePushState=true;
 fbq('init',${JSON.stringify(pixelId)});
 fbq('track','PageView');
 window.__taupocMetaPixel={pixelId:${JSON.stringify(pixelId)},pageView:window.location.pathname+(window.location.search?'?'+new URLSearchParams(window.location.search).toString():'')};`;
@@ -64,6 +66,8 @@ function initialize(pixelId: string): PixelFunction {
       { queue: [] as unknown[][], loaded: true, version: '2.0' },
     ) as PixelFunction;
     fbq.push = fbq;
+    // PageViews ya registra la navegación del cliente; sin esto Meta la duplica.
+    fbq.disablePushState = true;
     window.fbq = fbq;
     window._fbq ??= fbq;
 
