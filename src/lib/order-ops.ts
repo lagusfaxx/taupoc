@@ -11,8 +11,10 @@ import {
   sendOrderDelivered,
   sendOrderCancelled,
   sendOrderRefunded,
+  sendAdminNewOrder,
   type OrderMailData,
 } from './mail';
+import { formatCLP } from './money';
 
 /*
  * Operaciones de pedido compartidas por el panel y el servidor MCP. Viven acá
@@ -29,6 +31,9 @@ export async function orderMailPayload(orderId: string): Promise<OrderMailData |
     firstName: order.firstName,
     subtotal: order.subtotal,
     discountTotal: order.discountTotal,
+    paymentDiscount: order.paymentDiscount,
+    paymentMethod: order.paymentMethod,
+    couponCode: order.couponCode,
     shippingTotal: order.shippingTotal,
     total: order.total,
     shippingLabel: order.shippingLabel,
@@ -92,6 +97,15 @@ export async function changeOrderStatus(params: {
   });
 
   if (!wasCommitted && willCommit) await commitStockForOrder(id);
+
+  // Un pago que se aprueba a mano cuenta el uso del cupón igual que el
+  // webhook de Mercado Pago. Si ya venía aprobado, el uso ya se contó.
+  if (status === 'PAID' && order.paymentStatus !== 'APPROVED' && order.couponId) {
+    await prisma.coupon.update({
+      where: { id: order.couponId },
+      data: { usedCount: { increment: 1 } },
+    });
+  }
   if (wasCommitted && (status === 'CANCELLED' || status === 'REFUNDED')) {
     await restoreStockForOrder(id, status === 'REFUNDED' ? 'RETURN' : 'CANCEL');
   }
@@ -119,6 +133,63 @@ export async function changeOrderStatus(params: {
   }
 
   return { ok: true, message: `Pedido marcado como ${ORDER_STATUS_LABEL[status].toLowerCase()}.` };
+}
+
+/**
+ * Confirma o rechaza la transferencia de un pedido.
+ *
+ * Confirmar es marcar el pedido como pagado: desde ahí sigue el mismo camino
+ * que un pago de Mercado Pago (stock, cupón y correo de pago confirmado).
+ * Rechazar lo cancela y avisa al cliente.
+ */
+export async function resolveTransfer(params: {
+  orderId: string;
+  decision: 'confirm' | 'reject';
+  actor: string;
+  /** Número de operación o comentario del abono, para el historial. */
+  reference?: string;
+}): Promise<{ ok: boolean; message: string }> {
+  const order = await prisma.order.findUnique({ where: { id: params.orderId } });
+  if (!order) return { ok: false, message: 'Pedido no encontrado.' };
+  if (order.paymentMethod !== 'TRANSFER') {
+    return { ok: false, message: 'Este pedido no se paga por transferencia.' };
+  }
+  if (order.paymentStatus === 'APPROVED') {
+    return { ok: false, message: 'La transferencia de este pedido ya estaba confirmada.' };
+  }
+  if (order.status !== 'PENDING') {
+    return { ok: false, message: `El pedido está ${ORDER_STATUS_LABEL[order.status].toLowerCase()}: ya no espera la transferencia.` };
+  }
+
+  const reference = params.reference?.trim().slice(0, 200) || null;
+
+  if (params.decision === 'reject') {
+    await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: 'REJECTED' } });
+    await logOrderEvent({
+      orderId: order.id,
+      type: 'transfer_rejected',
+      message: `Transferencia rechazada${reference ? ` (${reference})` : ''}.`,
+      actor: params.actor,
+    });
+    const result = await changeOrderStatus({ orderId: order.id, status: 'CANCELLED', actor: params.actor });
+    return result.ok ? { ok: true, message: 'Transferencia rechazada y pedido cancelado.' } : result;
+  }
+
+  await logOrderEvent({
+    orderId: order.id,
+    type: 'transfer_confirmed',
+    message: `Transferencia de ${formatCLP(order.total)} confirmada${reference ? ` (${reference})` : ''}.`,
+    actor: params.actor,
+    payload: reference ? { reference } : undefined,
+  });
+  const result = await changeOrderStatus({ orderId: order.id, status: 'PAID', actor: params.actor });
+  if (!result.ok) return result;
+
+  // El mismo aviso interno que manda el webhook cuando se acredita un pago.
+  const payload = await orderMailPayload(order.id);
+  if (payload) await sendAdminNewOrder(payload).catch(() => {});
+
+  return { ok: true, message: 'Transferencia confirmada. El pedido quedó pagado y se avisó al cliente.' };
 }
 
 /** Carga el seguimiento y, si se pide, marca el pedido como despachado. */

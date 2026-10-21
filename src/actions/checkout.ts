@@ -10,7 +10,8 @@ import { getShippingOptions, resolveShippingOption, type ShippingOption } from '
 import { getSettings } from '@/lib/settings';
 import { nextOrderNumber, logOrderEvent } from '@/lib/orders';
 import { createPreference, mpConfigured } from '@/lib/mercadopago';
-import { sendOrderPlaced } from '@/lib/mail';
+import { sendAdminTransferPending, sendOrderPlaced, type OrderMailData } from '@/lib/mail';
+import { paymentMethodDiscount, paymentMethodOptions } from '@/lib/payment-methods';
 import { isValidRut } from '@/lib/chile';
 
 export interface CheckoutState {
@@ -45,6 +46,9 @@ const checkoutSchema = z
     addressExtra: z.string().optional(),
     postalCode: z.string().optional(),
     customerNote: z.string().max(500).optional(),
+    paymentMethod: z.enum(['MERCADOPAGO', 'TRANSFER'], {
+      errorMap: () => ({ message: 'Elige cómo quieres pagar.' }),
+    }),
   })
   .superRefine((data, ctx) => {
     if (data.rut && data.rut.trim() && !isValidRut(data.rut)) {
@@ -56,8 +60,9 @@ const checkoutSchema = z
  * Crea el pedido y la preferencia de pago.
  *
  * El pedido nace en PENDING y no descuenta stock: el descuento ocurre cuando
- * el webhook de Mercado Pago confirma el pago. Así un checkout abandonado
- * nunca deja stock bloqueado.
+ * el webhook de Mercado Pago confirma el pago, o cuando el equipo confirma la
+ * transferencia desde el panel. Así un checkout abandonado nunca deja stock
+ * bloqueado.
  */
 export async function createCheckout(
   _prev: CheckoutState | null,
@@ -108,8 +113,23 @@ export async function createCheckout(
   const settings = await getSettings();
   const session = await getSession();
 
+  // El medio de pago y su descuento también se validan acá: un medio
+  // deshabilitado en el panel no se acepta aunque llegue en el formulario.
+  const method = paymentMethodOptions(settings).find((o) => o.id === data.paymentMethod);
+  if (!method) {
+    return {
+      ok: false,
+      message: 'El medio de pago elegido ya no está disponible.',
+      fieldErrors: { paymentMethod: 'Elige otro medio de pago.' },
+    };
+  }
+  const isTransfer = method.id === 'TRANSFER';
+
+  const productsTotal = cart.subtotal - cart.discount;
+  const paymentDiscount = paymentMethodDiscount(productsTotal, method.discountPercent);
+  const discountTotal = cart.discount + paymentDiscount;
   const shippingTotal = cart.couponFreeShipping ? 0 : shipping.price;
-  const total = Math.max(0, cart.subtotal - cart.discount + shippingTotal);
+  const total = Math.max(0, cart.subtotal - discountTotal + shippingTotal);
 
   const coupon = cart.couponCode
     ? await prisma.coupon.findUnique({ where: { code: cart.couponCode } })
@@ -125,8 +145,10 @@ export async function createCheckout(
       phone: data.phone,
       status: 'PENDING',
       paymentStatus: 'PENDING',
+      paymentMethod: method.id,
       subtotal: cart.subtotal,
-      discountTotal: cart.discount,
+      discountTotal,
+      paymentDiscount,
       shippingTotal,
       total,
       couponId: coupon?.id ?? null,
@@ -166,19 +188,22 @@ export async function createCheckout(
   await logOrderEvent({
     orderId: order.id,
     type: 'created',
-    message: `Pedido creado por ${data.email}. Entrega: ${shipping.label}.`,
+    message: `Pedido creado por ${data.email}. Entrega: ${shipping.label}. Pago: ${method.label}.`,
   });
 
   if (session && data.rut) {
     await prisma.user.update({ where: { id: session.id }, data: { rut: data.rut } }).catch(() => {});
   }
 
-  await sendOrderPlaced({
+  const mailData: OrderMailData = {
     number: order.number,
     email: order.email,
     firstName: order.firstName,
     subtotal: order.subtotal,
     discountTotal: order.discountTotal,
+    paymentDiscount: order.paymentDiscount,
+    paymentMethod: order.paymentMethod,
+    couponCode: order.couponCode,
     shippingTotal: order.shippingTotal,
     total: order.total,
     shippingLabel: order.shippingLabel,
@@ -188,7 +213,23 @@ export async function createCheckout(
     commune: order.commune,
     region: order.region,
     items: order.items,
-  }).catch(() => {});
+  };
+
+  await sendOrderPlaced(mailData).catch(() => {});
+
+  if (isTransfer) {
+    // Sin pasarela de por medio: el pedido espera a que el equipo vea el
+    // abono y lo confirme desde el panel. Ahí sigue el camino de siempre.
+    await logOrderEvent({
+      orderId: order.id,
+      type: 'transfer_pending',
+      message: 'Esperando la transferencia del cliente.',
+    });
+    await sendAdminTransferPending(mailData).catch(() => {});
+    if (cart.id) await clearCart(cart.id);
+    revalidatePath('/', 'layout');
+    redirect(`/checkout/resultado?order=${order.number}&estado=transferencia`);
+  }
 
   if (!mpConfigured()) {
     // Sin credenciales de Mercado Pago no se puede cobrar: el pedido queda
@@ -217,7 +258,7 @@ export async function createCheckout(
         pictureUrl: line.imageUrl,
       })),
       shippingCost: shippingTotal,
-      discount: cart.discount,
+      discount: discountTotal,
       payer: {
         name: data.firstName,
         surname: data.lastName,

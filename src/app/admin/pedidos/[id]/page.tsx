@@ -11,12 +11,13 @@ import { buildMetadata } from '@/lib/seo';
 import {
   ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, orderStatusTone, paymentStatusTone,
 } from '@/lib/orders';
+import { PAYMENT_METHOD_LABEL } from '@/lib/payment-methods';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { Card } from '@/components/admin/Card';
 import { Table, Td, Th, Tr } from '@/components/admin/Table';
 import { Badge } from '@/components/ui/Badge';
 import {
-  OrderNoteForm, OrderStatusForm, RefundForm, TrackingForm, OrderItemsForm,
+  OrderNoteForm, OrderStatusForm, RefundForm, TrackingForm, OrderItemsForm, TransferForm,
   type AvailableVariant,
 } from '@/components/admin/OrderPanel';
 import { IconPrint } from '@/components/ui/Icons';
@@ -135,10 +136,16 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
                 <dt className="text-chalk-faint">Subtotal</dt>
                 <dd className="text-chalk">{formatCLP(order.subtotal)}</dd>
               </div>
-              {order.discountTotal > 0 ? (
+              {order.discountTotal - order.paymentDiscount > 0 ? (
                 <div className="flex justify-between">
                   <dt className="text-chalk-faint">Descuento {order.couponCode ? `(${order.couponCode})` : ''}</dt>
-                  <dd className="text-signal-ok">−{formatCLP(order.discountTotal)}</dd>
+                  <dd className="text-signal-ok">−{formatCLP(order.discountTotal - order.paymentDiscount)}</dd>
+                </div>
+              ) : null}
+              {order.paymentDiscount > 0 ? (
+                <div className="flex justify-between">
+                  <dt className="text-chalk-faint">Descuento {PAYMENT_METHOD_LABEL[order.paymentMethod].toLowerCase()}</dt>
+                  <dd className="text-signal-ok">−{formatCLP(order.paymentDiscount)}</dd>
                 </div>
               ) : null}
               <div className="flex justify-between">
@@ -203,14 +210,23 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
 
           <Card title="Pago">
             <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              {[
-                ['Estado', PAYMENT_STATUS_LABEL[order.paymentStatus]],
-                ['ID de pago', order.mpPaymentId ?? '—'],
-                ['Medio', order.mpPaymentType ?? '—'],
-                ['Cuotas', order.mpInstallments ? String(order.mpInstallments) : '—'],
-                ['Detalle', order.mpStatusDetail ?? '—'],
-                ['Preferencia', order.mpPreferenceId ?? '—'],
-              ].map(([label, value]) => (
+              {(order.paymentMethod === 'TRANSFER'
+                ? [
+                    ['Método', PAYMENT_METHOD_LABEL[order.paymentMethod]],
+                    ['Estado', PAYMENT_STATUS_LABEL[order.paymentStatus]],
+                    ['Monto a recibir', formatCLP(order.total)],
+                    ['Descuento por transferencia', order.paymentDiscount > 0 ? formatCLP(order.paymentDiscount) : '—'],
+                  ]
+                : [
+                    ['Método', PAYMENT_METHOD_LABEL[order.paymentMethod]],
+                    ['Estado', PAYMENT_STATUS_LABEL[order.paymentStatus]],
+                    ['ID de pago', order.mpPaymentId ?? '—'],
+                    ['Medio', order.mpPaymentType ?? '—'],
+                    ['Cuotas', order.mpInstallments ? String(order.mpInstallments) : '—'],
+                    ['Detalle', order.mpStatusDetail ?? '—'],
+                    ['Preferencia', order.mpPreferenceId ?? '—'],
+                  ]
+              ).map(([label, value]) => (
                 <div key={label}>
                   <dt className="font-display text-[9.5px] uppercase tracking-mega text-chalk-faint">{label}</dt>
                   <dd className="mt-1 break-all text-[13px] text-chalk-dim">{value}</dd>
@@ -238,6 +254,9 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         </div>
 
         <div className="min-w-0 space-y-5">
+          {order.paymentMethod === 'TRANSFER' && order.status === 'PENDING' && order.paymentStatus === 'PENDING' ? (
+            <TransferForm orderId={order.id} total={order.total} />
+          ) : null}
           <OrderItemsForm
             orderId={order.id}
             items={order.items.map((item) => ({

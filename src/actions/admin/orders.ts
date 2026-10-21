@@ -7,7 +7,7 @@ import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { logOrderEvent } from '@/lib/orders';
 import { restoreStockForOrder } from '@/lib/inventory';
-import { changeOrderStatus, saveOrderTracking } from '@/lib/order-ops';
+import { changeOrderStatus, resolveTransfer, saveOrderTracking } from '@/lib/order-ops';
 import { mailTransport, sendMail } from '@/lib/mail';
 import { refundPayment } from '@/lib/mercadopago';
 import type { AdminState } from './products';
@@ -27,6 +27,18 @@ export async function updateOrderStatus(
   const status = String(formData.get('status') ?? '') as OrderStatus;
 
   const result = await changeOrderStatus({ orderId: id, status, actor: admin.email });
+  if (result.ok) revalidateOrder(id);
+  return result;
+}
+
+/** Confirma el abono de una transferencia o la rechaza. */
+export async function decideTransfer(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const id = String(formData.get('orderId') ?? '');
+  const decision = formData.get('decision') === 'reject' ? 'reject' : 'confirm';
+  const reference = String(formData.get('reference') ?? '');
+
+  const result = await resolveTransfer({ orderId: id, decision, reference, actor: admin.email });
   if (result.ok) revalidateOrder(id);
   return result;
 }

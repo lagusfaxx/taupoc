@@ -4,6 +4,7 @@ import { formatCLP } from './money';
 import { getSettings } from './settings';
 import { isMediaUrl } from './media-url';
 import type { PlantillaDePrueba } from './mail-kinds';
+import { PAYMENT_METHOD_LABEL, type PaymentMethodId } from './payment-methods';
 
 /**
  * Correo transaccional. Se elige el transporte en este orden:
@@ -254,16 +255,30 @@ function itemsTable(items: { productName: string; colorName: string; size: strin
   </table>`;
 }
 
-function totals(o: { subtotal: number; discountTotal: number; shippingTotal: number; total: number }) {
+function totals(o: {
+  subtotal: number;
+  discountTotal: number;
+  paymentDiscount?: number;
+  paymentMethod?: PaymentMethodId;
+  couponCode?: string | null;
+  shippingTotal: number;
+  total: number;
+}) {
   const line = (label: string, value: string, strong = false) =>
     `<tr><td style="padding:${strong ? '12px 0 0' : '5px 0'};color:${strong ? CHALK : CHALK_FAINT};font-weight:${strong ? 700 : 400};font-size:${strong ? '15px' : '13.5px'};${strong ? `border-top:1px solid ${LINE};` : ''}">${label}</td>
      <td align="right" style="padding:${strong ? '12px 0 0' : '5px 0'};color:${strong ? ACCENT : CHALK_DIM};font-weight:${strong ? 700 : 400};font-size:${strong ? '20px' : '13.5px'};white-space:nowrap;${strong ? `border-top:1px solid ${LINE};` : ''}">${value}</td></tr>`;
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:14px;">
     ${line('Subtotal', formatCLP(o.subtotal))}
-    ${o.discountTotal > 0 ? line('Descuento', `-${formatCLP(o.discountTotal)}`) : ''}
+    ${couponDiscount(o) > 0 ? line(o.couponCode ? `Descuento (${esc(o.couponCode)})` : 'Descuento', `-${formatCLP(couponDiscount(o))}`) : ''}
+    ${o.paymentDiscount && o.paymentDiscount > 0 ? line(`Descuento ${esc(PAYMENT_METHOD_LABEL[o.paymentMethod ?? 'MERCADOPAGO'].toLowerCase())}`, `-${formatCLP(o.paymentDiscount)}`) : ''}
     ${line('Despacho', o.shippingTotal > 0 ? formatCLP(o.shippingTotal) : 'Gratis')}
     ${line('Total', formatCLP(o.total), true)}
   </table>`;
+}
+
+/** La parte del descuento que no viene del medio de pago. */
+function couponDiscount(o: { discountTotal: number; paymentDiscount?: number }): number {
+  return Math.max(0, o.discountTotal - (o.paymentDiscount ?? 0));
 }
 
 export interface OrderMailData {
@@ -271,7 +286,12 @@ export interface OrderMailData {
   email: string;
   firstName?: string | null;
   subtotal: number;
+  /** Cupón más medio de pago. */
   discountTotal: number;
+  /** La parte de `discountTotal` que viene del medio de pago. */
+  paymentDiscount?: number;
+  paymentMethod?: PaymentMethodId;
+  couponCode?: string | null;
   shippingTotal: number;
   total: number;
   shippingLabel?: string | null;
@@ -324,10 +344,41 @@ function hola(order: OrderMailData): string {
 
 // ── Correos del ciclo del pedido ──────────────────────────────
 
+/**
+ * Datos para transferir, con el monto y el número de pedido como referencia.
+ * Es lo que el cliente necesita a mano para pagar: va arriba del detalle.
+ */
+function transferBlock(order: OrderMailData, instructions: string): string {
+  const datos = esc(instructions.trim()).replace(/\r?\n/g, '<br>');
+  return panel(
+    'Datos para transferir',
+    `<div style="color:${CHALK};">${datos || 'Te escribiremos con los datos de la cuenta.'}</div>
+     <div style="margin-top:12px;">Monto exacto: <strong style="color:${ACCENT};">${formatCLP(order.total)}</strong></div>
+     <div>En el comentario indica el pedido <strong style="color:${CHALK};">${esc(order.number)}</strong>.</div>`,
+    ACCENT,
+  );
+}
+
 export async function sendOrderPlaced(order: OrderMailData, opts?: EnvioOpts) {
   const s = await getSettings();
   if (!opts?.force && !s.notifyOrderEmail) return;
   const b = await brand();
+  if (order.paymentMethod === 'TRANSFER') {
+    const html = layout({
+      title: `Pedido ${order.number}`,
+      preheader: `${hola(order)}recibimos tu pedido ${order.number}. Transfiere ${formatCLP(order.total)} para completarlo.`,
+      brand: b,
+      body:
+        heading('Pedido recibido', ACCENT, `Recibimos tu pedido <span style="color:${ACCENT};">${esc(order.number)}</span>`) +
+        `<p style="margin:0;">${hola(order)}para completarlo transfiere el total a la cuenta de abajo. Apenas veamos el abono confirmamos el pago y preparamos tu envío.</p>` +
+        transferBlock(order, s.transferInstructions) +
+        itemsTable(order.items) +
+        totals(order) +
+        deliveryBlock(order) +
+        button(`${b.siteUrl}/cuenta/pedidos`, 'Ver mi pedido'),
+    });
+    return await sendMail({ to: opts?.to ?? order.email, subject: `Pedido ${order.number} recibido · datos para transferir`, html });
+  }
   const html = layout({
     title: `Pedido ${order.number}`,
     preheader: `${hola(order)}recibimos tu pedido ${order.number}. Estamos esperando la confirmación del pago.`,
@@ -500,6 +551,28 @@ export async function sendAdminNewOrder(order: OrderMailData, opts?: EnvioOpts) 
   await sendMail({ to, subject: `[TAUPOC] Pedido pagado ${order.number} · ${formatCLP(order.total)}`, html });
 }
 
+/** Aviso interno: entró un pedido por transferencia que hay que confirmar. */
+export async function sendAdminTransferPending(order: OrderMailData, opts?: EnvioOpts) {
+  const s = await getSettings();
+  const to = opts?.to ?? process.env.ADMIN_ALERT_EMAIL;
+  if (!to || (!opts?.force && !s.notifyAdminNewOrder)) return;
+  const b = await brand();
+  const html = layout({
+    title: `Transferencia por confirmar ${order.number}`,
+    preheader: `${order.number} · ${formatCLP(order.total)} · ${order.email}`,
+    brand: b,
+    body:
+      heading('Transferencia por confirmar', WARN, `Pedido <span style="color:${ACCENT};">${esc(order.number)}</span>`) +
+      `<p style="margin:0;">El cliente eligió pagar por transferencia. Cuando veas el abono de <strong style="color:${CHALK};">${formatCLP(order.total)}</strong>, confírmalo desde el detalle del pedido: ahí se descuenta el stock y se avisa al cliente.</p>` +
+      panel('Cliente', esc(order.email)) +
+      itemsTable(order.items) +
+      totals(order) +
+      deliveryBlock(order) +
+      button(`${b.siteUrl}/admin/pedidos?metodo=TRANSFER&pago=PENDING`, 'Abrir en el panel'),
+  });
+  await sendMail({ to, subject: `[TAUPOC] Transferencia por confirmar ${order.number} · ${formatCLP(order.total)}`, html });
+}
+
 export async function sendLowStockAlert(
   items: { sku: string; productName: string; colorName: string; size: string; stock: number }[],
   opts?: EnvioOpts,
@@ -604,6 +677,18 @@ function pedidoDeMuestra(destino: string): OrderMailData {
 }
 
 
+/** El mismo pedido de muestra, pagado por transferencia con 5 % de descuento. */
+function transferenciaDeMuestra(order: OrderMailData): OrderMailData {
+  const paymentDiscount = Math.round(((order.subtotal - order.discountTotal) * 5) / 100);
+  return {
+    ...order,
+    paymentMethod: 'TRANSFER',
+    paymentDiscount,
+    discountTotal: order.discountTotal + paymentDiscount,
+    total: order.total - paymentDiscount,
+  };
+}
+
 /**
  * Manda una plantilla a la dirección que se indique.
  *
@@ -630,6 +715,12 @@ export async function sendTestMail(
     case 'cancelled': await sendOrderCancelled(order, opts); break;
     case 'refunded': await sendOrderRefunded(order, opts); break;
     case 'admin': await sendAdminNewOrder(order, opts); break;
+    case 'placed-transfer':
+      await sendOrderPlaced(transferenciaDeMuestra(order), opts);
+      break;
+    case 'admin-transfer':
+      await sendAdminTransferPending(transferenciaDeMuestra(order), opts);
+      break;
     case 'lowstock':
       await sendLowStockAlert(
         [

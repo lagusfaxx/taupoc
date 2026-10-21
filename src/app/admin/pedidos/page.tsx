@@ -9,6 +9,7 @@ import { buildMetadata } from '@/lib/seo';
 import {
   ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, orderStatusTone, paymentStatusTone,
 } from '@/lib/orders';
+import { PAYMENT_METHOD_LABEL } from '@/lib/payment-methods';
 import { BulkOrderMail, BulkOrderCheckbox } from '@/components/admin/BulkOrderMail';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { Toolbar } from '@/components/admin/Toolbar';
@@ -36,6 +37,7 @@ export default async function AdminOrdersPage({
   const query = one('q')?.trim();
   const status = one('estado');
   const payment = one('pago');
+  const method = one('metodo');
 
   const where: Prisma.OrderWhereInput = {
     ...(query
@@ -51,9 +53,10 @@ export default async function AdminOrdersPage({
       : {}),
     ...(status ? { status: status as never } : {}),
     ...(payment ? { paymentStatus: payment as never } : {}),
+    ...(method ? { paymentMethod: method as never } : {}),
   };
 
-  const [orders, total, pending, processing, todayRevenue] = await Promise.all([
+  const [orders, total, pending, processing, todayRevenue, transfers] = await Promise.all([
     prisma.order.findMany({
       where,
       include: { items: { select: { quantity: true } } },
@@ -71,6 +74,7 @@ export default async function AdminOrdersPage({
       },
       _sum: { total: true },
     }),
+    prisma.order.count({ where: { paymentMethod: 'TRANSFER', status: 'PENDING', paymentStatus: 'PENDING' } }),
   ]);
 
   return (
@@ -86,10 +90,17 @@ export default async function AdminOrdersPage({
         }
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard label="Pedidos totales" value={String(total)} />
         <StatCard label="Pagados por preparar" value={String(pending)} tone={pending > 0 ? 'warn' : 'ok'} />
         <StatCard label="En preparación" value={String(processing)} tone="info" />
+        <Link href="/admin/pedidos?metodo=TRANSFER&pago=PENDING&estado=PENDING" className="block">
+          <StatCard
+            label="Transferencias por confirmar"
+            value={String(transfers)}
+            tone={transfers > 0 ? 'warn' : 'ok'}
+          />
+        </Link>
         <StatCard label="Ventas de hoy" value={formatCLP(todayRevenue._sum.total ?? 0)} tone="accent" />
       </div>
 
@@ -105,6 +116,11 @@ export default async function AdminOrdersPage({
             name: 'pago',
             label: 'Todos los pagos',
             options: Object.entries(PAYMENT_STATUS_LABEL).map(([value, label]) => ({ value, label })),
+          },
+          {
+            name: 'metodo',
+            label: 'Todos los medios',
+            options: Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => ({ value, label })),
           },
         ]}
       />
@@ -145,7 +161,10 @@ export default async function AdminOrdersPage({
                   </p>
                 </Td>
                 <Td><Badge tone={orderStatusTone(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge></Td>
-                <Td><Badge tone={paymentStatusTone(order.paymentStatus)}>{PAYMENT_STATUS_LABEL[order.paymentStatus]}</Badge></Td>
+                <Td>
+                  <Badge tone={paymentStatusTone(order.paymentStatus)}>{PAYMENT_STATUS_LABEL[order.paymentStatus]}</Badge>
+                  <p className="mt-1 text-[11.5px] text-chalk-faint">{PAYMENT_METHOD_LABEL[order.paymentMethod]}</p>
+                </Td>
                 <Td align="center">{order.items.reduce((s, i) => s + i.quantity, 0)}</Td>
                 <Td align="right" className="font-display font-semibold text-chalk">{formatCLP(order.total)}</Td>
               </Tr>

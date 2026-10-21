@@ -103,12 +103,10 @@ enum Gender {
 
 /**
  * Un enlace de la barra de navegación de la tienda.
- *
  * El menú era código: cambiar una categoría del encabezado obligaba a tocar
  * `Header.tsx` y volver a desplegar. Con esto se edita desde el panel. Los
  * enlaces de primer nivel tienen `parentId` nulo; sus hijos son las entradas
  * del desplegable, en el orden de `position`.
- *
  * Sin ninguna fila, la tienda muestra el menú por defecto de `lib/nav.ts`: una
  * instalación nueva —o un menú borrado por error— nunca queda sin navegación.
  */
@@ -143,14 +141,14 @@ model Category {
 
 /// Línea técnica (R-SKIN, VEL-SKIN, accesorios...). Editable desde el admin.
 model ProductLine {
-  id          String         @id @default(cuid())
-  slug        String         @unique
+  id          String  @id @default(cuid())
+  slug        String  @unique
   name        String
   tagline     String?
   description String?
-  accentHex   String         @default("#00E0B8")
-  sortOrder   Int            @default(0)
-  active      Boolean        @default(true)
+  accentHex   String  @default("#00E0B8")
+  sortOrder   Int     @default(0)
+  active      Boolean @default(true)
 
   /// Escalón dentro de la gama: 1 es la línea de entrada a competición y los
   /// números mayores son líneas superiores. Ordena el comparador y decide qué
@@ -166,14 +164,13 @@ model ProductLine {
   /// distingue una tarjeta de la otra antes de entrar a la ficha.
   cardClaim String?
 
-  products    Product[]
-  sizeChart   SizeChartRow[]
-  metrics     LineMetric[]
+  products  Product[]
+  sizeChart SizeChartRow[]
+  metrics   LineMetric[]
 }
 
 /**
  * Una fila del comparador entre líneas.
- *
  * Las dos líneas repiten las mismas etiquetas para que el comparador las
  * enfrente fila por fila. `score` es solo el largo de la barra; el dato que
  * se lee es `value`.
@@ -586,6 +583,13 @@ enum PaymentStatus {
   CANCELLED
 }
 
+/// Cómo paga el cliente. Mercado Pago se confirma solo por webhook; la
+/// transferencia la confirma el equipo desde el panel al ver el abono.
+enum PaymentMethod {
+  MERCADOPAGO
+  TRANSFER
+}
+
 model Order {
   id     String  @id @default(cuid())
   /// Número visible al cliente, ej. TP-1042
@@ -596,12 +600,16 @@ model Order {
 
   status        OrderStatus   @default(PENDING)
   paymentStatus PaymentStatus @default(PENDING)
+  paymentMethod PaymentMethod @default(MERCADOPAGO)
 
-  subtotal      Int    @default(0)
-  discountTotal Int    @default(0)
-  shippingTotal Int    @default(0)
-  total         Int    @default(0)
-  currency      String @default("CLP")
+  subtotal        Int    @default(0)
+  /// Todos los descuentos: cupón más el del medio de pago.
+  discountTotal   Int    @default(0)
+  /// La parte de `discountTotal` que viene del medio de pago elegido.
+  paymentDiscount Int    @default(0)
+  shippingTotal   Int    @default(0)
+  total           Int    @default(0)
+  currency        String @default("CLP")
 
   couponId   String?
   couponCode String?
@@ -648,6 +656,7 @@ model Order {
 
   @@index([status])
   @@index([paymentStatus])
+  @@index([paymentMethod])
   @@index([createdAt])
   @@index([email])
   @@index([mpPaymentId])

@@ -11,6 +11,8 @@ import { ButtonLink } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { IconAlert, IconCheck, IconTruck } from '@/components/ui/Icons';
 import { PaymentTracking } from '@/components/store/PaymentTracking';
+import { TransferInstructions } from '@/components/store/TransferInstructions';
+import { getSettings } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,25 +35,32 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
   });
   if (!order) notFound();
 
+  const settings = await getSettings();
   const noGateway = params.estado === 'sin-pasarela';
   const approved = order.paymentStatus === 'APPROVED';
   const rejected = order.paymentStatus === 'REJECTED' || order.paymentStatus === 'CANCELLED';
+  const awaitingTransfer =
+    order.paymentMethod === 'TRANSFER' && order.status === 'PENDING' && order.paymentStatus === 'PENDING';
 
-  const headline = noGateway
-    ? 'Pedido registrado'
-    : approved
-      ? '¡Pago confirmado!'
-      : rejected
-        ? 'El pago no se completó'
-        : 'Estamos confirmando tu pago';
+  const headline = awaitingTransfer
+    ? 'Pedido registrado: falta la transferencia'
+    : noGateway
+      ? 'Pedido registrado'
+      : approved
+        ? '¡Pago confirmado!'
+        : rejected
+          ? 'El pago no se completó'
+          : 'Estamos confirmando tu pago';
 
-  const message = noGateway
-    ? 'Guardamos tu pedido. Te contactamos para coordinar el pago y el despacho.'
-    : approved
-      ? 'Ya estamos preparando tu envío. Te avisamos por correo cuando salga con el número de seguimiento.'
-      : rejected
-        ? 'El medio de pago rechazó la transacción. Puedes volver a intentarlo con otra tarjeta.'
-        : 'Mercado Pago está procesando la transacción. Apenas se acredite te llega el correo de confirmación. Esto puede tardar unos minutos.';
+  const message = awaitingTransfer
+    ? 'Transfiere el total a la cuenta de abajo. Apenas veamos el abono confirmamos el pago y preparamos tu envío. Te enviamos estos datos también por correo.'
+    : noGateway
+      ? 'Guardamos tu pedido. Te contactamos para coordinar el pago y el despacho.'
+      : approved
+        ? 'Ya estamos preparando tu envío. Te avisamos por correo cuando salga con el número de seguimiento.'
+        : rejected
+          ? 'El medio de pago rechazó la transacción. Puedes volver a intentarlo con otra tarjeta.'
+          : 'Mercado Pago está procesando la transacción. Apenas se acredite te llega el correo de confirmación. Esto puede tardar unos minutos.';
 
   const tone = approved ? 'ok' : rejected ? 'bad' : 'warn';
   const Icon = approved ? IconCheck : rejected ? IconAlert : IconTruck;
@@ -97,6 +106,15 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
               <p className="mt-2.5 text-[14.5px] leading-relaxed text-chalk-dim">{message}</p>
             </div>
           </div>
+
+          {awaitingTransfer ? (
+            <TransferInstructions
+              className="mt-8"
+              instructions={settings.transferInstructions}
+              total={order.total}
+              orderNumber={order.number}
+            />
+          ) : null}
 
           <dl className="mt-8 grid gap-px border border-line bg-line sm:grid-cols-2">
             <div className="bg-ink-900 p-4">
@@ -159,7 +177,7 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
             <ButtonLink href="/catalogo" variant="outline" size="lg">Seguir comprando</ButtonLink>
           </div>
 
-          {!approved && !noGateway ? (
+          {!approved && !noGateway && !awaitingTransfer ? (
             <p className="mt-6 text-[13px] text-chalk-faint">
               ¿Algo no cuadra?{' '}
               <Link href="/contacto" className="underline underline-offset-4 hover:text-chalk">

@@ -3,7 +3,7 @@
 import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
-  refundOrder, saveOrderNote, saveTracking, updateOrderStatus, updateOrderItem,
+  decideTransfer, refundOrder, saveOrderNote, saveTracking, updateOrderStatus, updateOrderItem,
 } from '@/actions/admin/orders';
 import type { AdminState } from '@/actions/admin/products';
 import { ORDER_STATUS_LABEL } from '@/lib/order-labels';
@@ -71,6 +71,68 @@ export function OrderStatusForm({ orderId, status }: { orderId: string; status: 
         <Submit label="Actualizar estado" />
       </form>
     </Card>
+  );
+}
+
+/**
+ * Confirmación de la transferencia. Solo aparece mientras el pedido la espera:
+ * confirmar lo deja pagado y sigue el camino normal; rechazar lo cancela.
+ */
+export function TransferForm({ orderId, total }: { orderId: string; total: number }) {
+  const [state, action] = useActionState<AdminState | null, FormData>(decideTransfer, null);
+
+  return (
+    <Card
+      title="Transferencia por confirmar"
+      description={`Revisa en el banco que llegó el abono de ${formatCLP(total)} antes de confirmar.`}
+    >
+      <Status state={state} />
+      <form
+        action={action}
+        onSubmit={(e) => {
+          const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+          const message =
+            submitter?.value === 'reject'
+              ? '¿Rechazar la transferencia? El pedido se cancela y se avisa al cliente.'
+              : `¿Confirmas que recibiste ${formatCLP(total)}? El pedido pasa a pagado, se descuenta el stock y se avisa al cliente.`;
+          if (!confirm(message)) e.preventDefault();
+        }}
+        className="space-y-3"
+      >
+        <input type="hidden" name="orderId" value={orderId} />
+        <Input
+          label="N° de operación o comentario"
+          hint="opcional"
+          name="reference"
+          placeholder="Ej.: transferencia 0012345, Banco de Chile"
+          help="Queda en el historial del pedido."
+        />
+        <div className="flex flex-wrap gap-2">
+          <TransferButton value="confirm" label="Confirmar transferencia" variant="accent" />
+          <TransferButton value="reject" label="Rechazar" variant="danger" />
+        </div>
+      </form>
+    </Card>
+  );
+}
+
+function TransferButton({ value, label, variant }: { value: string; label: string; variant: 'accent' | 'danger' }) {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      name="decision"
+      value={value}
+      disabled={pending}
+      className={cn(
+        'h-10 px-5 font-display text-[11px] font-bold uppercase tracking-widest transition disabled:opacity-50',
+        variant === 'accent'
+          ? 'accent-bg hover:brightness-110'
+          : 'border border-signal-bad/50 bg-signal-bad/10 text-signal-bad hover:bg-signal-bad/20',
+      )}
+    >
+      {pending ? 'Procesando…' : label}
+    </button>
   );
 }
 

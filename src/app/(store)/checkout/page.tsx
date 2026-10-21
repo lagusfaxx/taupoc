@@ -9,6 +9,7 @@ import { CheckoutForm } from '@/components/store/CheckoutForm';
 import { mpConfigured, mpMode } from '@/lib/mercadopago';
 import { MetaEvent } from '@/components/store/MetaPixel';
 import { metaCartData } from '@/lib/meta-pixel';
+import { paymentMethodOptions } from '@/lib/payment-methods';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,10 @@ export default async function CheckoutPage() {
   const [cart, user, settings] = await Promise.all([getCart(), getCurrentUser(), getSettings()]);
 
   if (cart.lines.length === 0) redirect('/carrito');
+
+  const paymentMethods = paymentMethodOptions(settings);
+  const offersMercadoPago = paymentMethods.some((m) => m.id === 'MERCADOPAGO');
+  const offersTransfer = paymentMethods.some((m) => m.id === 'TRANSFER');
 
   const address = user
     ? await prisma.address.findFirst({
@@ -37,10 +42,14 @@ export default async function CheckoutPage() {
         Finalizar compra
       </h1>
       <p className="mt-2.5 text-[14px] text-chalk-faint">
-        Pago procesado por Mercado Pago · Crédito, débito y cuotas
+        {offersMercadoPago && offersTransfer
+          ? 'Paga con Mercado Pago (crédito, débito y cuotas) o por transferencia bancaria'
+          : offersTransfer
+            ? 'Pago por transferencia bancaria'
+            : 'Pago procesado por Mercado Pago · Crédito, débito y cuotas'}
       </p>
 
-      {!mpConfigured() ? (
+      {!offersMercadoPago ? null : !mpConfigured() ? (
         <p className="mt-6 border border-signal-warn/40 bg-signal-warn/10 px-4 py-3 text-[13.5px] text-signal-warn">
           La pasarela de pago aún no está configurada. Puedes dejar tu pedido registrado y te
           contactamos para coordinar el pago.
@@ -55,6 +64,7 @@ export default async function CheckoutPage() {
         <CheckoutForm
           cart={cart}
           installmentsMax={settings.installmentsMax}
+          paymentMethods={paymentMethods}
           defaults={{
             email: user?.email ?? '',
             firstName: user?.name ?? address?.firstName ?? '',
