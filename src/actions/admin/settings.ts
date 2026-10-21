@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { saveSettings } from '@/lib/settings';
 import { parseCLP } from '@/lib/money';
+import { clampPercent } from '@/lib/payment-methods';
 import type { AdminState } from './products';
 
 const schema = z.object({
@@ -26,6 +27,12 @@ const schema = z.object({
   announcementBar: z.string().optional(),
   announcementActive: z.string().optional(),
   catalogSplitByColor: z.string().optional(),
+
+  mercadoPagoEnabled: z.string().optional(),
+  mercadoPagoDiscount: z.string().optional(),
+  transferEnabled: z.string().optional(),
+  transferDiscount: z.string().optional(),
+  transferInstructions: z.string().max(2000).optional(),
 
   gaMeasurementId: z.string().optional(),
   metaPixelId: z.string().trim().regex(/^\d*$/, 'Ingresa solo el ID numérico del píxel de Meta.').optional(),
@@ -50,6 +57,16 @@ export async function updateSettings(
 
   const freeShipping = (d.freeShippingOver ?? '').trim();
 
+  const mercadoPagoEnabled = d.mercadoPagoEnabled === 'on';
+  const transferEnabled = d.transferEnabled === 'on';
+  const transferInstructions = d.transferInstructions?.trim() ?? '';
+  if (!mercadoPagoEnabled && !transferEnabled) {
+    return { ok: false, message: 'Deja al menos un medio de pago habilitado.' };
+  }
+  if (transferEnabled && !transferInstructions) {
+    return { ok: false, message: 'Ingresa los datos de la cuenta para recibir transferencias.' };
+  }
+
   await saveSettings({
     storeName: d.storeName.trim(),
     tagline: d.tagline?.trim() ?? '',
@@ -69,6 +86,12 @@ export async function updateSettings(
     announcementBar: d.announcementBar?.trim() ?? '',
     announcementActive: d.announcementActive === 'on',
     catalogSplitByColor: d.catalogSplitByColor === 'on',
+
+    mercadoPagoEnabled,
+    mercadoPagoDiscount: clampPercent(Number(d.mercadoPagoDiscount ?? 0) || 0),
+    transferEnabled,
+    transferDiscount: clampPercent(Number(d.transferDiscount ?? 0) || 0),
+    transferInstructions,
 
     gaMeasurementId: d.gaMeasurementId?.trim() ?? '',
     metaPixelId: d.metaPixelId?.trim() ?? '',

@@ -89,7 +89,7 @@ export async function createPreference(input: CreatePreferenceInput) {
     items.push({
       id: 'descuento',
       title: 'Descuento aplicado',
-      description: 'Cupón',
+      description: 'Cupón y medio de pago',
       quantity: 1,
       unit_price: -input.discount,
       currency_id: 'CLP',

@@ -144,6 +144,67 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
             ),
           },
           {
+            id: 'pagos',
+            label: 'Pagos',
+            content: (
+              <div className="grid gap-5 xl:grid-cols-2">
+                <Card
+                  title="Mercado Pago"
+                  description="Crédito, débito y cuotas. El pago se confirma solo, por el webhook."
+                >
+                  <div className="space-y-4">
+                    <Checkbox
+                      name="mercadoPagoEnabled"
+                      defaultChecked={settings.mercadoPagoEnabled}
+                      label="Ofrecer Mercado Pago en el checkout"
+                    />
+                    <Input
+                      label="Descuento por pagar con Mercado Pago"
+                      hint="%"
+                      name="mercadoPagoDiscount"
+                      type="number"
+                      min={0}
+                      max={100}
+                      defaultValue={String(settings.mercadoPagoDiscount)}
+                      help="Sobre los productos, después del cupón. El despacho no se descuenta. 0 para no aplicar."
+                    />
+                  </div>
+                </Card>
+
+                <Card
+                  title="Transferencia bancaria"
+                  description="El pedido queda pendiente hasta que confirmas el abono desde el detalle del pedido."
+                >
+                  <div className="space-y-4">
+                    <Checkbox
+                      name="transferEnabled"
+                      defaultChecked={settings.transferEnabled}
+                      label="Ofrecer transferencia en el checkout"
+                    />
+                    <Input
+                      label="Descuento por pagar con transferencia"
+                      hint="%"
+                      name="transferDiscount"
+                      type="number"
+                      min={0}
+                      max={100}
+                      defaultValue={String(settings.transferDiscount)}
+                      help="Sobre los productos, después del cupón. El despacho no se descuenta. 0 para no aplicar."
+                    />
+                    <Textarea
+                      label="Datos para transferir"
+                      name="transferInstructions"
+                      rows={6}
+                      defaultValue={settings.transferInstructions}
+                      placeholder={'Banco Estado · Cuenta corriente\nN° 123456789\nRUT 76.123.456-7\nTAUPOC Chile SpA\npagos@taupoc.cl'}
+                      help="Se muestran al cliente al terminar la compra y en el correo del pedido, junto al monto y el número de pedido."
+                    />
+                  </div>
+                </Card>
+              </div>
+            ),
+          },
+          {
             id: 'analitica',
             label: 'Analítica',
             content: (

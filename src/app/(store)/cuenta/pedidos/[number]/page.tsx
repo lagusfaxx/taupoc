@@ -11,6 +11,9 @@ import { buildMetadata } from '@/lib/seo';
 import { ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, orderStatusTone, paymentStatusTone } from '@/lib/orders';
 import { Badge } from '@/components/ui/Badge';
 import { OrderTimeline } from '@/components/store/OrderTimeline';
+import { TransferInstructions } from '@/components/store/TransferInstructions';
+import { PAYMENT_METHOD_LABEL } from '@/lib/payment-methods';
+import { getSettings } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +32,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
     include: { items: true, events: { orderBy: { createdAt: 'asc' } } },
   });
   if (!order) notFound();
+
+  const awaitingTransfer =
+    order.paymentMethod === 'TRANSFER' && order.status === 'PENDING' && order.paymentStatus === 'PENDING';
+  const settings = awaitingTransfer ? await getSettings() : null;
+  const couponDiscount = order.discountTotal - order.paymentDiscount;
 
   return (
     <div className="space-y-8">
@@ -52,6 +60,19 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
         </div>
 
         <OrderTimeline status={order.status} isPickup={order.isPickup} />
+
+        {settings ? (
+          <div className="border-t border-line px-5 py-5 sm:px-6">
+            <p className="mb-3 text-[13.5px] leading-relaxed text-chalk-dim">
+              Tu pedido espera la transferencia. Apenas veamos el abono confirmamos el pago y preparamos tu envío.
+            </p>
+            <TransferInstructions
+              instructions={settings.transferInstructions}
+              total={order.total}
+              orderNumber={order.number}
+            />
+          </div>
+        ) : null}
 
         {order.trackingNumber ? (
           <div className="border-t border-line px-5 py-5 sm:px-6">
@@ -100,10 +121,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
             <dt className="text-chalk-faint">Subtotal</dt>
             <dd className="text-chalk">{formatCLP(order.subtotal)}</dd>
           </div>
-          {order.discountTotal > 0 ? (
+          {couponDiscount > 0 ? (
             <div className="flex justify-between">
               <dt className="text-chalk-faint">Descuento {order.couponCode ? `(${order.couponCode})` : ''}</dt>
-              <dd className="text-signal-ok">−{formatCLP(order.discountTotal)}</dd>
+              <dd className="text-signal-ok">−{formatCLP(couponDiscount)}</dd>
+            </div>
+          ) : null}
+          {order.paymentDiscount > 0 ? (
+            <div className="flex justify-between">
+              <dt className="text-chalk-faint">Descuento {PAYMENT_METHOD_LABEL[order.paymentMethod].toLowerCase()}</dt>
+              <dd className="text-signal-ok">−{formatCLP(order.paymentDiscount)}</dd>
             </div>
           ) : null}
           <div className="flex justify-between">

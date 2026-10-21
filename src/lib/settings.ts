@@ -42,6 +42,19 @@ export interface SiteSettings {
    */
   catalogSplitByColor: boolean;
 
+  // Medios de pago
+  mercadoPagoEnabled: boolean;
+  /** Porcentaje de descuento por pagar con Mercado Pago, de 0 a 100. */
+  mercadoPagoDiscount: number;
+  transferEnabled: boolean;
+  /** Porcentaje de descuento por pagar con transferencia, de 0 a 100. */
+  transferDiscount: number;
+  /**
+   * Datos de la cuenta para transferir: banco, tipo y número de cuenta, RUT,
+   * titular y correo. Texto libre, se muestra tal cual al cliente.
+   */
+  transferInstructions: string;
+
   // Marketing / analítica
   gaMeasurementId: string;
   metaPixelId: string;
@@ -73,6 +86,12 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   announcementBar: 'Despacho a todo Chile · Envío gratis sobre {envio_gratis}',
   announcementActive: true,
   catalogSplitByColor: true,
+
+  mercadoPagoEnabled: true,
+  mercadoPagoDiscount: 0,
+  transferEnabled: false,
+  transferDiscount: 0,
+  transferInstructions: '',
 
   gaMeasurementId: '',
   metaPixelId: DEFAULT_META_PIXEL_ID,
