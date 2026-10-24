@@ -2,7 +2,14 @@
 
 import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
-import { createCheckout, fetchShippingOptions, type CheckoutState } from '@/actions/checkout';
+import {
+  createCheckout,
+  fetchInternationalOptions,
+  fetchShippingOptions,
+  fetchStates,
+  type CheckoutState,
+} from '@/actions/checkout';
+import type { EnviaCountry, EnviaState } from '@/lib/envia';
 import type { ShippingOption } from '@/lib/shipping';
 import type { CartSummary } from '@/lib/cart';
 import { REGIONS, communesOf, formatRut } from '@/lib/chile';
@@ -36,6 +43,8 @@ interface Props {
   cart: CartSummary;
   installmentsMax: number;
   paymentMethods: PaymentMethodOption[];
+  /** Países extranjeros que cotiza Envía. Vacío si no está configurado: solo Chile. */
+  countries: EnviaCountry[];
   defaults: {
     email: string;
     firstName: string;
@@ -50,7 +59,7 @@ interface Props {
   };
 }
 
-export function CheckoutForm({ cart, installmentsMax, paymentMethods, defaults }: Props) {
+export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries, defaults }: Props) {
   const [state, action] = useActionState<CheckoutState | null, FormData>(createCheckout, null);
 
   const [region, setRegion] = useState(defaults.region);
@@ -61,16 +70,58 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, defaults }
   const [loadingRates, startLoading] = useTransition();
   const [methodId, setMethodId] = useState<PaymentMethodId | null>(paymentMethods[0]?.id ?? null);
 
+  // Chile es el valor por defecto: el comprador nacional no ve ningún paso extra.
+  const [country, setCountry] = useState('CL');
+  const international = country !== 'CL';
+  const [states, setStates] = useState<EnviaState[]>([]);
+  const [intl, setIntl] = useState({ state: '', city: '', postalCode: '', street: '', number: '' });
+  const [quoted, setQuoted] = useState(false);
+
   const communes = useMemo(() => communesOf(region), [region]);
+
+  useEffect(() => {
+    setOptions([]);
+    setRateId('');
+    setQuoted(false);
+    if (!international) return;
+    setStates([]);
+    fetchStates(country).then(setStates).catch(() => setStates([]));
+  }, [country, international]);
+
+  const updateIntl = (field: keyof typeof intl, value: string) => {
+    setIntl((current) => ({ ...current, [field]: value }));
+    // Cambió la dirección: la cotización anterior ya no vale.
+    setOptions([]);
+    setRateId('');
+    setQuoted(false);
+  };
+
+  const canQuote = Boolean(intl.city.trim() && intl.postalCode.trim() && intl.street.trim() && intl.number.trim());
+  const quoteInternational = () => {
+    startLoading(async () => {
+      const result = await fetchInternationalOptions({
+        country,
+        state: intl.state,
+        city: intl.city.trim(),
+        postalCode: intl.postalCode.trim(),
+        street: intl.street.trim(),
+        number: intl.number.trim(),
+      });
+      setOptions(result);
+      setRateId(result[0]?.rateId ?? '');
+      setQuoted(true);
+    });
+  };
 
   // Las tarifas se recalculan en el servidor cada vez que cambia la región.
   useEffect(() => {
+    if (international) return;
     startLoading(async () => {
       const result = await fetchShippingOptions(region || null);
       setOptions(result);
       setRateId((current) => (result.some((o) => o.rateId === current) ? current : (result[0]?.rateId ?? '')));
     });
-  }, [region]);
+  }, [region, international]);
 
   const selected = options.find((o) => o.rateId === rateId) ?? null;
   const shippingCost = cart.couponFreeShipping ? 0 : (selected?.price ?? 0);
@@ -80,7 +131,7 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, defaults }
   const productsTotal = cart.subtotal - cart.discount;
   const methodDiscount = method ? paymentMethodDiscount(productsTotal, method.discountPercent) : 0;
   const total = Math.max(0, productsTotal - methodDiscount + shippingCost);
-  const needsAddress = selected ? !selected.isPickup : true;
+  const needsAddress = !international && (selected ? !selected.isPickup : true);
   const isTransfer = methodId === 'TRANSFER';
 
   const errors = state?.fieldErrors ?? {};
@@ -142,6 +193,74 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, defaults }
             Forma de entrega
           </h2>
 
+          {countries.length > 0 ? (
+            <Select
+              label="País de destino"
+              name="country"
+              value={country}
+              onChange={(e) => setCountry(e.target.value)}
+              className="mb-5 max-w-sm"
+            >
+              <option value="CL">Chile</option>
+              {countries.map((c) => (
+                <option key={c.code} value={c.code}>{c.name}</option>
+              ))}
+            </Select>
+          ) : (
+            <input type="hidden" name="country" value="CL" />
+          )}
+
+          {international ? (
+            <div className="mb-5 grid gap-4 sm:grid-cols-2">
+              {states.length > 0 ? (
+                <Select
+                  label="Estado / provincia"
+                  name="state"
+                  value={intl.state}
+                  onChange={(e) => updateIntl('state', e.target.value)}
+                  error={errors.state}
+                >
+                  <option value="">Selecciona</option>
+                  {states.map((st) => (
+                    <option key={st.code} value={st.code}>{st.name}</option>
+                  ))}
+                </Select>
+              ) : (
+                <Input
+                  label="Estado / provincia"
+                  hint="opcional"
+                  name="state"
+                  value={intl.state}
+                  onChange={(e) => updateIntl('state', e.target.value)}
+                />
+              )}
+              <Input label="Ciudad" name="city" value={intl.city} onChange={(e) => updateIntl('city', e.target.value)} error={errors.city} />
+              <Input
+                label="Código postal"
+                name="postalCode"
+                value={intl.postalCode}
+                onChange={(e) => updateIntl('postalCode', e.target.value)}
+                error={errors.postalCode}
+              />
+              <Input label="Calle" name="street" value={intl.street} onChange={(e) => updateIntl('street', e.target.value)} error={errors.street} />
+              <Input
+                label="Número"
+                name="streetNumber"
+                value={intl.number}
+                onChange={(e) => updateIntl('number', e.target.value)}
+                error={errors.streetNumber}
+              />
+              <Input label="Depto. / referencia" hint="opcional" name="addressExtra" />
+              <button
+                type="button"
+                onClick={quoteInternational}
+                disabled={!canQuote || loadingRates}
+                className="h-11 border accent-border font-display text-[12px] font-bold uppercase tracking-widest text-chalk transition-colors hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
+              >
+                {loadingRates ? 'Cotizando envío…' : 'Cotizar envío internacional'}
+              </button>
+            </div>
+          ) : (
           <Select
             label="Región de destino"
             name="region"
@@ -158,13 +277,18 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, defaults }
               <option key={r.code} value={r.code}>{r.name}</option>
             ))}
           </Select>
+          )}
 
           <input type="hidden" name="shippingRateId" value={rateId} />
 
           <div className={cn('space-y-2.5 transition-opacity', loadingRates && 'opacity-50')}>
             {options.length === 0 && !loadingRates ? (
               <p className="border border-line bg-ink-900 px-4 py-3.5 text-[14px] text-chalk-faint">
-                Selecciona tu región para ver las opciones de despacho disponibles.
+                {!international
+                  ? 'Selecciona tu región para ver las opciones de despacho disponibles.'
+                  : quoted
+                    ? 'No encontramos opciones de envío a esa dirección. Revisa los datos o escríbenos.'
+                    : 'Completa tu dirección y cotiza para ver las paqueterías disponibles.'}
               </p>
             ) : null}
 
@@ -196,7 +320,8 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, defaults }
                       </span>
                     </span>
                     <span className="mt-1 block text-[12.5px] text-chalk-faint">
-                      {option.carrier} · {option.etaMinDays}–{option.etaMaxDays} días hábiles
+                      {option.carrier}
+                      {option.etaMaxDays > 0 ? ` · ${option.etaMinDays}–${option.etaMaxDays} días hábiles` : ''}
                     </span>
                     {option.description ? (
                       <span className="mt-0.5 block text-[12.5px] text-chalk-faint">{option.description}</span>

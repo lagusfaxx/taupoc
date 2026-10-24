@@ -10,6 +10,7 @@ import { mpConfigured, mpMode } from '@/lib/mercadopago';
 import { MetaEvent } from '@/components/store/MetaPixel';
 import { metaCartData } from '@/lib/meta-pixel';
 import { paymentMethodOptions } from '@/lib/payment-methods';
+import { enviaCountries } from '@/lib/envia';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,12 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default async function CheckoutPage() {
-  const [cart, user, settings] = await Promise.all([getCart(), getCurrentUser(), getSettings()]);
+  const [cart, user, settings, countries] = await Promise.all([
+    getCart(),
+    getCurrentUser(),
+    getSettings(),
+    enviaCountries(),
+  ]);
 
   if (cart.lines.length === 0) redirect('/carrito');
 
@@ -65,6 +71,7 @@ export default async function CheckoutPage() {
           cart={cart}
           installmentsMax={settings.installmentsMax}
           paymentMethods={paymentMethods}
+          countries={countries}
           defaults={{
             email: user?.email ?? '',
             firstName: user?.name ?? address?.firstName ?? '',

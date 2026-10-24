@@ -68,7 +68,7 @@ export default async function PackingSlipPage({ params }: { params: Promise<{ id
             <p className="mt-1 text-[13px] leading-relaxed">
               {[order.street, order.streetNumber].filter(Boolean).join(' ')}
               {order.addressExtra ? `, ${order.addressExtra}` : ''}<br />
-              {order.commune}, {regionName(order.region)}<br />
+              {order.commune}, {regionName(order.region)}{order.country !== 'CL' ? ` · ${order.country}` : ''}<br />
               {order.postalCode ? `CP ${order.postalCode}` : ''}
             </p>
           )}

@@ -193,7 +193,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
                 <address className="mt-3 not-italic text-[13px] leading-relaxed text-chalk-dim">
                   {[order.street, order.streetNumber].filter(Boolean).join(' ')}
                   {order.addressExtra ? `, ${order.addressExtra}` : ''}<br />
-                  {order.commune}, {regionName(order.region)}<br />
+                  {order.commune}, {regionName(order.region)}{order.country !== 'CL' ? ` · ${order.country}` : ''}<br />
                   {order.postalCode ? `CP ${order.postalCode}` : ''}
                 </address>
               )}

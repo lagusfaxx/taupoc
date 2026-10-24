@@ -619,6 +619,8 @@ model Order {
   shippingLabel   String?
   shippingCarrier String?
   isPickup        Boolean @default(false)
+  /// ISO 3166-1 alfa-2. Fuera de Chile, `region` guarda el estado y `commune` la ciudad.
+  country         String  @default("CL")
   firstName       String?
   lastName        String?
   street          String?

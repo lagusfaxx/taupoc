@@ -13,6 +13,7 @@ import { createPreference, mpConfigured } from '@/lib/mercadopago';
 import { sendAdminTransferPending, sendOrderPlaced, type OrderMailData } from '@/lib/mail';
 import { paymentMethodDiscount, paymentMethodOptions } from '@/lib/payment-methods';
 import { isValidRut } from '@/lib/chile';
+import { enviaQuotes, enviaStates, type EnviaDestination, type EnviaState } from '@/lib/envia';
 
 export interface CheckoutState {
   ok: boolean;
@@ -31,6 +32,39 @@ export async function fetchShippingOptions(region: string | null): Promise<Shipp
   });
 }
 
+/** Convierte una cotización de Envía al formato de opción que ya pinta el checkout. */
+function enviaOption(q: Awaited<ReturnType<typeof enviaQuotes>>[number]): ShippingOption {
+  return {
+    rateId: q.rateId,
+    carrier: q.carrier.toUpperCase(),
+    label: q.label,
+    description: q.deliveryEstimate ? `Entrega estimada: ${q.deliveryEstimate}` : null,
+    price: q.price,
+    freeApplied: false,
+    isPickup: false,
+    pickupInfo: null,
+    etaMinDays: 0,
+    etaMaxDays: 0,
+    zoneName: 'Internacional',
+  };
+}
+
+/** Estados / provincias del país extranjero elegido, desde Envía. */
+export async function fetchStates(country: string): Promise<EnviaState[]> {
+  return enviaStates(country);
+}
+
+/** Cotiza con Envía el despacho al extranjero. Solo se usa si el país no es Chile. */
+export async function fetchInternationalOptions(
+  dest: Omit<EnviaDestination, 'name' | 'email' | 'phone'>,
+): Promise<ShippingOption[]> {
+  const cart = await getCart();
+  if (cart.lines.length === 0 || !dest.country || dest.country === 'CL') return [];
+  if (!dest.city || !dest.postalCode) return [];
+  const quotes = await enviaQuotes({ ...dest, name: '', email: '', phone: '' }, cart.weightGrams);
+  return quotes.map(enviaOption);
+}
+
 const checkoutSchema = z
   .object({
     email: z.string().email('Ingresa un correo válido.'),
@@ -38,6 +72,9 @@ const checkoutSchema = z
     lastName: z.string().min(2, 'Ingresa tu apellido.'),
     phone: z.string().min(8, 'Ingresa un teléfono de contacto.'),
     rut: z.string().optional(),
+    country: z.string().regex(/^[A-Z]{2}$/).default('CL'),
+    state: z.string().optional(),
+    city: z.string().optional(),
     shippingRateId: z.string().min(1, 'Selecciona una forma de entrega.'),
     region: z.string().optional(),
     commune: z.string().optional(),
@@ -89,17 +126,50 @@ export async function createCheckout(
     return { ok: false, message: 'Hay productos sin stock suficiente. Ajusta el carrito.' };
   }
 
+  const international = data.country !== 'CL';
+
+  if (international) {
+    const missing: Record<string, string> = {};
+    if (!data.city) missing.city = 'Ingresa tu ciudad.';
+    if (!data.postalCode) missing.postalCode = 'Ingresa el código postal.';
+    if (!data.street || data.street.length < 3) missing.street = 'Ingresa tu calle.';
+    if (!data.streetNumber) missing.streetNumber = 'Ingresa el número.';
+    if (Object.keys(missing).length > 0) {
+      return { ok: false, message: 'Completa la dirección de despacho.', fieldErrors: missing };
+    }
+  }
+
   // El costo de envío se recalcula en el servidor: nunca se confía en el cliente.
-  const shipping = await resolveShippingOption(data.shippingRateId, {
-    region: data.region ?? null,
-    subtotal: cart.subtotal - cart.discount,
-    weightGrams: cart.weightGrams,
-  });
+  // Al extranjero se vuelve a cotizar con Envía y se busca la misma paquetería y servicio.
+  const shipping = international
+    ? ((
+        await enviaQuotes(
+          {
+            country: data.country,
+            state: data.state ?? '',
+            city: data.city ?? '',
+            postalCode: data.postalCode ?? '',
+            street: data.street ?? '',
+            number: data.streetNumber ?? '',
+            name: `${data.firstName} ${data.lastName}`,
+            email: data.email,
+            phone: data.phone,
+          },
+          cart.weightGrams,
+        )
+      )
+        .map(enviaOption)
+        .find((o) => o.rateId === data.shippingRateId) ?? null)
+    : await resolveShippingOption(data.shippingRateId, {
+        region: data.region ?? null,
+        subtotal: cart.subtotal - cart.discount,
+        weightGrams: cart.weightGrams,
+      });
   if (!shipping) {
     return { ok: false, message: 'La forma de entrega elegida ya no está disponible.' };
   }
 
-  if (!shipping.isPickup) {
+  if (!shipping.isPickup && !international) {
     const missing: Record<string, string> = {};
     if (!data.region) missing.region = 'Selecciona tu región.';
     if (!data.commune) missing.commune = 'Selecciona tu comuna.';
@@ -162,9 +232,10 @@ export async function createCheckout(
       street: shipping.isPickup ? null : data.street,
       streetNumber: shipping.isPickup ? null : data.streetNumber,
       addressExtra: shipping.isPickup ? null : data.addressExtra,
-      commune: shipping.isPickup ? null : data.commune,
-      city: shipping.isPickup ? null : data.commune,
-      region: shipping.isPickup ? null : data.region,
+      country: shipping.isPickup ? 'CL' : data.country,
+      commune: shipping.isPickup ? null : international ? data.city : data.commune,
+      city: shipping.isPickup ? null : international ? data.city : data.commune,
+      region: shipping.isPickup ? null : international ? data.state : data.region,
       postalCode: shipping.isPickup ? null : data.postalCode,
       customerNote: data.customerNote,
       items: {
