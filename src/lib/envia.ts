@@ -272,6 +272,10 @@ export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): 
         }
         return json.data.flatMap((q): EnviaQuote[] => {
           const price = toCLP(Number(q.totalPrice), q.currency ?? 'CLP');
+          console.info(
+            `[envia:quote] ${dest.country} ${dest.postalCode} · ${q.carrier ?? carrier}/${q.service} · ` +
+              `${q.totalPrice} ${q.currency ?? '?'} → ${price ?? 'descartada'} CLP · ${weightKg} kg`,
+          );
           if (price == null || !q.service) return [];
           const name = q.carrier ?? carrier;
           return [
