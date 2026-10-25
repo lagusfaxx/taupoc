@@ -11,6 +11,7 @@ import { MetaEvent } from '@/components/store/MetaPixel';
 import { metaCartData } from '@/lib/meta-pixel';
 import { paymentMethodOptions } from '@/lib/payment-methods';
 import { enviaCountries } from '@/lib/envia';
+import { paypalConfigured, usdRate } from '@/lib/paypal';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,7 @@ export default async function CheckoutPage() {
 
   if (cart.lines.length === 0) redirect('/carrito');
 
-  const paymentMethods = paymentMethodOptions(settings);
+  const paymentMethods = paymentMethodOptions({ ...settings, paypalEnabled: paypalConfigured() });
   const offersMercadoPago = paymentMethods.some((m) => m.id === 'MERCADOPAGO');
   const offersTransfer = paymentMethods.some((m) => m.id === 'TRANSFER');
 
@@ -72,6 +73,7 @@ export default async function CheckoutPage() {
           installmentsMax={settings.installmentsMax}
           paymentMethods={paymentMethods}
           countries={countries}
+          usdRate={paypalConfigured() ? usdRate() : 0}
           defaults={{
             email: user?.email ?? '',
             firstName: user?.name ?? address?.firstName ?? '',

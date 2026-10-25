@@ -588,6 +588,7 @@ enum PaymentStatus {
 enum PaymentMethod {
   MERCADOPAGO
   TRANSFER
+  PAYPAL
 }
 
 model Order {
@@ -646,6 +647,13 @@ model Order {
   mpPaymentType  String?
   mpInstallments Int?
 
+  // PayPal (pedidos internacionales, cobrados en USD)
+  paypalOrderId    String?
+  paypalCaptureId  String?
+  /// Lo que efectivamente se cobró, si no fue en CLP. Monto en centavos.
+  chargedCurrency  String?
+  chargedCents     Int?
+
   adminNote String?
 
   createdAt DateTime @default(now())
@@ -662,6 +670,7 @@ model Order {
   @@index([createdAt])
   @@index([email])
   @@index([mpPaymentId])
+  @@index([paypalOrderId])
 }
 
 model OrderItem {

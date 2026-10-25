@@ -217,7 +217,20 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
                     ['Monto a recibir', formatCLP(order.total)],
                     ['Descuento por transferencia', order.paymentDiscount > 0 ? formatCLP(order.paymentDiscount) : '—'],
                   ]
-                : [
+                : order.paymentMethod === 'PAYPAL'
+                  ? [
+                      ['Método', PAYMENT_METHOD_LABEL[order.paymentMethod]],
+                      ['Estado', PAYMENT_STATUS_LABEL[order.paymentStatus]],
+                      [
+                        'Cobrado',
+                        order.chargedCents != null
+                          ? `${order.chargedCurrency ?? 'USD'} ${(order.chargedCents / 100).toFixed(2)} (${formatCLP(order.total)})`
+                          : formatCLP(order.total),
+                      ],
+                      ['Orden PayPal', order.paypalOrderId ?? '—'],
+                      ['ID de cobro', order.paypalCaptureId ?? '—'],
+                    ]
+                  : [
                     ['Método', PAYMENT_METHOD_LABEL[order.paymentMethod]],
                     ['Estado', PAYMENT_STATUS_LABEL[order.paymentStatus]],
                     ['ID de pago', order.mpPaymentId ?? '—'],

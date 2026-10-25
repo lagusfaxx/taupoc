@@ -29,7 +29,7 @@ const ACTOR = 'Claude (MCP)';
 const PRODUCT_STATUS = ['DRAFT', 'ACTIVE', 'COMING_SOON', 'ARCHIVED'] as const;
 const ORDER_STATUS = ['PENDING', 'PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'REFUNDED'] as const;
 const PAYMENT_STATUS = ['PENDING', 'IN_PROCESS', 'APPROVED', 'REJECTED', 'REFUNDED', 'CHARGED_BACK', 'CANCELLED'] as const;
-const PAYMENT_METHOD = ['MERCADOPAGO', 'TRANSFER'] as const;
+const PAYMENT_METHOD = ['MERCADOPAGO', 'TRANSFER', 'PAYPAL'] as const;
 const QUOTE_STATUS = ['NEW', 'CONTACTED', 'QUOTED', 'WON', 'LOST'] as const;
 
 const clp = z.number().int().min(0).describe('Monto en pesos chilenos, entero y sin decimales.');
@@ -399,7 +399,7 @@ const buscarPedidos = tool({
     q: z.string().optional(),
     estado: z.enum(ORDER_STATUS).optional(),
     pago: z.enum(PAYMENT_STATUS).optional(),
-    metodo: z.enum(PAYMENT_METHOD).optional().describe('MERCADOPAGO o TRANSFER (transferencia bancaria).'),
+    metodo: z.enum(PAYMENT_METHOD).optional().describe('MERCADOPAGO, TRANSFER (transferencia bancaria) o PAYPAL (pedidos internacionales, cobrados en USD).'),
     desde: z.string().optional().describe('AAAA-MM-DD'),
     hasta: z.string().optional().describe('AAAA-MM-DD, inclusive'),
     limite: limite(200, 30),

@@ -37,8 +37,12 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
 
   const settings = await getSettings();
   const noGateway = params.estado === 'sin-pasarela';
+  const isPaypal = order.paymentMethod === 'PAYPAL';
   const approved = order.paymentStatus === 'APPROVED';
-  const rejected = order.paymentStatus === 'REJECTED' || order.paymentStatus === 'CANCELLED';
+  // Volver de PayPal sin pagar, o con error al capturar, se muestra como no completado.
+  const paypalFailed =
+    isPaypal && !approved && (params.estado === 'paypal-cancelado' || params.estado === 'paypal-error');
+  const rejected = paypalFailed || order.paymentStatus === 'REJECTED' || order.paymentStatus === 'CANCELLED';
   const awaitingTransfer =
     order.paymentMethod === 'TRANSFER' && order.status === 'PENDING' && order.paymentStatus === 'PENDING';
 
@@ -59,8 +63,14 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
       : approved
         ? 'Ya estamos preparando tu envío. Te avisamos por correo cuando salga con el número de seguimiento.'
         : rejected
-          ? 'El medio de pago rechazó la transacción. Puedes volver a intentarlo con otra tarjeta.'
-          : 'Mercado Pago está procesando la transacción. Apenas se acredite te llega el correo de confirmación. Esto puede tardar unos minutos.';
+          ? params.estado === 'paypal-cancelado'
+            ? 'Cancelaste el pago en PayPal. Tu pedido quedó guardado: escríbenos con el número y te enviamos un nuevo enlace de pago.'
+            : params.estado === 'paypal-error'
+              ? 'PayPal no pudo completar el cobro. Si se descontó dinero de tu cuenta, escríbenos con el número de pedido y lo revisamos.'
+              : 'El medio de pago rechazó la transacción. Puedes volver a intentarlo con otra tarjeta.'
+          : isPaypal
+            ? 'PayPal está revisando el pago. Apenas se acredite te llega el correo de confirmación.'
+            : 'Mercado Pago está procesando la transacción. Apenas se acredite te llega el correo de confirmación. Esto puede tardar unos minutos.';
 
   const tone = approved ? 'ok' : rejected ? 'bad' : 'warn';
   const Icon = approved ? IconCheck : rejected ? IconAlert : IconTruck;

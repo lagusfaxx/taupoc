@@ -15,15 +15,41 @@ import type { ShippingOption } from '@/lib/shipping';
 import type { CartSummary } from '@/lib/cart';
 import { REGIONS, communesOf, formatRut } from '@/lib/chile';
 import { formatCLP, installment } from '@/lib/money';
-import { paymentMethodDiscount, type PaymentMethodId, type PaymentMethodOption } from '@/lib/payment-methods';
+import {
+  methodsForDestination,
+  paymentMethodDiscount,
+  type PaymentMethodId,
+  type PaymentMethodOption,
+} from '@/lib/payment-methods';
 import { cn } from '@/lib/utils';
 import { Input, Select, Textarea } from '@/components/ui/Field';
 import { ADDRESS_SEARCH_ENABLED, AddressSearch, type PickedAddress } from '@/components/store/AddressSearch';
 import { IconCheck, IconShield, IconTruck } from '@/components/ui/Icons';
 
-function Submit({ total, disabled, method }: { total: number; disabled: boolean; method: PaymentMethodId | null }) {
+function Submit({
+  total,
+  disabled,
+  method,
+  usd,
+}: {
+  total: number;
+  disabled: boolean;
+  method: PaymentMethodId | null;
+  usd: string | null;
+}) {
   const { pending } = useFormStatus();
   const transfer = method === 'TRANSFER';
+  if (method === 'PAYPAL') {
+    return (
+      <button
+        type="submit"
+        disabled={pending || disabled}
+        className="h-14 w-full accent-bg font-display text-[13px] font-bold uppercase tracking-widest transition-all clip-notch-sm hover:brightness-110 disabled:cursor-not-allowed disabled:bg-ink-600 disabled:text-chalk-faint"
+      >
+        {pending ? 'Conectando con PayPal…' : `Pagar con PayPal${usd ? ` · ${usd}` : ''}`}
+      </button>
+    );
+  }
   return (
     <button
       type="submit"
@@ -65,6 +91,8 @@ interface Props {
   cart: CartSummary;
   installmentsMax: number;
   paymentMethods: PaymentMethodOption[];
+  /** Pesos por dólar para mostrar lo que cobra PayPal. 0 si no hay. */
+  usdRate: number;
   /** Países extranjeros que cotiza Envía. Vacío si no está configurado: solo Chile. */
   countries: EnviaCountry[];
   defaults: {
@@ -81,7 +109,7 @@ interface Props {
   };
 }
 
-export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries, defaults }: Props) {
+export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, countries, defaults }: Props) {
   const [state, action] = useActionState<CheckoutState | null, FormData>(createCheckout, null);
 
   const [region, setRegion] = useState(defaults.region);
@@ -90,7 +118,9 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
   const [options, setOptions] = useState<ShippingOption[]>([]);
   const [rateId, setRateId] = useState('');
   const [loadingRates, startLoading] = useTransition();
-  const [methodId, setMethodId] = useState<PaymentMethodId | null>(paymentMethods[0]?.id ?? null);
+  const [methodId, setMethodId] = useState<PaymentMethodId | null>(
+    methodsForDestination(paymentMethods, false)[0]?.id ?? null,
+  );
 
   // Chile es el valor por defecto: el comprador nacional no ve ningún paso extra.
   const [country, setCountry] = useState('CL');
@@ -103,6 +133,17 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
   const [zipStatus, setZipStatus] = useState<'idle' | 'loading' | 'found' | 'missing'>('idle');
 
   const communes = useMemo(() => communesOf(region), [region]);
+  const availableMethods = useMemo(
+    () => methodsForDestination(paymentMethods, international),
+    [paymentMethods, international],
+  );
+
+  // Al cambiar entre Chile y el extranjero cambian los medios ofrecidos.
+  useEffect(() => {
+    setMethodId((current) =>
+      availableMethods.some((m) => m.id === current) ? current : (availableMethods[0]?.id ?? null),
+    );
+  }, [availableMethods]);
 
   // Con buscador, el extranjero ve primero solo ese campo; el resto aparece
   // al elegir una sugerencia o al optar por escribir la dirección a mano.
@@ -226,12 +267,15 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
   const shippingCost = cart.couponFreeShipping ? 0 : (selected?.price ?? 0);
   // Mismo cálculo que el servidor: el descuento del medio va sobre los
   // productos ya descontado el cupón, nunca sobre el despacho.
-  const method = paymentMethods.find((m) => m.id === methodId) ?? null;
+  const method = availableMethods.find((m) => m.id === methodId) ?? null;
   const productsTotal = cart.subtotal - cart.discount;
   const methodDiscount = method ? paymentMethodDiscount(productsTotal, method.discountPercent) : 0;
   const total = Math.max(0, productsTotal - methodDiscount + shippingCost);
   const needsAddress = !international && (selected ? !selected.isPickup : true);
   const isTransfer = methodId === 'TRANSFER';
+  const isPaypal = methodId === 'PAYPAL';
+  // Mismo redondeo que el servidor (hacia arriba) para que el monto coincida.
+  const usdTotal = isPaypal && usdRate > 0 ? `US$ ${(Math.ceil((total / usdRate) * 100) / 100).toFixed(2)}` : null;
 
   const errors = state?.fieldErrors ?? {};
 
@@ -572,7 +616,14 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
           <input type="hidden" name="paymentMethod" value={methodId ?? ''} />
 
           <div className="space-y-2.5">
-            {paymentMethods.map((option) => {
+            {availableMethods.length === 0 ? (
+              <p className="border border-line bg-ink-900 px-4 py-3.5 text-[14px] text-chalk-faint">
+                {international
+                  ? 'Por ahora no tenemos pago en línea para compras desde el extranjero. Escríbenos y coordinamos tu pedido.'
+                  : 'No hay medios de pago disponibles en este momento.'}
+              </p>
+            ) : null}
+            {availableMethods.map((option) => {
               const active = option.id === methodId;
               const saving = paymentMethodDiscount(productsTotal, option.discountPercent);
               return (
@@ -604,7 +655,9 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
                     <span className="mt-1 block text-[12.5px] text-chalk-faint">
                       {option.id === 'TRANSFER'
                         ? 'Te mostramos los datos de la cuenta al confirmar. Despachamos cuando verificamos el abono.'
-                        : 'Crédito, débito y cuotas. Te redirigimos a Mercado Pago para pagar.'}
+                        : option.id === 'PAYPAL'
+                          ? 'Paga con tu cuenta PayPal o con tarjeta de crédito o débito internacional. Se cobra en dólares (USD).'
+                          : 'Crédito, débito y cuotas. Te redirigimos a Mercado Pago para pagar.'}
                     </span>
                     {saving > 0 ? (
                       <span className="mt-0.5 block text-[12.5px] text-signal-ok">Ahorras {formatCLP(saving)}</span>
@@ -681,14 +734,20 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
             </span>
           </div>
 
-          {installmentsMax > 1 && !isTransfer ? (
+          {usdTotal ? (
+            <p className="mt-2 text-right text-[12.5px] text-chalk-faint">
+              PayPal te cobra <span className="font-semibold text-chalk">{usdTotal}</span>
+            </p>
+          ) : null}
+
+          {installmentsMax > 1 && !isTransfer && !isPaypal ? (
             <p className="mt-2 text-right text-[12.5px] text-chalk-faint">
               o {installmentsMax} cuotas de {formatCLP(installment(total, installmentsMax))}
             </p>
           ) : null}
 
           <div className="mt-6">
-            <Submit total={total} method={methodId} disabled={!rateId || !methodId || cart.hasIssues} />
+            <Submit total={total} method={methodId} usd={usdTotal} disabled={!rateId || !methodId || cart.hasIssues} />
           </div>
 
           <ul className="mt-6 space-y-3 border-t border-line pt-5">
@@ -696,7 +755,9 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
               <IconShield className="mt-0.5 h-4 w-4 shrink-0" />
               {isTransfer
                 ? 'Al confirmar te mostramos los datos para transferir y te los enviamos por correo.'
-                : 'Te redirigimos a Mercado Pago para completar el pago. No guardamos datos de tu tarjeta.'}
+                : isPaypal
+                  ? 'Te redirigimos a PayPal para completar el pago. No guardamos datos de tu tarjeta.'
+                  : 'Te redirigimos a Mercado Pago para completar el pago. No guardamos datos de tu tarjeta.'}
             </li>
             <li className="flex items-start gap-2.5 text-[12.5px] leading-relaxed text-chalk-faint">
               <IconTruck className="mt-0.5 h-4 w-4 shrink-0" />

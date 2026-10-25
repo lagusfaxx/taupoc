@@ -2,6 +2,7 @@
 
 import { z } from 'zod';
 import { redirect } from 'next/navigation';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
 import { getCart, clearCart } from '@/lib/cart';
@@ -11,7 +12,8 @@ import { getSettings } from '@/lib/settings';
 import { nextOrderNumber, logOrderEvent } from '@/lib/orders';
 import { createPreference, mpConfigured } from '@/lib/mercadopago';
 import { sendAdminTransferPending, sendOrderPlaced, type OrderMailData } from '@/lib/mail';
-import { paymentMethodDiscount, paymentMethodOptions } from '@/lib/payment-methods';
+import { methodsForDestination, paymentMethodDiscount, paymentMethodOptions } from '@/lib/payment-methods';
+import { clpToUsdCents, createPaypalOrder, paypalConfigured } from '@/lib/paypal';
 import { isValidRut } from '@/lib/chile';
 import {
   enviaQuotes,
@@ -112,7 +114,7 @@ const checkoutSchema = z
     addressExtra: z.string().optional(),
     postalCode: z.string().optional(),
     customerNote: z.string().max(500).optional(),
-    paymentMethod: z.enum(['MERCADOPAGO', 'TRANSFER'], {
+    paymentMethod: z.enum(['MERCADOPAGO', 'TRANSFER', 'PAYPAL'], {
       errorMap: () => ({ message: 'Elige cómo quieres pagar.' }),
     }),
   })
@@ -214,7 +216,11 @@ export async function createCheckout(
 
   // El medio de pago y su descuento también se validan acá: un medio
   // deshabilitado en el panel no se acepta aunque llegue en el formulario.
-  const method = paymentMethodOptions(settings).find((o) => o.id === data.paymentMethod);
+  // Al extranjero solo se cobra con PayPal; dentro de Chile, con los de siempre.
+  const method = methodsForDestination(
+    paymentMethodOptions({ ...settings, paypalEnabled: paypalConfigured() }),
+    international,
+  ).find((o) => o.id === data.paymentMethod);
   if (!method) {
     return {
       ok: false,
@@ -329,6 +335,34 @@ export async function createCheckout(
     if (cart.id) await clearCart(cart.id);
     revalidatePath('/', 'layout');
     redirect(`/checkout/resultado?order=${order.number}&estado=transferencia`);
+  }
+
+  if (method.id === 'PAYPAL') {
+    try {
+      const amountCents = clpToUsdCents(total);
+      const paypal = await createPaypalOrder({ orderId: order.id, orderNumber: order.number, amountCents });
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { paypalOrderId: paypal.id, chargedCurrency: 'USD', chargedCents: amountCents },
+      });
+      if (cart.id) await clearCart(cart.id);
+      revalidatePath('/', 'layout');
+      redirect(paypal.approveUrl);
+    } catch (error) {
+      if (isRedirectError(error)) throw error;
+      console.error('[checkout:paypal-error]', error);
+      await logOrderEvent({
+        orderId: order.id,
+        type: 'payment_error',
+        message: 'No se pudo crear la orden de pago en PayPal.',
+      });
+      return {
+        ok: false,
+        message:
+          'No pudimos conectar con PayPal. Tu pedido quedó guardado como ' +
+          `${order.number}; escríbenos y lo retomamos.`,
+      };
+    }
   }
 
   if (!mpConfigured()) {

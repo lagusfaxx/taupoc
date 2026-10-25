@@ -6,11 +6,12 @@
  * lado redondeara a su manera, el cliente vería un monto y pagaría otro.
  */
 
-export type PaymentMethodId = 'MERCADOPAGO' | 'TRANSFER';
+export type PaymentMethodId = 'MERCADOPAGO' | 'TRANSFER' | 'PAYPAL';
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethodId, string> = {
   MERCADOPAGO: 'Mercado Pago',
   TRANSFER: 'Transferencia bancaria',
+  PAYPAL: 'PayPal',
 };
 
 export interface PaymentMethodOption {
@@ -26,6 +27,8 @@ export interface PaymentMethodSettings {
   mercadoPagoDiscount: number;
   transferEnabled: boolean;
   transferDiscount: number;
+  /** PayPal tiene credenciales y tipo de cambio: se ofrece fuera de Chile. */
+  paypalEnabled?: boolean;
 }
 
 /** Medios habilitados, en el orden en que se ofrecen. */
@@ -45,7 +48,21 @@ export function paymentMethodOptions(settings: PaymentMethodSettings): PaymentMe
       discountPercent: clampPercent(settings.transferDiscount),
     });
   }
+  if (settings.paypalEnabled) {
+    options.push({ id: 'PAYPAL', label: PAYMENT_METHOD_LABEL.PAYPAL, discountPercent: 0 });
+  }
   return options;
+}
+
+/**
+ * Medios que se ofrecen según el destino: dentro de Chile los de siempre;
+ * al extranjero solo PayPal, que cobra en dólares y acepta tarjetas de afuera.
+ */
+export function methodsForDestination(
+  options: PaymentMethodOption[],
+  international: boolean,
+): PaymentMethodOption[] {
+  return options.filter((o) => (o.id === 'PAYPAL') === international);
 }
 
 export function clampPercent(value: number): number {
