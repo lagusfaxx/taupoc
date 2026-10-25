@@ -43,11 +43,12 @@ function matchesRange(
 function rateApplies(rate: RateWithZone, ctx: ShippingContext): boolean {
   if (!rate.active || !rate.zone.active) return false;
 
-  // El retiro en tienda / entrega en torneo no depende de la región.
-  if (!rate.isPickup) {
-    if (!ctx.region) return false;
-    if (!rate.zone.regions.includes(ctx.region)) return false;
-  }
+  // Ninguna opción aparece antes de elegir región. Un retiro en una zona sin
+  // regiones (entrega en torneo) vale para todo Chile; uno dentro de una zona
+  // con regiones (retiro en tienda en la RM) solo para esas regiones.
+  if (!ctx.region) return false;
+  const anyRegion = rate.isPickup && rate.zone.regions.length === 0;
+  if (!anyRegion && !rate.zone.regions.includes(ctx.region)) return false;
 
   const mode: RateMode = rate.mode;
   if (mode === 'BY_WEIGHT') {
