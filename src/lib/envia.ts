@@ -28,6 +28,20 @@ export interface EnviaQuote {
   deliveryEstimate: string | null;
 }
 
+export interface EnviaZipMatch {
+  /** Código de estado que espera la API de cotización (2 dígitos). */
+  state: string;
+  stateName: string;
+  /** Ciudades / localidades posibles para ese código postal. */
+  cities: string[];
+}
+
+export interface EnviaQuoteResult {
+  quotes: EnviaQuote[];
+  /** Motivo legible cuando ninguna paquetería devolvió precio. */
+  error: string | null;
+}
+
 export interface EnviaDestination {
   country: string;
   state: string;
@@ -97,6 +111,45 @@ export async function enviaStates(country: string): Promise<EnviaState[]> {
   }
 }
 
+/**
+ * Busca un código postal en Envía y devuelve estado y ciudades.
+ * Es lo que permite autocompletar la dirección del comprador extranjero.
+ */
+export async function enviaZip(country: string, zip: string): Promise<EnviaZipMatch | null> {
+  const code = zip.trim();
+  if (!/^[A-Z]{2}$/.test(country) || !/^[A-Za-z0-9 -]{2,12}$/.test(code)) return null;
+  try {
+    const res = await fetch(
+      `https://geocodes.envia.com/zipcode/${country}/${encodeURIComponent(code)}`,
+      { next: { revalidate: 86_400 } },
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as Array<{
+      state?: { name?: string; code?: { '2digit'?: string | null; '1digit'?: string | null } };
+      locality?: string;
+      suburbs?: string[];
+      regions?: { region_1?: string; region_2?: string };
+    }>;
+    const first = json?.[0];
+    if (!first?.state) return null;
+    const cities = [
+      ...new Set(
+        json
+          .flatMap((m) => [m.locality, ...(m.suburbs ?? [])])
+          .filter((c): c is string => Boolean(c && c.trim())),
+      ),
+    ];
+    return {
+      state: first.state.code?.['2digit'] ?? first.state.code?.['1digit'] ?? '',
+      stateName: first.state.name ?? '',
+      cities,
+    };
+  } catch (error) {
+    console.error('[envia:zip]', error);
+    return null;
+  }
+}
+
 /** Paqueterías habilitadas en la cuenta para envíos internacionales desde Chile. */
 async function internationalCarriers(): Promise<string[]> {
   const configured = process.env.ENVIA_CARRIERS?.split(',').map((c) => c.trim()).filter(Boolean);
@@ -106,11 +159,13 @@ async function internationalCarriers(): Promise<string[]> {
       `${QUERIES_API}/available-carrier/CL/1`,
       3_600,
     );
-    return [...new Set((json.data ?? []).map((c) => c.name).filter((n): n is string => Boolean(n)))];
+    const names = [...new Set((json.data ?? []).map((c) => c.name).filter((n): n is string => Boolean(n)))];
+    if (names.length) return names;
   } catch (error) {
     console.error('[envia:carriers]', error);
-    return [];
   }
+  // Si la consulta falla, se prueba con las internacionales habituales.
+  return ['dhl', 'fedex', 'ups'];
 }
 
 function origin() {
@@ -143,10 +198,15 @@ function toCLP(amount: number, currency: string): number | null {
  * Cotiza el despacho internacional con todas las paqueterías disponibles.
  * Envía cotiza una paquetería por llamada, así que van en paralelo.
  */
-export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): Promise<EnviaQuote[]> {
-  if (!enviaConfigured()) return [];
+export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): Promise<EnviaQuoteResult> {
+  if (!enviaConfigured()) return { quotes: [], error: 'Los envíos internacionales no están configurados.' };
+  const from = origin();
+  if (!from.street || !from.postalCode || !from.phone) {
+    console.error('[envia:origin] Faltan ENVIA_ORIGIN_STREET, ENVIA_ORIGIN_POSTAL_CODE o ENVIA_ORIGIN_PHONE');
+    return { quotes: [], error: 'No pudimos cotizar el envío en este momento. Escríbenos y lo coordinamos.' };
+  }
   const carriers = await internationalCarriers();
-  if (carriers.length === 0) return [];
+  const errors: string[] = [];
 
   const env = process.env;
   const weightKg = Math.max(0.1, Math.ceil((weightGrams || Number(env.ENVIA_DEFAULT_WEIGHT_G ?? 500)) / 100) / 10);
@@ -166,9 +226,9 @@ export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): 
     },
   };
   const destination = {
-    name: dest.name,
-    email: dest.email,
-    phone: dest.phone,
+    name: dest.name || 'Cliente',
+    email: dest.email || from.email,
+    phone: dest.phone || from.phone,
     street: dest.street,
     number: dest.number,
     city: dest.city,
@@ -185,15 +245,16 @@ export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): 
           headers: headers(),
           cache: 'no-store',
           body: JSON.stringify({
-            origin: origin(),
+            origin: from,
             destination,
             packages: [pkg],
             shipment: { carrier, type: 1 },
             settings: { currency: 'CLP' },
           }),
         });
-        if (!res.ok) return [];
-        const json = (await res.json()) as {
+        const json = (await res.json().catch(() => ({}))) as {
+          meta?: string;
+          error?: { message?: string; description?: string } | string;
           data?: Array<{
             carrier?: string;
             service?: string;
@@ -203,7 +264,13 @@ export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): 
             currency?: string;
           }>;
         };
-        return (json.data ?? []).flatMap((q): EnviaQuote[] => {
+        if (!res.ok || json.meta === 'error' || !Array.isArray(json.data)) {
+          const msg =
+            typeof json.error === 'string' ? json.error : (json.error?.description ?? json.error?.message);
+          errors.push(`${carrier}: ${msg ?? `HTTP ${res.status}`}`);
+          return [];
+        }
+        return json.data.flatMap((q): EnviaQuote[] => {
           const price = toCLP(Number(q.totalPrice), q.currency ?? 'CLP');
           if (price == null || !q.service) return [];
           const name = q.carrier ?? carrier;
@@ -219,11 +286,19 @@ export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): 
           ];
         });
       } catch (error) {
-        console.error('[envia:rate]', carrier, error);
+        errors.push(`${carrier}: ${String(error)}`);
         return [];
       }
     }),
   );
 
-  return results.flat().sort((a, b) => a.price - b.price);
+  const quotes = results.flat().sort((a, b) => a.price - b.price);
+  if (quotes.length === 0) {
+    console.error('[envia:rate]', errors.join(' | '));
+    return {
+      quotes,
+      error: 'Ninguna paquetería despacha a esa dirección. Revisa el código postal y la ciudad, o escríbenos.',
+    };
+  }
+  return { quotes, error: null };
 }

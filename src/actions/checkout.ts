@@ -13,7 +13,15 @@ import { createPreference, mpConfigured } from '@/lib/mercadopago';
 import { sendAdminTransferPending, sendOrderPlaced, type OrderMailData } from '@/lib/mail';
 import { paymentMethodDiscount, paymentMethodOptions } from '@/lib/payment-methods';
 import { isValidRut } from '@/lib/chile';
-import { enviaQuotes, enviaStates, type EnviaDestination, type EnviaState } from '@/lib/envia';
+import {
+  enviaQuotes,
+  enviaStates,
+  enviaZip,
+  type EnviaDestination,
+  type EnviaQuote,
+  type EnviaState,
+  type EnviaZipMatch,
+} from '@/lib/envia';
 
 export interface CheckoutState {
   ok: boolean;
@@ -33,7 +41,7 @@ export async function fetchShippingOptions(region: string | null): Promise<Shipp
 }
 
 /** Convierte una cotización de Envía al formato de opción que ya pinta el checkout. */
-function enviaOption(q: Awaited<ReturnType<typeof enviaQuotes>>[number]): ShippingOption {
+function enviaOption(q: EnviaQuote): ShippingOption {
   return {
     rateId: q.rateId,
     carrier: q.carrier.toUpperCase(),
@@ -54,15 +62,20 @@ export async function fetchStates(country: string): Promise<EnviaState[]> {
   return enviaStates(country);
 }
 
+/** Autocompleta estado y ciudad a partir del código postal. */
+export async function lookupZip(country: string, zip: string): Promise<EnviaZipMatch | null> {
+  return enviaZip(country, zip);
+}
+
 /** Cotiza con Envía el despacho al extranjero. Solo se usa si el país no es Chile. */
 export async function fetchInternationalOptions(
   dest: Omit<EnviaDestination, 'name' | 'email' | 'phone'>,
-): Promise<ShippingOption[]> {
+): Promise<{ options: ShippingOption[]; error: string | null }> {
   const cart = await getCart();
-  if (cart.lines.length === 0 || !dest.country || dest.country === 'CL') return [];
-  if (!dest.city || !dest.postalCode) return [];
-  const quotes = await enviaQuotes({ ...dest, name: '', email: '', phone: '' }, cart.weightGrams);
-  return quotes.map(enviaOption);
+  if (cart.lines.length === 0 || !dest.country || dest.country === 'CL') return { options: [], error: null };
+  if (!dest.city || !dest.postalCode) return { options: [], error: null };
+  const { quotes, error } = await enviaQuotes({ ...dest, name: '', email: '', phone: '' }, cart.weightGrams);
+  return { options: quotes.map(enviaOption), error };
 }
 
 const checkoutSchema = z
@@ -157,7 +170,7 @@ export async function createCheckout(
           },
           cart.weightGrams,
         )
-      )
+      ).quotes
         .map(enviaOption)
         .find((o) => o.rateId === data.shippingRateId) ?? null)
     : await resolveShippingOption(data.shippingRateId, {

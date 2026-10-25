@@ -7,6 +7,7 @@ import {
   fetchInternationalOptions,
   fetchShippingOptions,
   fetchStates,
+  lookupZip,
   type CheckoutState,
 } from '@/actions/checkout';
 import type { EnviaCountry, EnviaState } from '@/lib/envia';
@@ -76,13 +77,24 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
   const [states, setStates] = useState<EnviaState[]>([]);
   const [intl, setIntl] = useState({ state: '', city: '', postalCode: '', street: '', number: '' });
   const [quoted, setQuoted] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [cities, setCities] = useState<string[]>([]);
+  const [zipStatus, setZipStatus] = useState<'idle' | 'loading' | 'found' | 'missing'>('idle');
 
   const communes = useMemo(() => communesOf(region), [region]);
 
-  useEffect(() => {
+  const resetQuote = () => {
     setOptions([]);
     setRateId('');
     setQuoted(false);
+    setQuoteError(null);
+  };
+
+  useEffect(() => {
+    resetQuote();
+    setCities([]);
+    setZipStatus('idle');
+    setIntl({ state: '', city: '', postalCode: '', street: '', number: '' });
     if (!international) return;
     setStates([]);
     fetchStates(country).then(setStates).catch(() => setStates([]));
@@ -91,27 +103,70 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
   const updateIntl = (field: keyof typeof intl, value: string) => {
     setIntl((current) => ({ ...current, [field]: value }));
     // Cambió la dirección: la cotización anterior ya no vale.
-    setOptions([]);
-    setRateId('');
-    setQuoted(false);
+    resetQuote();
   };
 
-  const canQuote = Boolean(intl.city.trim() && intl.postalCode.trim() && intl.street.trim() && intl.number.trim());
-  const quoteInternational = () => {
-    startLoading(async () => {
-      const result = await fetchInternationalOptions({
-        country,
-        state: intl.state,
-        city: intl.city.trim(),
-        postalCode: intl.postalCode.trim(),
-        street: intl.street.trim(),
-        number: intl.number.trim(),
+  // El código postal manda: con él Envía devuelve estado y ciudad, y el
+  // comprador solo confirma en vez de adivinar cómo escribirlos.
+  useEffect(() => {
+    if (!international) return;
+    const zip = intl.postalCode.trim();
+    if (zip.length < 3) {
+      setZipStatus('idle');
+      setCities([]);
+      return;
+    }
+    setZipStatus('loading');
+    const timer = setTimeout(async () => {
+      const match = await lookupZip(country, zip).catch(() => null);
+      if (!match) {
+        setZipStatus('missing');
+        setCities([]);
+        return;
+      }
+      setZipStatus('found');
+      setCities(match.cities);
+      // El catálogo de estados de Envía no siempre trae el que devuelve el código postal.
+      if (match.state) {
+        setStates((current) =>
+          current.length === 0 || current.some((st) => st.code === match.state)
+            ? current
+            : [...current, { code: match.state, name: match.stateName }],
+        );
+      }
+      setIntl((current) => ({
+        ...current,
+        state: match.state || current.state,
+        city: match.cities.includes(current.city) ? current.city : (match.cities[0] ?? current.city),
+      }));
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [country, international, intl.postalCode]);
+
+  // Con la dirección completa se cotiza sola, sin botón.
+  const readyToQuote = Boolean(
+    intl.city.trim() && intl.postalCode.trim() && intl.street.trim().length >= 3 && intl.number.trim(),
+  );
+  useEffect(() => {
+    if (!international || !readyToQuote || zipStatus === 'loading') return;
+    const timer = setTimeout(() => {
+      startLoading(async () => {
+        const result = await fetchInternationalOptions({
+          country,
+          state: intl.state,
+          city: intl.city.trim(),
+          postalCode: intl.postalCode.trim(),
+          street: intl.street.trim(),
+          number: intl.number.trim(),
+        }).catch(() => ({ options: [], error: 'No pudimos cotizar. Intenta de nuevo en un momento.' }));
+        setOptions(result.options);
+        setRateId(result.options[0]?.rateId ?? '');
+        setQuoteError(result.error);
+        setQuoted(true);
       });
-      setOptions(result);
-      setRateId(result[0]?.rateId ?? '');
-      setQuoted(true);
-    });
-  };
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [international, readyToQuote, zipStatus, country, intl.state, intl.city, intl.postalCode, intl.street, intl.number]);
 
   // Las tarifas se recalculan en el servidor cada vez que cambia la región.
   useEffect(() => {
@@ -212,6 +267,39 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
 
           {international ? (
             <div className="mb-5 grid gap-4 sm:grid-cols-2">
+              <Input
+                label="Código postal"
+                name="postalCode"
+                value={intl.postalCode}
+                onChange={(e) => updateIntl('postalCode', e.target.value)}
+                error={errors.postalCode}
+                autoComplete="postal-code"
+                help={
+                  zipStatus === 'loading'
+                    ? 'Buscando…'
+                    : zipStatus === 'found'
+                      ? `✓ ${[intl.city, states.find((st) => st.code === intl.state)?.name].filter(Boolean).join(', ')}`
+                      : zipStatus === 'missing'
+                        ? 'No reconocemos ese código: completa ciudad y estado a mano.'
+                        : 'Lo usamos para completar ciudad y estado.'
+                }
+              />
+              {cities.length > 1 ? (
+                <Select label="Ciudad" name="city" value={intl.city} onChange={(e) => updateIntl('city', e.target.value)} error={errors.city}>
+                  {cities.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </Select>
+              ) : (
+                <Input
+                  label="Ciudad"
+                  name="city"
+                  value={intl.city}
+                  onChange={(e) => updateIntl('city', e.target.value)}
+                  error={errors.city}
+                  autoComplete="address-level2"
+                />
+              )}
               {states.length > 0 ? (
                 <Select
                   label="Estado / provincia"
@@ -232,17 +320,17 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
                   name="state"
                   value={intl.state}
                   onChange={(e) => updateIntl('state', e.target.value)}
+                  autoComplete="address-level1"
                 />
               )}
-              <Input label="Ciudad" name="city" value={intl.city} onChange={(e) => updateIntl('city', e.target.value)} error={errors.city} />
               <Input
-                label="Código postal"
-                name="postalCode"
-                value={intl.postalCode}
-                onChange={(e) => updateIntl('postalCode', e.target.value)}
-                error={errors.postalCode}
+                label="Calle"
+                name="street"
+                value={intl.street}
+                onChange={(e) => updateIntl('street', e.target.value)}
+                error={errors.street}
+                autoComplete="address-line1"
               />
-              <Input label="Calle" name="street" value={intl.street} onChange={(e) => updateIntl('street', e.target.value)} error={errors.street} />
               <Input
                 label="Número"
                 name="streetNumber"
@@ -250,15 +338,7 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
                 onChange={(e) => updateIntl('number', e.target.value)}
                 error={errors.streetNumber}
               />
-              <Input label="Depto. / referencia" hint="opcional" name="addressExtra" />
-              <button
-                type="button"
-                onClick={quoteInternational}
-                disabled={!canQuote || loadingRates}
-                className="h-11 border accent-border font-display text-[12px] font-bold uppercase tracking-widest text-chalk transition-colors hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2"
-              >
-                {loadingRates ? 'Cotizando envío…' : 'Cotizar envío internacional'}
-              </button>
+              <Input label="Depto. / referencia" hint="opcional" name="addressExtra" autoComplete="address-line2" />
             </div>
           ) : (
           <Select
@@ -282,13 +362,18 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
           <input type="hidden" name="shippingRateId" value={rateId} />
 
           <div className={cn('space-y-2.5 transition-opacity', loadingRates && 'opacity-50')}>
+            {loadingRates && international ? (
+              <p className="border border-line bg-ink-900 px-4 py-3.5 text-[14px] text-chalk-faint">
+                Cotizando con las paqueterías…
+              </p>
+            ) : null}
             {options.length === 0 && !loadingRates ? (
               <p className="border border-line bg-ink-900 px-4 py-3.5 text-[14px] text-chalk-faint">
                 {!international
                   ? 'Selecciona tu región para ver las opciones de despacho disponibles.'
                   : quoted
-                    ? 'No encontramos opciones de envío a esa dirección. Revisa los datos o escríbenos.'
-                    : 'Completa tu dirección y cotiza para ver las paqueterías disponibles.'}
+                    ? (quoteError ?? 'No encontramos opciones de envío a esa dirección. Revisa los datos o escríbenos.')
+                    : 'Completa tu dirección y te mostramos las paqueterías disponibles con su precio.'}
               </p>
             ) : null}
 
