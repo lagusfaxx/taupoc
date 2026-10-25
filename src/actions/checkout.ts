@@ -41,11 +41,27 @@ export async function fetchShippingOptions(region: string | null): Promise<Shipp
 }
 
 /** Convierte una cotización de Envía al formato de opción que ya pinta el checkout. */
+const CARRIER_NAMES: Record<string, string> = { fedex: 'FedEx', dhl: 'DHL', ups: 'UPS', usps: 'USPS' };
+
+/** "FEDEX INTERNATIONAL PRIORITY®" → "International Priority": el courier ya va en su logo. */
+function serviceName(label: string, carrier: string): string {
+  const clean = label
+    .replace(/[®™]/g, '')
+    .replace(new RegExp(`^\\s*${carrier}\\s*`, 'i'), '')
+    .replace(/\binternacional\b/gi, 'International')
+    .trim();
+  if (!clean) return label;
+  // Algunas paqueterías mandan todo en mayúsculas: se pasa a tipo título.
+  const titled = label === label.toUpperCase() ? clean.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase()) : clean;
+  return titled.charAt(0).toUpperCase() + titled.slice(1);
+}
+
 function enviaOption(q: EnviaQuote): ShippingOption {
+  const key = q.carrier.toLowerCase();
   return {
     rateId: q.rateId,
-    carrier: q.carrier.toUpperCase(),
-    label: q.label,
+    carrier: CARRIER_NAMES[key] ?? q.carrier.charAt(0).toUpperCase() + q.carrier.slice(1),
+    label: serviceName(q.label, key),
     description: q.deliveryEstimate ? `Entrega estimada: ${q.deliveryEstimate}` : null,
     price: q.price,
     freeApplied: false,

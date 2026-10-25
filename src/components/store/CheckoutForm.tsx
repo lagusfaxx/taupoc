@@ -41,6 +41,26 @@ function Submit({ total, disabled, method }: { total: number; disabled: boolean;
   );
 }
 
+// Colores de marca de cada courier, para que la opción se reconozca de un vistazo.
+const COURIER_STYLES: Record<string, string> = {
+  FedEx: 'bg-[#4D148C] text-white',
+  DHL: 'bg-[#FFCC00] text-[#D40511]',
+  UPS: 'bg-[#351C15] text-[#FFB500]',
+};
+
+function CourierBadge({ carrier }: { carrier: string }) {
+  return (
+    <span
+      className={cn(
+        'flex h-10 w-14 shrink-0 items-center justify-center font-display text-[12px] font-black italic tracking-tight',
+        COURIER_STYLES[carrier] ?? 'bg-ink-600 text-chalk',
+      )}
+    >
+      {carrier}
+    </span>
+  );
+}
+
 interface Props {
   cart: CartSummary;
   installmentsMax: number;
@@ -410,9 +430,53 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
               </p>
             ) : null}
 
-            {options.map((option) => {
+            {international && options.length > 0 ? (
+              <p className="text-[12.5px] leading-relaxed text-chalk-faint">
+                Despacho puerta a puerta con seguimiento. Los impuestos o aranceles de importación, si
+                aplican, los cobra la aduana del país de destino.
+              </p>
+            ) : null}
+
+            {options.map((option, index) => {
               const active = option.rateId === rateId;
               const price = cart.couponFreeShipping ? 0 : option.price;
+              if (international) {
+                return (
+                  <label
+                    key={option.rateId}
+                    className={cn(
+                      'flex cursor-pointer items-center gap-3 border px-3.5 py-3 transition-colors',
+                      active ? 'accent-border bg-ink-800' : 'border-line hover:border-line-bright',
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="_rate"
+                      checked={active}
+                      onChange={() => setRateId(option.rateId)}
+                      className="h-4 w-4 shrink-0 cursor-pointer appearance-none rounded-full border border-line-bright bg-ink-900 checked:border-[var(--accent)] checked:bg-[var(--accent)]"
+                    />
+                    <CourierBadge carrier={option.carrier} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[14px] font-semibold leading-snug text-chalk">{option.label}</span>
+                      {option.description ? (
+                        <span className="mt-0.5 flex items-center gap-1.5 text-[12.5px] text-chalk-faint">
+                          <IconTruck className="h-3.5 w-3.5 shrink-0" />
+                          {option.description.replace('Entrega estimada: ', '')}
+                        </span>
+                      ) : null}
+                      {index === 0 && options.length > 1 ? (
+                        <span className="mt-1.5 inline-block border border-signal-ok/40 bg-signal-ok/10 px-1.5 py-0.5 font-display text-[10px] uppercase tracking-widest text-signal-ok">
+                          Más económico
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 text-right font-display text-[15px] font-semibold text-chalk">
+                      {formatCLP(price)}
+                    </span>
+                  </label>
+                );
+              }
               return (
                 <label
                   key={option.rateId}
