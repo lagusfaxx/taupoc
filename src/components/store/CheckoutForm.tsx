@@ -18,7 +18,7 @@ import { formatCLP, installment } from '@/lib/money';
 import { paymentMethodDiscount, type PaymentMethodId, type PaymentMethodOption } from '@/lib/payment-methods';
 import { cn } from '@/lib/utils';
 import { Input, Select, Textarea } from '@/components/ui/Field';
-import { AddressSearch, type PickedAddress } from '@/components/store/AddressSearch';
+import { ADDRESS_SEARCH_ENABLED, AddressSearch, type PickedAddress } from '@/components/store/AddressSearch';
 import { IconCheck, IconShield, IconTruck } from '@/components/ui/Icons';
 
 function Submit({ total, disabled, method }: { total: number; disabled: boolean; method: PaymentMethodId | null }) {
@@ -84,6 +84,10 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
 
   const communes = useMemo(() => communesOf(region), [region]);
 
+  // Con buscador, el extranjero ve primero solo ese campo; el resto aparece
+  // al elegir una sugerencia o al optar por escribir la dirección a mano.
+  const [showIntlFields, setShowIntlFields] = useState(!ADDRESS_SEARCH_ENABLED);
+
   const resetQuote = () => {
     setOptions([]);
     setRateId('');
@@ -96,6 +100,7 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
     setCities([]);
     setZipStatus('idle');
     setIntl({ state: '', city: '', postalCode: '', street: '', number: '' });
+    setShowIntlFields(!ADDRESS_SEARCH_ENABLED);
     if (!international) return;
     setStates([]);
     fetchStates(country).then(setStates).catch(() => setStates([]));
@@ -119,6 +124,7 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
       street: a.street || current.street,
       number: a.number || current.number,
     }));
+    setShowIntlFields(true);
     resetQuote();
   };
 
@@ -285,7 +291,13 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
 
           {international ? (
             <div className="mb-5 grid gap-4 sm:grid-cols-2">
-              <AddressSearch country={country} onPick={applyPicked} />
+              <AddressSearch
+                country={country}
+                onPick={applyPicked}
+                onManual={showIntlFields ? undefined : () => setShowIntlFields(true)}
+              />
+              {showIntlFields || (state && !state.ok) ? (
+              <>
               <Input
                 label="Código postal"
                 name="postalCode"
@@ -358,6 +370,8 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
                 error={errors.streetNumber}
               />
               <Input label="Depto. / referencia" hint="opcional" name="addressExtra" autoComplete="address-line2" />
+              </>
+              ) : null}
             </div>
           ) : (
           <Select

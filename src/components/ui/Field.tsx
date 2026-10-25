@@ -5,7 +5,7 @@ import { useId } from 'react';
 import { cn } from '@/lib/utils';
 
 const CONTROL =
-  'w-full bg-ink-900 border border-line px-3.5 py-3 text-[15px] text-chalk placeholder:text-chalk-faint/60 ' +
+  'w-full bg-ink-900 border border-line px-3.5 py-3 text-base text-chalk sm:text-[15px] placeholder:text-chalk-faint/60 ' +
   'transition-colors duration-150 focus:border-[var(--accent)] focus:outline-none disabled:opacity-50';
 
 export function Label({ children, htmlFor, hint }: { children: ReactNode; htmlFor?: string; hint?: string }) {

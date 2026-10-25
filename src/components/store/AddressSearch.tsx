@@ -30,11 +30,23 @@ interface Feature {
 
 const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
+/** Con token, el checkout muestra primero solo el buscador. */
+export const ADDRESS_SEARCH_ENABLED = Boolean(TOKEN);
+
 /**
  * Buscador de direcciones con Mapbox (Geocoding v6) para el comprador extranjero.
  * Al elegir una sugerencia rellena los campos de abajo, que siguen editables.
  */
-export function AddressSearch({ country, onPick }: { country: string; onPick: (a: PickedAddress) => void }) {
+export function AddressSearch({
+  country,
+  onPick,
+  onManual,
+}: {
+  country: string;
+  onPick: (a: PickedAddress) => void;
+  /** Si se pasa, muestra el enlace para escribir la dirección a mano. */
+  onManual?: () => void;
+}) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Feature[]>([]);
   const [open, setOpen] = useState(false);
@@ -127,9 +139,19 @@ export function AddressSearch({ country, onPick }: { country: string; onPick: (a
         }}
         placeholder="Calle y número, ej.: Av. 9 de Octubre 100"
         autoComplete="off"
-        className="w-full border border-line bg-ink-900 px-3.5 py-3 text-[15px] text-chalk transition-colors placeholder:text-chalk-faint/60 focus:border-[var(--accent)] focus:outline-none"
+        className="w-full border border-line bg-ink-900 px-3.5 py-3 text-base text-chalk transition-colors sm:text-[15px] placeholder:text-chalk-faint/60 focus:border-[var(--accent)] focus:outline-none"
       />
-      <p className="mt-1.5 text-[13px] text-chalk-faint">Elige una sugerencia y completamos el resto. Si no aparece, llena los campos de abajo.</p>
+      <p className="mt-1.5 text-[13px] text-chalk-faint">
+        Elige una sugerencia y completamos el resto.
+        {onManual ? (
+          <>
+            {' '}
+            <button type="button" onClick={onManual} className="underline underline-offset-2 hover:text-chalk">
+              ¿No aparece? Escríbela a mano
+            </button>
+          </>
+        ) : null}
+      </p>
       {open && results.length > 0 ? (
         <ul className="absolute z-20 mt-1 w-full border border-line-bright bg-ink-800 shadow-lg">
           {results.map((f, i) => (
@@ -139,7 +161,7 @@ export function AddressSearch({ country, onPick }: { country: string; onPick: (a
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => pick(f)}
                 className={cn(
-                  'block w-full px-3.5 py-2.5 text-left text-[14px] text-chalk',
+                  'block w-full px-3.5 py-3 text-left text-[14px] text-chalk',
                   i === active ? 'bg-ink-700' : 'hover:bg-ink-700',
                 )}
               >
