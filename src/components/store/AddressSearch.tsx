@@ -1,0 +1,154 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/Field';
+
+export interface PickedAddress {
+  street: string;
+  number: string;
+  postalCode: string;
+  city: string;
+  stateName: string;
+}
+
+interface Feature {
+  id: string;
+  properties: {
+    full_address?: string;
+    name?: string;
+    context?: {
+      address?: { address_number?: string; street_name?: string };
+      street?: { name?: string };
+      postcode?: { name?: string };
+      place?: { name?: string };
+      locality?: { name?: string };
+      region?: { name?: string };
+    };
+  };
+}
+
+const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
+/**
+ * Buscador de direcciones con Mapbox (Geocoding v6) para el comprador extranjero.
+ * Al elegir una sugerencia rellena los campos de abajo, que siguen editables.
+ */
+export function AddressSearch({ country, onPick }: { country: string; onPick: (a: PickedAddress) => void }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<Feature[]>([]);
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(0);
+  const skipNext = useRef(false);
+
+  useEffect(() => {
+    setQuery('');
+    setResults([]);
+  }, [country]);
+
+  useEffect(() => {
+    if (skipNext.current) {
+      skipNext.current = false;
+      return;
+    }
+    const q = query.trim();
+    if (!TOKEN || q.length < 4) {
+      setResults([]);
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      const params = new URLSearchParams({
+        q,
+        country: country.toLowerCase(),
+        types: 'address',
+        autocomplete: 'true',
+        language: 'es',
+        limit: '5',
+        access_token: TOKEN,
+      });
+      try {
+        const res = await fetch(`https://api.mapbox.com/search/geocode/v6/forward?${params}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const json = (await res.json()) as { features?: Feature[] };
+        setResults(json.features ?? []);
+        setActive(0);
+        setOpen(true);
+      } catch {
+        // Abortado o sin red: el comprador sigue con los campos manuales.
+      }
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, country]);
+
+  const pick = (f: Feature) => {
+    const ctx = f.properties.context ?? {};
+    onPick({
+      street: ctx.address?.street_name ?? ctx.street?.name ?? f.properties.name ?? '',
+      number: ctx.address?.address_number ?? '',
+      postalCode: ctx.postcode?.name ?? '',
+      city: ctx.place?.name ?? ctx.locality?.name ?? '',
+      stateName: ctx.region?.name ?? '',
+    });
+    skipNext.current = true;
+    setQuery(f.properties.full_address ?? f.properties.name ?? '');
+    setOpen(false);
+  };
+
+  if (!TOKEN) return null;
+
+  return (
+    <div className="relative sm:col-span-2">
+      <Label htmlFor="address-search">Busca tu dirección</Label>
+      <input
+        id="address-search"
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => results.length > 0 && setOpen(true)}
+        onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onKeyDown={(e) => {
+          if (!open || results.length === 0) return;
+          if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setActive((i) => (i + 1) % results.length);
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setActive((i) => (i - 1 + results.length) % results.length);
+          } else if (e.key === 'Enter') {
+            e.preventDefault();
+            pick(results[active]);
+          }
+        }}
+        placeholder="Calle y número, ej.: Av. 9 de Octubre 100"
+        autoComplete="off"
+        className="w-full border border-line bg-ink-900 px-3.5 py-3 text-[15px] text-chalk transition-colors placeholder:text-chalk-faint/60 focus:border-[var(--accent)] focus:outline-none"
+      />
+      <p className="mt-1.5 text-[13px] text-chalk-faint">Elige una sugerencia y completamos el resto. Si no aparece, llena los campos de abajo.</p>
+      {open && results.length > 0 ? (
+        <ul className="absolute z-20 mt-1 w-full border border-line-bright bg-ink-800 shadow-lg">
+          {results.map((f, i) => (
+            <li key={f.id}>
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(f)}
+                className={cn(
+                  'block w-full px-3.5 py-2.5 text-left text-[14px] text-chalk',
+                  i === active ? 'bg-ink-700' : 'hover:bg-ink-700',
+                )}
+              >
+                {f.properties.full_address ?? f.properties.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}

@@ -18,6 +18,7 @@ import { formatCLP, installment } from '@/lib/money';
 import { paymentMethodDiscount, type PaymentMethodId, type PaymentMethodOption } from '@/lib/payment-methods';
 import { cn } from '@/lib/utils';
 import { Input, Select, Textarea } from '@/components/ui/Field';
+import { AddressSearch, type PickedAddress } from '@/components/store/AddressSearch';
 import { IconCheck, IconShield, IconTruck } from '@/components/ui/Icons';
 
 function Submit({ total, disabled, method }: { total: number; disabled: boolean; method: PaymentMethodId | null }) {
@@ -106,6 +107,21 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
     resetQuote();
   };
 
+  // Lo elegido en el buscador rellena los campos; el código postal luego
+  // pasa por Envía, que fija el estado con el código que espera para cotizar.
+  const applyPicked = (a: PickedAddress) => {
+    const norm = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const state = states.find((st) => norm(st.name) === norm(a.stateName))?.code;
+    setIntl((current) => ({
+      state: state ?? current.state,
+      city: a.city || current.city,
+      postalCode: a.postalCode || current.postalCode,
+      street: a.street || current.street,
+      number: a.number || current.number,
+    }));
+    resetQuote();
+  };
+
   // El código postal manda: con él Envía devuelve estado y ciudad, y el
   // comprador solo confirma en vez de adivinar cómo escribirlos.
   useEffect(() => {
@@ -137,7 +153,9 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
       setIntl((current) => ({
         ...current,
         state: match.state || current.state,
-        city: match.cities.includes(current.city) ? current.city : (match.cities[0] ?? current.city),
+        city:
+          match.cities.find((c) => c.toLowerCase() === current.city.trim().toLowerCase()) ??
+          (current.city.trim() || (match.cities[0] ?? '')),
       }));
     }, 450);
     return () => clearTimeout(timer);
@@ -267,6 +285,7 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
 
           {international ? (
             <div className="mb-5 grid gap-4 sm:grid-cols-2">
+              <AddressSearch country={country} onPick={applyPicked} />
               <Input
                 label="Código postal"
                 name="postalCode"
@@ -286,7 +305,7 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, countries,
               />
               {cities.length > 1 ? (
                 <Select label="Ciudad" name="city" value={intl.city} onChange={(e) => updateIntl('city', e.target.value)} error={errors.city}>
-                  {cities.map((c) => (
+                  {(intl.city && !cities.includes(intl.city) ? [intl.city, ...cities] : cities).map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </Select>

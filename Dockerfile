@@ -32,8 +32,10 @@ COPY . .
 # hay que reconstruir la imagen, no basta con reiniciar el contenedor.
 ARG NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 ARG NEXT_PUBLIC_MP_PUBLIC_KEY=""
+ARG NEXT_PUBLIC_MAPBOX_TOKEN=""
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 ENV NEXT_PUBLIC_MP_PUBLIC_KEY=$NEXT_PUBLIC_MP_PUBLIC_KEY
+ENV NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # La compilación no consulta la base de datos: todas las páginas que leen
