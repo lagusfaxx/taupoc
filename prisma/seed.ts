@@ -28,8 +28,8 @@ function chartRows(rows: SizeRow[]): Prisma.SizeChartRowCreateWithoutProductInpu
     size: r.size,
     chestMinCm: r.chest?.[0], chestMaxCm: r.chest?.[1],
     waistMinCm: r.waist[0], waistMaxCm: r.waist[1],
-    hipMinCm: r.hip[0], hipMaxCm: r.hip[1],
-    heightMinCm: r.height[0], heightMaxCm: r.height[1],
+    hipMinCm: r.hip?.[0], hipMaxCm: r.hip?.[1],
+    heightMinCm: r.height, heightMaxCm: null,
     cn: r.cn, usa: r.usa, uk: r.uk, aus: r.aus, nz: r.nz,
     sortOrder: i,
   }));

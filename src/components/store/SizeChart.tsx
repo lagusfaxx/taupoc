@@ -83,6 +83,8 @@ export function SizeChart({
   const [hip, setHip] = useState('');
 
   const showChest = gender !== 'MALE' && rows.some((r) => r.chestMinCm != null);
+  // La tabla oficial del jammer no trae cadera: sin datos, la columna sobra.
+  const showHip = rows.some((r) => r.hipMinCm != null);
 
   const suggestion = useMemo(() => {
     const measures = {
@@ -158,7 +160,12 @@ export function SizeChart({
                   Ingresa las medidas del cuerpo en centímetros, sin apretar la huincha.
                 </p>
 
-                <div className={cn('mt-4 grid gap-3', showChest ? 'grid-cols-3' : 'grid-cols-2')}>
+                <div
+                  className={cn(
+                    'mt-4 grid gap-3',
+                    ['grid-cols-1', 'grid-cols-2', 'grid-cols-3'][Number(showChest) + Number(showHip)],
+                  )}
+                >
                   {showChest ? (
                     <label className="block">
                       <span className="mb-1.5 block font-display text-[10px] uppercase tracking-widest text-chalk-faint">
@@ -187,6 +194,7 @@ export function SizeChart({
                       className="w-full border border-line bg-ink-900 px-3 py-2.5 text-[15px] text-chalk placeholder:text-chalk-faint/50 focus:border-[var(--accent)] focus:outline-none"
                     />
                   </label>
+                  {showHip ? (
                   <label className="block">
                     <span className="mb-1.5 block font-display text-[10px] uppercase tracking-widest text-chalk-faint">
                       Cadera (cm)
@@ -200,6 +208,7 @@ export function SizeChart({
                       className="w-full border border-line bg-ink-900 px-3 py-2.5 text-[15px] text-chalk placeholder:text-chalk-faint/50 focus:border-[var(--accent)] focus:outline-none"
                     />
                   </label>
+                  ) : null}
                 </div>
 
                 {suggestion ? (
@@ -286,7 +295,7 @@ export function SizeChart({
                         <>
                           {showChest ? <Th>Pecho (cm)</Th> : null}
                           <Th>Cintura (cm)</Th>
-                          <Th>Cadera (cm)</Th>
+                          {showHip ? <Th>Cadera (cm)</Th> : null}
                           <Th>Estatura (cm)</Th>
                         </>
                       ) : (
@@ -310,7 +319,7 @@ export function SizeChart({
                           <>
                             {showChest ? <Td>{range(row.chestMinCm, row.chestMaxCm)}</Td> : null}
                             <Td>{range(row.waistMinCm, row.waistMaxCm)}</Td>
-                            <Td>{range(row.hipMinCm, row.hipMaxCm)}</Td>
+                            {showHip ? <Td>{range(row.hipMinCm, row.hipMaxCm)}</Td> : null}
                             <Td>{range(row.heightMinCm, row.heightMaxCm)}</Td>
                           </>
                         ) : (
