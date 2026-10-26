@@ -7,6 +7,7 @@ import { VISIBLE_LINE, fillRowWithColors, getFeatured, getLineComparison } from 
 import { getHomeBlocks } from '@/lib/home';
 import { LANDINGS } from '@/lib/landings';
 import { buildMetadata, jsonLd, absoluteUrl, SITE_NAME } from '@/lib/seo';
+import { COUNTRIES } from '@/lib/international';
 import { ProductCard } from '@/components/store/ProductCard';
 import { LineCompareTeaser } from '@/components/store/LineCompareTeaser';
 import { HomeBlocks } from '@/components/store/home/HomeBlocks';
@@ -64,8 +65,13 @@ export default async function HomePage() {
     email: settings.contactEmail,
     telephone: settings.contactPhone,
     address: { '@type': 'PostalAddress', addressLocality: 'Santiago', addressCountry: 'CL' },
-    currenciesAccepted: 'CLP',
-    paymentAccepted: 'Tarjeta de crédito, tarjeta de débito, Mercado Pago',
+    // Chile primero; los demás son los países con página propia de envío.
+    areaServed: [
+      { '@type': 'Country', name: 'Chile' },
+      ...COUNTRIES.map((c) => ({ '@type': 'Country', name: c.name })),
+    ],
+    currenciesAccepted: 'CLP, USD',
+    paymentAccepted: 'Tarjeta de crédito, tarjeta de débito, Mercado Pago, transferencia bancaria, PayPal',
   };
 
   const grafo = { '@context': 'https://schema.org', '@graph': [website, store] };

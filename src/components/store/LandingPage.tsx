@@ -4,6 +4,7 @@ import { colorPagePath, getCatalog, splitCardsByColor } from '@/lib/catalog';
 import { getSettings } from '@/lib/settings';
 import { formatCLP } from '@/lib/money';
 import { LANDING_LINKS, type Landing } from '@/lib/landings';
+import { INTERNATIONAL_LINKS } from '@/lib/international';
 import { absoluteUrl, buildMetadata, jsonLd } from '@/lib/seo';
 import { ProductCard } from '@/components/store/ProductCard';
 import { ButtonLink } from '@/components/ui/Button';
@@ -46,7 +47,15 @@ export async function LandingPage({ landing }: { landing: Landing }) {
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Inicio', item: absoluteUrl('/') },
-          { '@type': 'ListItem', position: 2, name: landing.h1, item: absoluteUrl(landing.path) },
+          ...(landing.parent
+            ? [{ '@type': 'ListItem', position: 2, name: landing.parent.name, item: absoluteUrl(landing.parent.href) }]
+            : []),
+          {
+            '@type': 'ListItem',
+            position: landing.parent ? 3 : 2,
+            name: landing.h1,
+            item: absoluteUrl(landing.path),
+          },
         ],
       },
       {
@@ -82,6 +91,12 @@ export async function LandingPage({ landing }: { landing: Landing }) {
         <ol className="container flex items-center gap-2 py-3.5 text-[12px] text-chalk-faint">
           <li><Link href="/" className="hover:text-chalk">Inicio</Link></li>
           <li aria-hidden>/</li>
+          {landing.parent ? (
+            <>
+              <li><Link href={landing.parent.href} className="hover:text-chalk">{landing.parent.name}</Link></li>
+              <li aria-hidden>/</li>
+            </>
+          ) : null}
           <li className="text-chalk-dim">{landing.h1}</li>
         </ol>
       </nav>
@@ -95,8 +110,8 @@ export async function LandingPage({ landing }: { landing: Landing }) {
           <p className="mt-6 max-w-2xl text-pretty text-[16px] leading-relaxed text-chalk-dim">{landing.intro}</p>
           {fromPrice != null ? (
             <p className="mt-4 text-[14px] text-chalk-faint">
-              Desde <span className="font-display font-semibold text-chalk">{formatCLP(fromPrice)}</span> ·
-              Tallas con stock en Chile · Despacho a todo el país
+              Desde <span className="font-display font-semibold text-chalk">{formatCLP(fromPrice)}</span> ·{' '}
+              {landing.priceNote ?? 'Tallas con stock en Chile · Despacho a todo el país'}
             </p>
           ) : null}
         </div>
@@ -175,7 +190,7 @@ export async function LandingPage({ landing }: { landing: Landing }) {
               {landing.related.map((href) => (
                 <li key={href}>
                   <Link href={href} className="text-[14.5px] text-chalk-dim underline underline-offset-4 hover:text-chalk">
-                    {LANDING_LINKS[href] ?? href}
+                    {LANDING_LINKS[href] ?? INTERNATIONAL_LINKS[href] ?? href}
                   </Link>
                 </li>
               ))}

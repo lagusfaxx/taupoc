@@ -23,6 +23,7 @@ const COLUMNS = [
       { label: 'Guía de tallas', href: '/guia-de-tallas' },
       { label: 'Cómo ponerse el traje', href: '/como-ponerse-un-traje-de-competencia' },
       { label: 'Envíos y plazos', href: '/envios' },
+      { label: 'Envíos a Latinoamérica', href: '/envios-internacionales' },
       { label: 'Cambios y devoluciones', href: '/devoluciones' },
       { label: 'Cómo elegir la talla', href: '/blog/como-elegir-la-talla-de-tu-traje-de-competicion' },
       { label: 'Contacto', href: '/contacto' },

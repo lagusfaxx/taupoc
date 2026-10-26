@@ -41,6 +41,10 @@ export interface Landing {
   faq: LandingFaq[];
   /** Enlaces a las otras páginas del grupo, para que se encuentren entre sí. */
   related: string[];
+  /** Línea bajo el precio "Desde"; por defecto habla del despacho en Chile. */
+  priceNote?: string;
+  /** Página padre en la miga de pan, entre Inicio y esta. */
+  parent?: { name: string; href: string };
 }
 
 export const LANDINGS = {
@@ -256,7 +260,7 @@ export const LANDINGS = {
       {
         title: 'Para niñas y juveniles',
         paragraphs: [
-          'Las tallas parten en la 20, pensada para estaturas desde 140 cm, así que también sirven para niñas ' +
+          'Las tallas parten en la 20, pensada para una estatura de 120 cm, así que también sirven para niñas ' +
             'que empiezan a competir en categorías infantiles y juveniles. En un primer traje de carrera ' +
             'recomendamos bajar solo una talla: la compresión cuesta más a esa edad.',
         ],
@@ -285,8 +289,8 @@ export const LANDINGS = {
       {
         q: '¿Sirve para una niña de 10 a 12 años?',
         a:
-          'Si mide desde 140 cm, sí: la talla 20 está pensada para estaturas de 140 a 150 cm. Revisa cintura y ' +
-          'cadera en la guía de tallas antes de comprar.',
+          'Sí: según la tabla oficial, la talla 20 es para unos 120 cm de estatura, la 22 para 130 cm y la 24 ' +
+          'para 140 cm. Revisa pecho, cintura y cadera en la guía de tallas antes de comprar.',
       },
       {
         q: '¿Puedo cambiar la talla?',
@@ -338,7 +342,7 @@ export const LANDINGS = {
       {
         title: 'Para juveniles',
         paragraphs: [
-          'La talla 20 parte en 140 cm de estatura, así que también sirve para nadadores infantiles y ' +
+          'La talla 20 es para unos 120 cm de estatura, así que también sirve para nadadores infantiles y ' +
             'juveniles que empiezan a competir.',
         ],
       },
@@ -375,13 +379,13 @@ export const LANDINGS = {
     path: '/trajes-de-competencia-juveniles',
     title: 'Trajes de competencia para niñas, niños y juveniles',
     description:
-      'Trajes de baño de competencia para niñas, niños y juveniles desde 140 cm de estatura. Homologados ' +
+      'Trajes de baño de competencia para niñas, niños y juveniles desde 120 cm de estatura. Homologados ' +
       'World Aquatics, tallas 20 a 24.',
     eyebrow: 'Infantil y juvenil',
     h1: 'Trajes de competencia para niñas, niños y juveniles',
     intro:
       'Las primeras competencias federadas piden lo mismo que las de adultos: un traje homologado por World ' +
-      'Aquatics. Nuestras tallas parten en la 20, para estaturas desde 140 cm, así que los nadadores ' +
+      'Aquatics. Nuestras tallas parten en la 20, para estaturas desde 120 cm, así que los nadadores ' +
       'infantiles y juveniles pueden competir con el mismo traje que los adultos.',
     sizes: ['20', '22', '24'],
     productsTitle: 'Con stock en tallas 20 a 24',
@@ -397,11 +401,14 @@ export const LANDINGS = {
       },
       {
         title: 'Tallas juveniles',
-        paragraphs: ['Medidas de cuerpo de referencia. Revisa la guía de tallas para cintura y cadera exactas.'],
+        paragraphs: [
+          'Estatura de referencia según la tabla oficial de TAUPOC. Lo que define la talla son las medidas: ' +
+            'revisa la guía de tallas para pecho, cintura y cadera.',
+        ],
         bullets: [
-          'Talla 20: estatura de 140 a 150 cm.',
-          'Talla 22: estatura de 148 a 158 cm.',
-          'Talla 24: estatura de 155 a 165 cm.',
+          'Talla 20 (3XS): estatura de 120 cm, cintura de 50 a 55 cm.',
+          'Talla 22 (2XS): estatura de 130 cm, cintura de 55 a 60 cm.',
+          'Talla 24 (XS): estatura de 140 cm, cintura de 60 a 65 cm.',
         ],
       },
       {
@@ -418,7 +425,7 @@ export const LANDINGS = {
         q: '¿Desde qué edad se usa un traje de competencia?',
         a:
           'No hay una edad fija: depende de la estatura y de si el nadador ya compite. La talla 20 está pensada ' +
-          'para estaturas de 140 a 150 cm.',
+          'para unos 120 cm de estatura.',
       },
       {
         q: '¿Los trajes juveniles están homologados?',

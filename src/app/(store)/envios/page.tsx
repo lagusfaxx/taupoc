@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
 import { buildMetadata } from '@/lib/seo';
@@ -91,6 +92,13 @@ export default async function ShippingPage() {
         Los despachos a Arica y Parinacota, Tarapacá, Antofagasta, Aysén y Magallanes tienen plazos
         mayores y tarifa diferenciada. Para Isla de Pascua y Juan Fernández, escríbenos antes de comprar
         para cotizar el envío.
+      </p>
+
+      <h2>Envíos fuera de Chile</h2>
+      <p>
+        También despachamos a Perú, Argentina, Colombia, México, Ecuador y el resto de Latinoamérica por
+        FedEx o DHL, con pago en dólares por PayPal. Revisa{' '}
+        <Link href="/envios-internacionales">cómo comprar desde tu país</Link>.
       </p>
     </LegalPage>
   );
