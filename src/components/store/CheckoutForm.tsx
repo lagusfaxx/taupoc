@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useMemo, useState, useTransition } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   createCheckout,
@@ -148,6 +148,9 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
   // Con buscador, el extranjero ve primero solo ese campo; el resto aparece
   // al elegir una sugerencia o al optar por escribir la dirección a mano.
   const [showIntlFields, setShowIntlFields] = useState(!ADDRESS_SEARCH_ENABLED);
+  // La dirección elegida no traía código postal: se le pide al comprador.
+  const [zipMissingFromSearch, setZipMissingFromSearch] = useState(false);
+  const postalRef = useRef<HTMLInputElement>(null);
 
   const resetQuote = () => {
     setOptions([]);
@@ -186,6 +189,8 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
       number: a.number || current.number,
     }));
     setShowIntlFields(true);
+    setZipMissingFromSearch(!a.postalCode);
+    if (!a.postalCode) setTimeout(() => postalRef.current?.focus(), 50);
     resetQuote();
   };
 
@@ -367,8 +372,14 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
                 name="postalCode"
                 value={intl.postalCode}
                 onChange={(e) => updateIntl('postalCode', e.target.value)}
-                error={errors.postalCode}
                 autoComplete="postal-code"
+                ref={postalRef}
+                error={
+                  errors.postalCode ??
+                  (zipMissingFromSearch && !intl.postalCode.trim()
+                    ? 'Esta dirección no trae código postal. Escríbelo para cotizar el envío.'
+                    : undefined)
+                }
                 help={
                   zipStatus === 'loading'
                     ? 'Buscando…'

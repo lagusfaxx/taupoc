@@ -301,7 +301,11 @@ export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): 
     console.error('[envia:rate]', errors.join(' | '));
     return {
       quotes,
-      error: 'Ninguna paquetería despacha a esa dirección. Revisa el código postal y la ciudad, o escríbenos.',
+      // Si alguna paquetería reclamó por el código postal, se dice eso: es lo
+      // que el comprador puede corregir.
+      error: errors.some((e) => /post(al)?\s*code|postcode|zip/i.test(e))
+        ? 'El código postal no es válido para ese país. Revísalo y lo cotizamos de nuevo.'
+        : 'Ninguna paquetería despacha a esa dirección. Revisa el código postal y la ciudad, o escríbenos.',
     };
   }
   return { quotes, error: null };
