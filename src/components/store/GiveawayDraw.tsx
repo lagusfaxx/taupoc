@@ -176,6 +176,8 @@ export function GiveawayDraw({
   winner: initialWinner,
   revealAt,
   participants,
+  totalComments,
+  showList,
 }: {
   title: string;
   prize: string;
@@ -184,6 +186,9 @@ export function GiveawayDraw({
   winner: GiveawayEntry | null;
   revealAt: string | null;
   participants: number;
+  totalComments: number;
+  /** Solo antes de liberar el ganador; después la lista no se publica. */
+  showList: boolean;
 }) {
   const [winner, setWinner] = useState<GiveawayEntry | null>(initialWinner);
   const [phase, setPhase] = useState<Phase>(initialWinner ? 'idle' : 'countdown');
@@ -294,7 +299,7 @@ export function GiveawayDraw({
 
           <div className="mt-8 flex gap-8 font-display">
             <div>
-              <p className="text-[32px] font-bold leading-none accent-text">{entries.length.toLocaleString('es-CL')}</p>
+              <p className="text-[32px] font-bold leading-none accent-text">{totalComments.toLocaleString('es-CL')}</p>
               <p className="mt-1.5 text-[10.5px] uppercase tracking-widest text-chalk-faint">Comentarios</p>
             </div>
             <div>
@@ -330,7 +335,7 @@ export function GiveawayDraw({
                 aria-live="polite"
               >
                 <p className="font-display text-[11px] uppercase tracking-widest text-chalk-faint">
-                  {phase === 'done' ? '¡Tenemos ganador!' : `Mezclando ${entries.length.toLocaleString('es-CL')} comentarios…`}
+                  {phase === 'done' ? '¡Tenemos ganador!' : `Mezclando ${totalComments.toLocaleString('es-CL')} comentarios…`}
                 </p>
                 {current ? (
                   <div
@@ -384,7 +389,10 @@ export function GiveawayDraw({
         </div>
       </section>
 
-      {/* Todos los comentarios */}
+      {/* La lista completa solo se publica durante la cuenta regresiva. Al
+          liberar el ganador se retira, también para quien miraba en vivo,
+          y el servidor deja de enviarla: no queda nada que recontar. */}
+      {showList && phase === 'countdown' ? (
       <section className="container py-12 lg:py-16">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -411,20 +419,15 @@ export function GiveawayDraw({
 
         <ul className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.slice(0, limit).map((e, i) => {
-            const isWinner = phase === 'done' && !!winner && e.user.toLowerCase() === winner.user.toLowerCase();
             return (
               <li
                 key={`${e.user}-${i}`}
-                className={cn(
-                  'flex items-start gap-3 border px-3.5 py-3',
-                  isWinner ? 'accent-border bg-ink-800' : 'border-line bg-ink-900',
-                )}
+                className="flex items-start gap-3 border border-line bg-ink-900 px-3.5 py-3"
               >
                 <Avatar user={e.user} className="h-9 w-9 text-[14px]" />
                 <span className="min-w-0">
                   <span className="block truncate text-[14px] font-semibold text-chalk">
                     @{e.user}
-                    {isWinner ? <span className="ml-2 font-display text-[10px] uppercase tracking-widest accent-text">Ganador</span> : null}
                   </span>
                   {e.comment ? <span className="mt-0.5 block break-words text-[13.5px] text-chalk-dim">{e.comment}</span> : null}
                 </span>
@@ -443,6 +446,13 @@ export function GiveawayDraw({
           </button>
         ) : null}
       </section>
+      ) : (
+        <section className="container py-10 text-center">
+          <p className="mx-auto max-w-xl text-[14px] leading-relaxed text-chalk-faint">
+            El ganador se eligió al azar entre todos los comentarios del post. ¡Gracias por participar!
+          </p>
+        </section>
+      )}
     </>
   );
 }

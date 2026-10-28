@@ -20,6 +20,15 @@ export async function generateMetadata(): Promise<Metadata> {
   });
 }
 
+function sample<T>(items: T[], n: number): T[] {
+  const copy = [...items];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy.slice(0, n);
+}
+
 export default async function GiveawayPage() {
   const giveaway = await getGiveaway();
   if (!giveaway.active) notFound();
@@ -31,12 +40,19 @@ export default async function GiveawayPage() {
   // regresiva a /api/sorteo/ganador cuando llega a cero.
   const revealed = isRevealed(giveaway);
 
+  // Liberado el ganador, la lista completa ya no sale del servidor: así nadie
+  // puede ir a contar comentarios después. La ruleta solo necesita una
+  // muestra al azar para animar.
+  const shown = revealed ? sample(entries, 80) : entries;
+
   return (
     <GiveawayDraw
       title={giveaway.title}
       prize={giveaway.prize}
       description={giveaway.description}
-      entries={entries}
+      entries={shown}
+      totalComments={entries.length}
+      showList={!revealed}
       winner={revealed ? winner : null}
       revealAt={revealed ? null : giveaway.revealAt}
       participants={uniqueUsers(entries).length}
