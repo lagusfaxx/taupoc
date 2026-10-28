@@ -62,6 +62,7 @@ export function AdminShell({
         { href: '/admin/inicio', label: 'Inicio', icon: IconSpark },
         { href: '/admin/menu', label: 'Menú', icon: IconMenu },
         { href: '/admin/blog', label: 'Blog', icon: IconDoc },
+        { href: '/admin/sorteo', label: 'Sorteo', icon: IconSpark },
       ],
     },
     {
