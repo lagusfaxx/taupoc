@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { getSettings } from '@/lib/settings';
 import { getGiveaway } from '@/lib/giveaway-store';
+import { formatChileShort, isRevealed } from '@/lib/giveaway';
 import { formatCLP } from '@/lib/money';
 import { getCartCount } from '@/lib/cart';
 import { getSession } from '@/lib/auth';
@@ -36,7 +37,8 @@ export async function Header() {
           className="group block accent-bg text-center font-display text-[11px] font-bold uppercase tracking-widest transition hover:brightness-110"
         >
           <span className="container flex min-h-9 items-center justify-center gap-2 py-2">
-            {giveaway.title} · Ver ganador
+            {giveaway.title} ·{' '}
+            {isRevealed(giveaway) ? 'Ver ganador' : `Ganador en vivo · ${formatChileShort(giveaway.revealAt)}`}
             <span aria-hidden className="transition-transform group-hover:translate-x-1">→</span>
           </span>
         </Link>

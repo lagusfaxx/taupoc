@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getGiveaway } from '@/lib/giveaway-store';
-import { normalizeUser, parseEntries, uniqueUsers } from '@/lib/giveaway';
+import { isRevealed, normalizeUser, parseEntries, uniqueUsers } from '@/lib/giveaway';
 import { buildMetadata } from '@/lib/seo';
 import { GiveawayDraw } from '@/components/store/GiveawayDraw';
 
@@ -27,6 +27,9 @@ export default async function GiveawayPage() {
   const entries = parseEntries(giveaway.entriesText);
   const winner = entries.find((e) => normalizeUser(e.user) === normalizeUser(giveaway.winner));
   if (!winner) notFound();
+  // Antes de la hora el ganador no se manda al navegador: lo pide la cuenta
+  // regresiva a /api/sorteo/ganador cuando llega a cero.
+  const revealed = isRevealed(giveaway);
 
   return (
     <GiveawayDraw
@@ -34,7 +37,8 @@ export default async function GiveawayPage() {
       prize={giveaway.prize}
       description={giveaway.description}
       entries={entries}
-      winner={winner}
+      winner={revealed ? winner : null}
+      revealAt={revealed ? null : giveaway.revealAt}
       participants={uniqueUsers(entries).length}
     />
   );

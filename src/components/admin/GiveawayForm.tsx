@@ -5,7 +5,7 @@ import { useFormStatus } from 'react-dom';
 import Link from 'next/link';
 import { updateGiveaway } from '@/actions/admin/giveaway';
 import type { AdminState } from '@/actions/admin/products';
-import { normalizeUser, parseEntries, uniqueUsers, type Giveaway } from '@/lib/giveaway';
+import { isoToChileLocal, normalizeUser, parseEntries, uniqueUsers, type Giveaway } from '@/lib/giveaway';
 import { cn } from '@/lib/utils';
 import { Card } from './Card';
 import { Checkbox, Input, Textarea } from '@/components/ui/Field';
@@ -61,6 +61,16 @@ export function GiveawayForm({ giveaway }: { giveaway: Giveaway }) {
             defaultChecked={giveaway.showBanner}
             label='Mostrar el aviso "Ver ganador del sorteo" arriba de todo el sitio'
           />
+          <div className="max-w-xs">
+            <Input
+              label="Revelar el ganador"
+              hint="hora de Chile"
+              name="revealAt"
+              type="datetime-local"
+              defaultValue={giveaway.revealAt ? isoToChileLocal(giveaway.revealAt) : ''}
+              help="Hasta esa hora la página muestra una cuenta regresiva y el ganador no se puede ver. Vacío: se ve de inmediato."
+            />
+          </div>
           {giveaway.active ? (
             <Link href="/sorteo" target="_blank" className="inline-block text-[13.5px] accent-text underline underline-offset-4">
               Abrir /sorteo

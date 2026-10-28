@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { saveGiveaway } from '@/lib/giveaway-store';
-import { normalizeUser, parseEntries } from '@/lib/giveaway';
+import { chileLocalToIso, normalizeUser, parseEntries } from '@/lib/giveaway';
 import type { AdminState } from './products';
 
 const schema = z.object({
@@ -15,6 +15,7 @@ const schema = z.object({
   winner: z.string().trim().max(60).optional(),
   active: z.string().optional(),
   showBanner: z.string().optional(),
+  revealAt: z.string().trim().optional(),
 });
 
 export async function updateGiveaway(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
@@ -39,6 +40,9 @@ export async function updateGiveaway(_prev: AdminState | null, formData: FormDat
     return { ok: false, message: `@${winner} no está en la lista de participantes. Revisa cómo está escrito.` };
   }
 
+  const revealAt = d.revealAt ? chileLocalToIso(d.revealAt) : '';
+  if (revealAt === null) return { ok: false, message: 'La fecha y hora de revelación no es válida.' };
+
   await saveGiveaway({
     active,
     showBanner: d.showBanner === 'on',
@@ -47,6 +51,7 @@ export async function updateGiveaway(_prev: AdminState | null, formData: FormDat
     description: d.description ?? '',
     entriesText,
     winner,
+    revealAt,
   });
   revalidatePath('/', 'layout');
   return {

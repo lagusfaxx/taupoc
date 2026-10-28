@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import type { GiveawayEntry } from '@/lib/giveaway';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { formatChileDate, type GiveawayEntry } from '@/lib/giveaway';
 import { cn } from '@/lib/utils';
 
-type Phase = 'idle' | 'drawing' | 'done';
+type Phase = 'countdown' | 'revealing' | 'idle' | 'drawing' | 'done';
 
 const CONFETTI_COLORS = ['var(--accent)', '#ffffff', '#ffd23f', '#ff5d8f', '#3ec1ff'];
 const PAGE = 120;
@@ -100,22 +100,93 @@ function Confetti() {
   );
 }
 
+function pad(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+/**
+ * Cuenta regresiva hasta la hora de revelación. La hora se calcula en el
+ * navegador recién al montar, para no desalinear lo que pinta el servidor.
+ */
+function Countdown({ revealAt, onZero }: { revealAt: string; onZero: () => void }) {
+  const target = Date.parse(revealAt);
+  const [now, setNow] = useState<number | null>(null);
+  const fired = useRef(false);
+
+  useEffect(() => {
+    const tick = () => {
+      const t = Date.now();
+      setNow(t);
+      if (t >= target && !fired.current) {
+        fired.current = true;
+        onZero();
+      }
+    };
+    tick();
+    const id = setInterval(tick, 250);
+    return () => clearInterval(id);
+  }, [target, onZero]);
+
+  const left = now == null ? null : Math.max(0, target - now);
+  const total = left == null ? 0 : Math.floor(left / 1000);
+  const units = [
+    { label: 'Días', value: Math.floor(total / 86400) },
+    { label: 'Horas', value: Math.floor((total % 86400) / 3600) },
+    { label: 'Min', value: Math.floor((total % 3600) / 60) },
+    { label: 'Seg', value: total % 60 },
+  ].filter((u, i) => i > 0 || u.value > 0);
+  const finalCountdown = left != null && left <= 10_000;
+
+  return (
+    <div className="w-full border border-line-bright bg-ink px-4 py-7 sm:px-8">
+      <p className="font-display text-[11px] uppercase tracking-widest text-chalk-faint">El ganador se revela en vivo en</p>
+      {finalCountdown ? (
+        <p
+          key={total}
+          className="mt-3 font-display text-[88px] font-bold leading-none accent-text"
+          style={{ animation: 'sorteo-pop .5s cubic-bezier(.2,.9,.3,1.2) both' }}
+        >
+          {total}
+        </p>
+      ) : (
+        <div className="mt-4 flex justify-center gap-2 sm:gap-3">
+          {units.map((u) => (
+            <div key={u.label} className="min-w-[64px] border border-line bg-ink-900 px-2 py-3 sm:min-w-[84px]">
+              <p className="font-display text-[34px] font-bold leading-none tabular-nums text-chalk sm:text-[44px]">
+                {left == null ? '--' : pad(u.value)}
+              </p>
+              <p className="mt-1.5 font-display text-[10px] uppercase tracking-widest text-chalk-faint">{u.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="mt-5 text-[14px] text-chalk-dim">
+        <span className="capitalize">{formatChileDate(revealAt)}</span> · hora de Chile
+      </p>
+      <p className="mt-1 text-[12.5px] text-chalk-faint">Deja esta página abierta: la ruleta parte sola.</p>
+    </div>
+  );
+}
+
 export function GiveawayDraw({
   title,
   prize,
   description,
   entries,
-  winner,
+  winner: initialWinner,
+  revealAt,
   participants,
 }: {
   title: string;
   prize: string;
   description: string;
   entries: GiveawayEntry[];
-  winner: GiveawayEntry;
+  winner: GiveawayEntry | null;
+  revealAt: string | null;
   participants: number;
 }) {
-  const [phase, setPhase] = useState<Phase>('idle');
+  const [winner, setWinner] = useState<GiveawayEntry | null>(initialWinner);
+  const [phase, setPhase] = useState<Phase>(initialWinner ? 'idle' : 'countdown');
   const [current, setCurrent] = useState<GiveawayEntry | null>(null);
   const [ticks, setTicks] = useState(0);
   const [query, setQuery] = useState('');
@@ -127,11 +198,12 @@ export function GiveawayDraw({
     if (timer.current) clearTimeout(timer.current);
   }, []);
 
-  const draw = () => {
+  const draw = (w: GiveawayEntry | null = winner) => {
+    if (!w) return;
     if (timer.current) clearTimeout(timer.current);
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const steps = reduced ? 6 : 46;
-    const others = entries.filter((e) => e.user.toLowerCase() !== winner.user.toLowerCase());
+    const others = entries.filter((e) => e.user.toLowerCase() !== w.user.toLowerCase());
     const pool = others.length > 0 ? others : entries;
     setPhase('drawing');
     resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -141,7 +213,7 @@ export function GiveawayDraw({
       step += 1;
       setTicks(step);
       if (step >= steps) {
-        setCurrent(winner);
+        setCurrent(w);
         setPhase('done');
         return;
       }
@@ -153,6 +225,32 @@ export function GiveawayDraw({
     };
     next();
   };
+
+  // Al llegar a cero se pide el ganador. Si el reloj del teléfono va un poco
+  // adelantado, el servidor responde "todavía no" y se reintenta.
+  const reveal = useCallback(() => {
+    setPhase('revealing');
+    let tries = 0;
+    const ask = async () => {
+      tries += 1;
+      try {
+        const res = await fetch('/api/sorteo/ganador', { cache: 'no-store' });
+        if (res.ok) {
+          const { winner: w } = (await res.json()) as { winner: GiveawayEntry };
+          setWinner(w);
+          drawRef.current(w);
+          return;
+        }
+      } catch {
+        // Sin red: se reintenta igual.
+      }
+      if (tries < 60) timer.current = setTimeout(ask, 2000);
+      else window.location.reload();
+    };
+    ask();
+  }, []);
+  const drawRef = useRef(draw);
+  drawRef.current = draw;
 
   const filtered = useMemo(() => {
     const q = query.trim().replace(/^@/, '').toLowerCase();
@@ -207,10 +305,16 @@ export function GiveawayDraw({
 
           {/* La ruleta */}
           <div ref={resultRef} className="mt-10 w-full max-w-xl scroll-mt-24">
-            {phase === 'idle' ? (
+            {phase === 'countdown' && revealAt ? (
+              <Countdown revealAt={revealAt} onZero={reveal} />
+            ) : phase === 'revealing' ? (
+              <div className="w-full border border-line-bright bg-ink px-5 py-10">
+                <p className="font-display text-[13px] uppercase tracking-widest text-chalk-dim">Revelando al ganador…</p>
+              </div>
+            ) : phase === 'idle' ? (
               <button
                 type="button"
-                onClick={draw}
+                onClick={() => draw()}
                 className="h-16 w-full accent-bg font-display text-[15px] font-bold uppercase tracking-widest transition clip-notch-sm hover:brightness-110 sm:text-[17px]"
                 style={{ animation: 'sorteo-glow 2.4s ease-in-out infinite' }}
               >
@@ -258,7 +362,7 @@ export function GiveawayDraw({
                 {phase === 'done' ? (
                   <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
                     <a
-                      href={`https://www.instagram.com/${encodeURIComponent(winner.user)}/`}
+                      href={`https://www.instagram.com/${encodeURIComponent(winner?.user ?? '')}/`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="h-11 accent-bg px-6 font-display text-[11px] font-bold uppercase leading-[44px] tracking-widest transition hover:brightness-110"
@@ -267,7 +371,7 @@ export function GiveawayDraw({
                     </a>
                     <button
                       type="button"
-                      onClick={draw}
+                      onClick={() => draw()}
                       className="h-11 border border-line-bright px-6 font-display text-[11px] font-bold uppercase tracking-widest text-chalk transition hover:border-chalk"
                     >
                       Ver de nuevo
@@ -307,7 +411,7 @@ export function GiveawayDraw({
 
         <ul className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.slice(0, limit).map((e, i) => {
-            const isWinner = phase === 'done' && e.user.toLowerCase() === winner.user.toLowerCase();
+            const isWinner = phase === 'done' && !!winner && e.user.toLowerCase() === winner.user.toLowerCase();
             return (
               <li
                 key={`${e.user}-${i}`}
