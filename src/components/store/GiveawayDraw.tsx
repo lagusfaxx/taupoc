@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { formatChileDate, type GiveawayEntry } from '@/lib/giveaway';
 import { cn } from '@/lib/utils';
 
-type Phase = 'countdown' | 'revealing' | 'idle' | 'drawing' | 'done';
+// 'static': se entra con el sorteo ya resuelto; se muestra el ganador sin animación.
+type Phase = 'countdown' | 'revealing' | 'drawing' | 'done' | 'static';
 
 const CONFETTI_COLORS = ['var(--accent)', '#ffffff', '#ffd23f', '#ff5d8f', '#3ec1ff'];
 const PAGE = 120;
@@ -191,8 +192,8 @@ export function GiveawayDraw({
   showList: boolean;
 }) {
   const [winner, setWinner] = useState<GiveawayEntry | null>(initialWinner);
-  const [phase, setPhase] = useState<Phase>(initialWinner ? 'idle' : 'countdown');
-  const [current, setCurrent] = useState<GiveawayEntry | null>(null);
+  const [phase, setPhase] = useState<Phase>(initialWinner ? 'static' : 'countdown');
+  const [current, setCurrent] = useState<GiveawayEntry | null>(initialWinner);
   const [ticks, setTicks] = useState(0);
   const [query, setQuery] = useState('');
   const [limit, setLimit] = useState(PAGE);
@@ -264,6 +265,8 @@ export function GiveawayDraw({
       : entries;
   }, [entries, query]);
 
+  // El ganador ya está a la vista, recién revelado en vivo o de entrada.
+  const final = phase === 'done' || phase === 'static';
   const progress = phase === 'drawing' ? Math.min(100, (ticks / 46) * 100) : phase === 'done' ? 100 : 0;
 
   return (
@@ -282,7 +285,7 @@ export function GiveawayDraw({
       {phase === 'done' ? <Confetti key={ticks} /> : null}
 
       <section className="relative overflow-hidden border-b border-line bg-ink-900">
-        <CommentWall entries={entries} fast={phase === 'drawing'} />
+        {phase !== 'static' ? <CommentWall entries={entries} fast={phase === 'drawing'} /> : null}
         <div className="relative container flex flex-col items-center py-14 text-center lg:py-20">
           <p className="eyebrow-accent mb-3">Sorteo en Instagram</p>
           <h1 className="max-w-3xl text-balance font-display text-[34px] leading-[1] tracking-tightest text-chalk sm:text-[52px]">
@@ -316,38 +319,29 @@ export function GiveawayDraw({
               <div className="w-full border border-line-bright bg-ink px-5 py-10">
                 <p className="font-display text-[13px] uppercase tracking-widest text-chalk-dim">Revelando al ganador…</p>
               </div>
-            ) : phase === 'idle' ? (
-              <button
-                type="button"
-                onClick={() => draw()}
-                className="h-16 w-full accent-bg font-display text-[15px] font-bold uppercase tracking-widest transition clip-notch-sm hover:brightness-110 sm:text-[17px]"
-                style={{ animation: 'sorteo-glow 2.4s ease-in-out infinite' }}
-              >
-                Ver ganador
-              </button>
             ) : (
               <div
                 className={cn(
                   'relative border bg-ink px-5 py-7 transition-colors sm:px-8',
-                  phase === 'done' ? 'accent-border' : 'border-line-bright',
+                  final ? 'accent-border' : 'border-line-bright',
                 )}
                 style={phase === 'done' ? { animation: 'sorteo-glow 2.4s ease-in-out infinite' } : undefined}
                 aria-live="polite"
               >
                 <p className="font-display text-[11px] uppercase tracking-widest text-chalk-faint">
-                  {phase === 'done' ? '¡Tenemos ganador!' : `Mezclando ${totalComments.toLocaleString('es-CL')} comentarios…`}
+                  {phase === 'done' ? '¡Tenemos ganador!' : phase === 'static' ? 'Ganador del sorteo' : `Mezclando ${totalComments.toLocaleString('es-CL')} comentarios…`}
                 </p>
                 {current ? (
                   <div
-                    key={phase === 'done' ? 'winner' : ticks}
+                    key={final ? 'winner' : ticks}
                     className="mt-4 flex flex-col items-center gap-3"
                     style={phase === 'done' ? { animation: 'sorteo-pop .7s cubic-bezier(.2,.9,.3,1.2) both' } : undefined}
                   >
-                    <Avatar user={current.user} className={phase === 'done' ? 'h-20 w-20 text-[32px]' : 'h-14 w-14 text-[22px]'} />
+                    <Avatar user={current.user} className={final ? 'h-20 w-20 text-[32px]' : 'h-14 w-14 text-[22px]'} />
                     <p
                       className={cn(
                         'break-all font-display font-bold tracking-tight',
-                        phase === 'done' ? 'text-[34px] accent-text sm:text-[44px]' : 'text-[24px] text-chalk',
+                        final ? 'text-[34px] accent-text sm:text-[44px]' : 'text-[24px] text-chalk',
                       )}
                     >
                       @{current.user}
@@ -364,8 +358,8 @@ export function GiveawayDraw({
                   </div>
                 ) : null}
 
-                {phase === 'done' ? (
-                  <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                {final ? (
+                  <div className="mt-7 flex justify-center">
                     <a
                       href={`https://www.instagram.com/${encodeURIComponent(winner?.user ?? '')}/`}
                       target="_blank"
@@ -374,13 +368,6 @@ export function GiveawayDraw({
                     >
                       Ver perfil en Instagram
                     </a>
-                    <button
-                      type="button"
-                      onClick={() => draw()}
-                      className="h-11 border border-line-bright px-6 font-display text-[11px] font-bold uppercase tracking-widest text-chalk transition hover:border-chalk"
-                    >
-                      Ver de nuevo
-                    </button>
                   </div>
                 ) : null}
               </div>
