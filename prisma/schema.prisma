@@ -353,6 +353,8 @@ model Variant {
   cartItems  CartItem[]
   orderItems OrderItem[]
   movements  InventoryMovement[]
+  cartEvents CartEvent[]
+  interests  SizeInterest[]
 
   @@unique([productId, colorId, size])
   @@index([productId])
@@ -461,6 +463,38 @@ model CartItem {
 
   @@unique([cartId, variantId])
   @@index([cartId])
+}
+
+/// Cada vez que una talla entra al carrito. Los ítems del carrito se borran o
+/// cambian; este registro queda para medir qué se agrega y no se compra.
+model CartEvent {
+  id        String   @id @default(cuid())
+  variantId String
+  cartId    String
+  quantity  Int
+  createdAt DateTime @default(now())
+
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
+  @@index([createdAt])
+}
+
+/// "¿Te interesa esta talla?" sobre una talla agotada o apagada.
+model SizeInterest {
+  id         String    @id @default(cuid())
+  variantId  String
+  /// Carrito o visitante que lo pidió, para no contar dos veces el mismo clic.
+  visitorKey String
+  email      String?
+  userId     String?
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([variantId, visitorKey])
+  @@index([createdAt])
 }
 
 // ─────────────────────────────────────────────────────────────

@@ -77,6 +77,14 @@ export async function addToCart(
     update: { quantity },
   });
 
+  // Registro para la demanda de tallas: qué se agrega aunque después no se compre.
+  const added = quantity - (existing?.quantity ?? 0);
+  if (added > 0) {
+    await prisma.cartEvent
+      .create({ data: { variantId: variant.id, cartId: cart.id, quantity: added } })
+      .catch(() => null);
+  }
+
   // Solo la página del carrito. Invalidar el layout entero volvía a montar la
   // ficha del producto, y con ella se perdía el estado de la acción: el
   // producto entraba al carrito pero en pantalla no pasaba nada hasta
