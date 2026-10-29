@@ -85,8 +85,12 @@ try {
   assert.equal(order.paymentStatus, 'APPROVED');
   assert.equal((await db.variant.findUniqueOrThrow({ where: { id: v[1].id } })).stock, -1);
   await panel.locator('select[name="status"]').selectOption('PROCESSING');
+  const saved = panel.waitForResponse(response => response.request().method() === 'POST' && new URL(response.url()).pathname === `/admin/pedidos/${order.id}`);
   await panel.getByRole('button', { name: 'Actualizar estado', exact: true }).click();
-  await panel.getByText('Pedido marcado como en preparación.', { exact: true }).waitFor();
+  assert.equal((await saved).ok(), true);
+  await panel.reload();
+  assert.equal(await panel.locator('select[name="status"]').inputValue(), 'PROCESSING');
+  assert.equal((await db.order.findUniqueOrThrow({ where: { id: order.id } })).status, 'PROCESSING');
   assert.equal((await db.variant.findUniqueOrThrow({ where: { id: v[1].id } })).stock, -1);
   await panel.goto(`${base}/admin/tallas`);
   await panel.getByRole('heading', { name: 'Demanda de tallas', exact: true }).waitFor();
