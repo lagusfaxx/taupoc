@@ -241,33 +241,33 @@ function SizeInterestPanel({
   return (
     <div className="mt-3 border border-line bg-ink-800 p-4 animate-rise-in">
       <div className="flex items-start justify-between gap-3">
-        <p className="text-[14px] text-chalk">
+        <p className="pt-0.5 text-[14px] leading-snug text-chalk">
           La talla <strong>{variant.size}</strong> está agotada. ¿Te interesa esta talla?
         </p>
         <button
           type="button"
           onClick={onClose}
           aria-label="Cerrar"
-          className="shrink-0 text-[13px] text-chalk-faint hover:text-chalk"
+          className="-m-2 flex h-10 w-10 shrink-0 items-center justify-center text-[15px] text-chalk-faint hover:text-chalk"
         >
           ✕
         </button>
       </div>
 
       {!registrado ? (
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 sm:flex">
           <button
             type="button"
             onClick={() => enviar()}
             disabled={enviando}
-            className="h-10 accent-bg px-5 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm disabled:opacity-60"
+            className="h-11 accent-bg px-5 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm disabled:opacity-60"
           >
             {enviando ? 'Enviando…' : 'Sí, me interesa'}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="h-10 border border-line px-5 font-display text-[12px] font-bold uppercase tracking-widest text-chalk-dim"
+            className="h-11 border border-line px-5 font-display text-[12px] font-bold uppercase tracking-widest text-chalk-dim"
           >
             No
           </button>
@@ -280,13 +280,16 @@ function SizeInterestPanel({
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Tu correo para avisarte (opcional)"
             aria-label="Correo para avisarte de la reposición"
-            className="h-10 min-w-0 flex-1 border border-line bg-ink-900 px-3 text-[13.5px] text-chalk placeholder:text-chalk-faint"
+            autoComplete="email"
+            inputMode="email"
+            // 16px en el teléfono: con menos, iOS hace zoom al enfocar.
+            className="h-11 min-w-0 flex-1 border border-line bg-ink-900 px-3 text-[16px] text-chalk sm:text-[13.5px] placeholder:text-chalk-faint"
           />
           <button
             type="button"
             onClick={() => enviar(email)}
             disabled={enviando || !email.trim()}
-            className="h-10 shrink-0 border border-line-bright px-5 font-display text-[12px] font-bold uppercase tracking-widest text-chalk disabled:opacity-50"
+            className="h-11 shrink-0 border border-line-bright px-5 font-display text-[12px] font-bold uppercase tracking-widest text-chalk disabled:opacity-50"
           >
             Avísame
           </button>
@@ -570,7 +573,7 @@ export function ProductView({
                       setVariantId(v.id);
                     }}
                     aria-pressed={out ? v.id === interesId : selected}
-                    aria-label={`Talla ${v.size}${out ? ' agotada' : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
+                    aria-label={`Talla ${v.size}${out ? ' agotada, avísame cuando vuelva' : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
                     className={cn(
                       'relative flex h-12 items-center justify-center border font-display text-[15px] font-semibold tracking-wide transition-all duration-150',
                       selected
@@ -617,7 +620,7 @@ export function ProductView({
                 )
               ) : colorStock === 0 ? (
                 <span className="text-chalk-faint">
-                  Este color está agotado. Prueba con otro o escríbenos para avisarte de la reposición.
+                  Este color está agotado. Toca una talla para avisarte cuando vuelva.
                 </span>
               ) : (
                 <span className="text-chalk-faint">

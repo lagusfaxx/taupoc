@@ -142,7 +142,9 @@ export default async function ProductPage({
     stripCode: color.stripCode,
     stripHex: color.stripHex,
     images: color.images.map((img) => ({ id: img.id, url: img.url, alt: img.alt })),
-    variants: color.variants.map((v) => {
+    // Un accesorio no ofrece tallas apagadas: con una sola presentación activa
+    // tiene que seguir quedando preseleccionada.
+    variants: color.variants.filter((v) => v.active || !esAccesorio).map((v) => {
       // Una talla apagada se ofrece como agotada.
       const available = v.active ? Math.max(0, v.stock - v.reserved) : 0;
       return {
