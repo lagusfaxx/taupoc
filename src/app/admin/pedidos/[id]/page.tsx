@@ -210,7 +210,9 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
 
           <Card title="Pago">
             <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-              {(order.paymentMethod === 'TRANSFER'
+              {(order.paymentMethod === 'MANUAL'
+                ? [['Método', PAYMENT_METHOD_LABEL.MANUAL], ['Estado', PAYMENT_STATUS_LABEL[order.paymentStatus]], ['Total', formatCLP(order.total)]]
+                : order.paymentMethod === 'TRANSFER'
                 ? [
                     ['Método', PAYMENT_METHOD_LABEL[order.paymentMethod]],
                     ['Estado', PAYMENT_STATUS_LABEL[order.paymentStatus]],

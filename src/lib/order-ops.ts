@@ -2,19 +2,20 @@ import 'server-only';
 import type { OrderStatus } from '@prisma/client';
 import { prisma } from './db';
 import { logOrderEvent, ORDER_STATUS_LABEL } from './orders';
-import { commitStockForOrder, restoreStockForOrder } from './inventory';
+import { adjustStock, checkLowStock } from './inventory';
+import { formatCLP } from './money';
 import { trackingUrlFor } from './shipping';
 import {
+  sendAdminNewOrder,
+  sendOrderPlaced,
   sendOrderShipped,
   sendOrderPaid,
   sendOrderProcessing,
   sendOrderDelivered,
   sendOrderCancelled,
   sendOrderRefunded,
-  sendAdminNewOrder,
   type OrderMailData,
 } from './mail';
-import { formatCLP } from './money';
 
 /*
  * Operaciones de pedido compartidas por el panel y el servidor MCP. Viven acá
@@ -52,10 +53,11 @@ export async function orderMailPayload(orderId: string): Promise<OrderMailData |
 /**
  * Qué correo acompaña a cada estado.
  *
- * Los que no aparecen no avisan: PENDING ya lo cubre el correo de pedido
- * recibido que sale del propio checkout.
+ * Se usan también al crear un pedido desde el panel.
  */
 const AVISO_POR_ESTADO: Partial<Record<OrderStatus, (order: OrderMailData) => Promise<unknown>>> = {
+  PENDING: sendOrderPlaced,
+  PAID: sendOrderPaid,
   PROCESSING: sendOrderProcessing,
   SHIPPED: sendOrderShipped,
   DELIVERED: sendOrderDelivered,
@@ -77,62 +79,70 @@ export async function changeOrderStatus(params: {
   notify?: boolean;
 }): Promise<{ ok: boolean; message: string }> {
   const { orderId: id, status, actor } = params;
-  const order = await prisma.order.findUnique({ where: { id } });
-  if (!order) return { ok: false, message: 'Pedido no encontrado.' };
-  if (order.status === status) return { ok: true, message: 'El pedido ya estaba en ese estado.' };
-
-  const wasCommitted = COMPROMETE_STOCK.includes(order.status);
-  const willCommit = COMPROMETE_STOCK.includes(status);
-
-  await prisma.order.update({
-    where: { id },
-    data: {
-      status,
-      ...(status === 'PAID' && order.paymentStatus !== 'APPROVED'
-        ? { paymentStatus: 'APPROVED', paidAt: new Date() }
-        : {}),
-      ...(status === 'SHIPPED' && !order.shippedAt ? { shippedAt: new Date() } : {}),
-      ...(status === 'DELIVERED' && !order.deliveredAt ? { deliveredAt: new Date() } : {}),
-    },
-  });
-
-  if (!wasCommitted && willCommit) await commitStockForOrder(id);
-
-  // Un pago que se aprueba a mano cuenta el uso del cupón igual que el
-  // webhook de Mercado Pago. Si ya venía aprobado, el uso ya se contó.
-  if (status === 'PAID' && order.paymentStatus !== 'APPROVED' && order.couponId) {
-    await prisma.coupon.update({
-      where: { id: order.couponId },
-      data: { usedCount: { increment: 1 } },
-    });
-  }
-  if (wasCommitted && (status === 'CANCELLED' || status === 'REFUNDED')) {
-    await restoreStockForOrder(id, status === 'REFUNDED' ? 'RETURN' : 'CANCEL');
-  }
-
-  await logOrderEvent({
-    orderId: id,
-    type: 'status_change',
-    message: `Estado cambiado a ${ORDER_STATUS_LABEL[status]}.`,
-    actor,
-  });
-
-  if (params.notify !== false) {
-    const payload = await orderMailPayload(id);
-    if (payload) {
-      // PAID va aparte: solo se avisa si el pago no venía ya aprobado, porque
-      // en ese caso el webhook de Mercado Pago ya mandó su propio correo.
-      const aviso =
-        status === 'PAID'
-          ? order.paymentStatus !== 'APPROVED'
-            ? sendOrderPaid
-            : null
-          : (AVISO_POR_ESTADO[status] ?? null);
-      if (aviso) await aviso(payload).catch(() => {});
+  if (!Object.prototype.hasOwnProperty.call(ORDER_STATUS_LABEL, status))
+    return { ok: false, message: 'Estado inválido.' };
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${id} FOR UPDATE`;
+    const order = await tx.order.findUnique({ where: { id } });
+    if (!order) return { ok: false, message: 'Pedido no encontrado.', notify: false };
+    if (order.status === status)
+      return { ok: true, message: 'El pedido ya estaba en ese estado.', notify: false };
+    if (status === 'PENDING' && order.stockCommitted)
+      return {
+        ok: false,
+        message: 'Cancela el pedido antes de volver a dejarlo pendiente.',
+        notify: false,
+      };
+    const willCommit = COMPROMETE_STOCK.includes(status);
+    const willRestore = status === 'CANCELLED' || status === 'REFUNDED';
+    if ((willCommit && !order.stockCommitted) || (willRestore && order.stockCommitted)) {
+      const items = await tx.orderItem.findMany({ where: { orderId: id } });
+      for (const item of items)
+        if (item.variantId)
+          await adjustStock(tx, {
+            variantId: item.variantId,
+            delta: willCommit ? -item.quantity : item.quantity,
+            type: willCommit ? 'SALE' : status === 'REFUNDED' ? 'RETURN' : 'CANCEL',
+            reason: `Pedido ${order.number}: ${ORDER_STATUS_LABEL[status]}`,
+            actorEmail: actor,
+            orderId: id,
+          });
     }
-  }
-
-  return { ok: true, message: `Pedido marcado como ${ORDER_STATUS_LABEL[status].toLowerCase()}.` };
+    await tx.order.update({
+      where: { id },
+      data: {
+        status,
+        stockCommitted: willCommit ? true : willRestore ? false : order.stockCommitted,
+        ...(willCommit && order.paymentStatus !== 'APPROVED'
+          ? { paymentStatus: 'APPROVED', paidAt: new Date() }
+          : {}),
+        ...(status === 'PENDING' ? { paymentStatus: 'PENDING', paidAt: null } : {}),
+        ...(status === 'CANCELLED' && order.creationKey ? { paymentStatus: 'CANCELLED' } : {}),
+        ...(status === 'REFUNDED' && order.creationKey ? { paymentStatus: 'REFUNDED' } : {}),
+        ...(status === 'SHIPPED' && !order.shippedAt ? { shippedAt: new Date() } : {}),
+        ...(status === 'DELIVERED' && !order.deliveredAt ? { deliveredAt: new Date() } : {}),
+      },
+    });
+    if (willCommit && order.paymentStatus !== 'APPROVED' && order.couponId) {
+      await tx.coupon.update({ where: { id: order.couponId }, data: { usedCount: { increment: 1 } } });
+    }
+    await tx.orderEvent.create({
+      data: {
+        orderId: id,
+        type: 'status_change',
+        message: `Estado cambiado a ${ORDER_STATUS_LABEL[status]}.`,
+        actor,
+      },
+    });
+    return {
+      ok: true,
+      message: `Pedido marcado como ${ORDER_STATUS_LABEL[status].toLowerCase()}.`,
+      notify: status !== 'PAID' || order.paymentStatus !== 'APPROVED',
+    };
+  });
+  if (result.ok && COMPROMETE_STOCK.includes(status)) void checkLowStock();
+  if (params.notify !== false && result.notify) await notifyOrderStatus(id, status, actor);
+  return { ok: result.ok, message: result.message };
 }
 
 /**
@@ -213,7 +223,6 @@ export async function saveOrderTracking(params: {
       shippingCarrier: carrier,
       trackingNumber: tracking,
       trackingUrl: trackingUrlFor(carrier, tracking),
-      ...(shouldShip ? { status: 'SHIPPED', shippedAt: order.shippedAt ?? new Date() } : {}),
     },
   });
 
@@ -225,14 +234,39 @@ export async function saveOrderTracking(params: {
   });
 
   if (shouldShip) {
-    const payload = await orderMailPayload(params.orderId);
-    if (payload) await sendOrderShipped(payload).catch(() => {});
+    if (order.status !== 'SHIPPED' && order.status !== 'DELIVERED') {
+      await changeOrderStatus({ orderId: params.orderId, status: 'SHIPPED', actor: params.actor });
+    } else if (order.trackingNumber !== tracking || order.shippingCarrier !== carrier) {
+      await notifyOrderStatus(params.orderId, 'SHIPPED', params.actor);
+    }
   }
 
   return {
     ok: true,
     message: shouldShip
-      ? 'Seguimiento guardado y correo de despacho enviado al cliente.'
+      ? 'Seguimiento guardado. El resultado del aviso figura en el historial.'
       : 'Seguimiento guardado.',
   };
+}
+
+/** El historial distingue aceptación, omisión y fallo de entrega al proveedor. */
+export async function notifyOrderStatus(orderId: string, status: OrderStatus, actor: string) {
+  const send = AVISO_POR_ESTADO[status];
+  if (!send) return;
+  let message: string;
+  try {
+    const payload = await orderMailPayload(orderId);
+    if (!payload) return;
+    const result = (await send(payload)) as { skipped?: boolean; error?: unknown } | undefined;
+    message = result?.error
+      ? 'El proveedor rechazó el correo de estado. Revisa la configuración del correo.'
+      : !result || result.skipped
+        ? 'Correo no enviado: revisa el transporte y las notificaciones en Ajustes.'
+        : 'Correo de estado aceptado por el proveedor.';
+  } catch {
+    message = 'No se pudo enviar el correo de estado. Revisa el proveedor de correo.';
+  }
+  await logOrderEvent({ orderId, type: 'status_email', message, actor }).catch((error) =>
+    console.error('[status-email:log]', error),
+  );
 }

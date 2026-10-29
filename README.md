@@ -445,3 +445,34 @@ respeto por `prefers-reduced-motion`.
 
 Las imágenes se sirven en AVIF y WEBP mediante `next/image` con tamaños
 responsivos. Los scripts de analítica se cargan después de la interacción.
+
+### Crear pedido
+
+**Pedidos → Crear pedido** permite seleccionar variantes, incluso desactivadas o
+sin stock, cantidades, cliente, entrega, descuento y estado inicial: pendiente,
+pagado o en preparación. El servidor toma los precios del catálogo y guarda las
+mismas copias de producto, color, talla, SKU y precio que el checkout habitual.
+
+Los pedidos pagados o en preparación descuentan stock, incluso por debajo de
+cero. El déficit queda visible en el inventario para planificar reposición. Un
+pendiente descuenta al confirmar pago. Los cambios de estado y sus movimientos
+son atómicos; reintentos del mismo formulario no duplican el pedido. Cancelar o
+reembolsar devuelve el compromiso una sola vez. Un pedido creado desde el panel
+no realiza un cobro ni genera una preferencia de Mercado Pago.
+
+El correo inicial corresponde al estado elegido; los cambios posteriores usan
+las plantillas habituales. Requiere Resend/SMTP y notificaciones habilitadas.
+El historial registra aceptación por el proveedor, omisión o error; aceptación
+no garantiza entrega. No es necesario configurar Meta Pixel para estas métricas.
+
+**Despliegue:** ejecutar `npx prisma migrate deploy` antes de iniciar la nueva
+versión. La migración agrega la clave de reintento, el método de pago manual y
+reconstruye el compromiso de inventario de los pedidos existentes.
+
+**Pruebas:** con una base local separada cuyo nombre empiece por `taupoc_test`,
+aplicar las migraciones y ejecutar `node --conditions=react-server --import tsx
+--test tests/admin-orders.test.ts`, pasando su `DATABASE_URL`. Comprueba stock,
+reintentos, estados, correos simulados, ventas por talla y confirmación de
+transferencias con cupones. Para el navegador: `node --import tsx
+tests/browser-admin-orders.mts`, con `DATABASE_URL` local y `TEST_BASE_URL`
+apuntando al servidor de prueba, sin credenciales externas de pagos ni correo.
