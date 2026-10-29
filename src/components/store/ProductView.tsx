@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { addToCart, type CartActionState } from '@/actions/cart';
+import { registerSizeInterest, type InterestState } from '@/actions/size-interest';
 import { formatCLP, installment } from '@/lib/money';
 import { cn, readableOn } from '@/lib/utils';
 import { colorLabel } from '@/lib/colors';
@@ -206,6 +207,107 @@ function ColorPicker({
   );
 }
 
+/**
+ * Pregunta sobre una talla agotada o apagada. Un clic en "Sí" ya cuenta como
+ * demanda; el correo es opcional, para avisar cuando vuelva.
+ */
+function SizeInterestPanel({
+  variant,
+  onClose,
+}: {
+  variant: ViewVariant | null;
+  onClose: () => void;
+}) {
+  const [estado, setEstado] = useState<InterestState | null>(null);
+  const [registrado, setRegistrado] = useState(false);
+  const [email, setEmail] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  if (!variant) return null;
+
+  async function enviar(correo?: string) {
+    if (!variant || enviando) return;
+    setEnviando(true);
+    try {
+      const r = await registerSizeInterest(variant.id, correo);
+      setEstado(r);
+      if (r.ok) setRegistrado(true);
+    } catch {
+      setEstado({ ok: false, message: 'No se pudo registrar. Inténtalo de nuevo.' });
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 border border-line bg-ink-800 p-4 animate-rise-in">
+      <div className="flex items-start justify-between gap-3">
+        <p className="pt-0.5 text-[14px] leading-snug text-chalk">
+          La talla <strong>{variant.size}</strong> está agotada. ¿Te interesa esta talla?
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar"
+          className="-m-2 flex h-10 w-10 shrink-0 items-center justify-center text-[15px] text-chalk-faint hover:text-chalk"
+        >
+          ✕
+        </button>
+      </div>
+
+      {!registrado ? (
+        <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 sm:flex">
+          <button
+            type="button"
+            onClick={() => enviar()}
+            disabled={enviando}
+            className="h-11 accent-bg px-5 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm disabled:opacity-60"
+          >
+            {enviando ? 'Enviando…' : 'Sí, me interesa'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 border border-line px-5 font-display text-[12px] font-bold uppercase tracking-widest text-chalk-dim"
+          >
+            No
+          </button>
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Tu correo para avisarte (opcional)"
+            aria-label="Correo para avisarte de la reposición"
+            autoComplete="email"
+            inputMode="email"
+            // 16px en el teléfono: con menos, iOS hace zoom al enfocar.
+            className="h-11 min-w-0 flex-1 border border-line bg-ink-900 px-3 text-[16px] text-chalk sm:text-[13.5px] placeholder:text-chalk-faint"
+          />
+          <button
+            type="button"
+            onClick={() => enviar(email)}
+            disabled={enviando || !email.trim()}
+            className="h-11 shrink-0 border border-line-bright px-5 font-display text-[12px] font-bold uppercase tracking-widest text-chalk disabled:opacity-50"
+          >
+            Avísame
+          </button>
+        </div>
+      )}
+
+      {estado ? (
+        <p
+          role="status"
+          className={cn('mt-2.5 text-[13px]', estado.ok ? 'text-signal-ok' : 'text-signal-bad')}
+        >
+          {estado.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function ProductView({
   product,
   initialColorSlug,
@@ -229,6 +331,8 @@ export function ProductView({
   const [variantId, setVariantId] = useState<string | null>(unicaVariante?.id ?? null);
   const [state, setState] = useState<CartActionState | null>(null);
   const [enviando, setEnviando] = useState(false);
+  // Talla agotada sobre la que se preguntó "¿Te interesa esta talla?".
+  const [interesId, setInteresId] = useState<string | null>(null);
 
   /**
    * La acción se llama a mano en vez de pasarla como `action` del formulario.
@@ -295,6 +399,7 @@ export function ProductView({
 
   // Al cambiar de color se conserva la talla si sigue existiendo con stock.
   useEffect(() => {
+    setInteresId(null);
     if (!color) return;
     const current = color.variants.find((v) => v.id === variantId);
     if (current) return;
@@ -459,16 +564,24 @@ export function ProductView({
                   <button
                     key={v.id}
                     type="button"
-                    disabled={out}
-                    onClick={() => setVariantId(v.id)}
-                    aria-pressed={selected}
-                    aria-label={`Talla ${v.size}${out ? ' agotada' : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
+                    onClick={() => {
+                      if (out) {
+                        setInteresId(v.id);
+                        return;
+                      }
+                      setInteresId(null);
+                      setVariantId(v.id);
+                    }}
+                    aria-pressed={out ? v.id === interesId : selected}
+                    aria-label={`Talla ${v.size}${out ? ' agotada, avísame cuando vuelva' : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
                     className={cn(
                       'relative flex h-12 items-center justify-center border font-display text-[15px] font-semibold tracking-wide transition-all duration-150',
                       selected
                         ? 'accent-border accent-text bg-ink-800'
                         : out
-                          ? 'cursor-not-allowed border-line-soft text-chalk-faint/40'
+                          ? v.id === interesId
+                            ? 'border-chalk-faint text-chalk-faint'
+                            : 'border-line-soft text-chalk-faint/40 hover:border-line hover:text-chalk-faint'
                           : 'border-line text-chalk hover:border-chalk-faint',
                     )}
                   >
@@ -483,6 +596,14 @@ export function ProductView({
               })}
             </div>
             )}
+
+            {interesId ? (
+              <SizeInterestPanel
+                key={interesId}
+                variant={color?.variants.find((v) => v.id === interesId) ?? null}
+                onClose={() => setInteresId(null)}
+              />
+            ) : null}
 
             {/* Estado de stock en vivo */}
             <p ref={liveRef} aria-live="polite" className="mt-3 min-h-[20px] text-[13px]">
@@ -499,7 +620,7 @@ export function ProductView({
                 )
               ) : colorStock === 0 ? (
                 <span className="text-chalk-faint">
-                  Este color está agotado. Prueba con otro o escríbenos para avisarte de la reposición.
+                  Este color está agotado. Toca una talla para avisarte cuando vuelva.
                 </span>
               ) : (
                 <span className="text-chalk-faint">

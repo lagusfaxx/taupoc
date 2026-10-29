@@ -88,7 +88,7 @@ export async function generateMetadata({
   // foto y su canónica nombran ese colorway y no el modelo.
   if (color) {
     const tallas = color.variants
-      .filter((v) => v.stock - v.reserved > 0)
+      .filter((v) => v.active && v.stock - v.reserved > 0)
       .map((v) => v.size);
     const rango =
       tallas.length > 0 ? `Tallas ${tallas[0]} a ${tallas[tallas.length - 1]}` : 'Tallas 20 a 36';
@@ -142,8 +142,11 @@ export default async function ProductPage({
     stripCode: color.stripCode,
     stripHex: color.stripHex,
     images: color.images.map((img) => ({ id: img.id, url: img.url, alt: img.alt })),
-    variants: color.variants.map((v) => {
-      const available = Math.max(0, v.stock - v.reserved);
+    // Un accesorio no ofrece tallas apagadas: con una sola presentación activa
+    // tiene que seguir quedando preseleccionada.
+    variants: color.variants.filter((v) => v.active || !esAccesorio).map((v) => {
+      // Una talla apagada se ofrece como agotada.
+      const available = v.active ? Math.max(0, v.stock - v.reserved) : 0;
       return {
         id: v.id,
         size: v.size,
@@ -266,7 +269,7 @@ export default async function ProductPage({
       priceCurrency: 'CLP',
       lowPrice: product.basePrice,
       highPrice: product.basePrice,
-      offerCount: enVista.reduce((s, c) => s + c.variants.length, 0),
+      offerCount: enVista.reduce((s, c) => s + c.variants.filter((v) => v.available > 0).length, 0),
       availability:
         product.status === 'COMING_SOON'
           ? 'https://schema.org/PreOrder'

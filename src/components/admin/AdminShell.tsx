@@ -70,6 +70,7 @@ export function AdminShell({
       items: [
         { href: '/admin/envios', label: 'Envíos', icon: IconTruck },
         { href: '/admin/reportes', label: 'Reportes', icon: IconChart },
+        { href: '/admin/tallas', label: 'Demanda de tallas', icon: IconRuler },
         { href: '/admin/configuracion', label: 'Ajustes', icon: IconSettings },
       ],
     },

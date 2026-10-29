@@ -480,7 +480,9 @@ export const getProductDetail = cache(async function getProductDetail(slug: stri
         orderBy: { sortOrder: 'asc' },
         include: {
           images: { orderBy: { sortOrder: 'asc' } },
-          variants: { where: { active: true }, orderBy: { sortOrder: 'asc' } },
+          // Las tallas apagadas también viajan: la ficha las muestra como
+          // agotadas para medir cuánta gente las pide.
+          variants: { orderBy: { sortOrder: 'asc' } },
         },
       },
       images: { orderBy: { sortOrder: 'asc' } },

@@ -145,3 +145,120 @@ export async function couponUsage(from: Date, to: Date) {
     revenue: r._sum.total ?? 0,
   }));
 }
+
+export interface SizeDemandRow {
+  size: string;
+  /** Unidades que entraron al carrito en el período. */
+  added: number;
+  /** Unidades vendidas con pago aprobado. */
+  sold: number;
+  /** Agregadas que no terminaron en compra. */
+  abandoned: number;
+  /** Clics en "¿Te interesa esta talla?". */
+  interest: number;
+  /** Stock disponible hoy, sumando todos los productos. */
+  stock: number;
+}
+
+export interface VariantDemandRow extends Omit<SizeDemandRow, 'size'> {
+  variantId: string;
+  productName: string;
+  colorName: string;
+  size: string;
+  sku: string;
+  active: boolean;
+  /** Unidades sugeridas para pedir a fábrica. */
+  suggested: number;
+}
+
+function orden(a: string, b: string) {
+  const na = Number(a);
+  const nb = Number(b);
+  if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+  return a.localeCompare(b);
+}
+
+/**
+ * Demanda por talla y por variante: lo que se agrega al carrito, lo que se
+ * compra, lo que se abandona y el interés por tallas agotadas.
+ */
+export async function sizeDemand(from: Date, to: Date) {
+  const range = { gte: from, lte: to };
+  const [adds, sales, interests] = await Promise.all([
+    prisma.cartEvent.groupBy({ by: ['variantId'], where: { createdAt: range }, _sum: { quantity: true } }),
+    prisma.orderItem.groupBy({
+      by: ['variantId'],
+      where: { variantId: { not: null }, order: { ...PAID, createdAt: range } },
+      _sum: { quantity: true },
+    }),
+    prisma.sizeInterest.groupBy({ by: ['variantId'], where: { createdAt: range }, _count: true }),
+  ]);
+
+  const addMap = new Map(adds.map((r) => [r.variantId, r._sum.quantity ?? 0]));
+  const soldMap = new Map(sales.map((r) => [r.variantId as string, r._sum.quantity ?? 0]));
+  const intMap = new Map(interests.map((r) => [r.variantId, r._count]));
+
+  const ids = new Set([...addMap.keys(), ...soldMap.keys(), ...intMap.keys()]);
+  const variants = await prisma.variant.findMany({
+    where: { OR: [{ id: { in: [...ids] } }, { product: { status: 'ACTIVE' } }] },
+    select: {
+      id: true, size: true, sku: true, stock: true, reserved: true, active: true,
+      product: { select: { name: true } },
+      color: { select: { name: true } },
+    },
+  });
+
+  const rows: VariantDemandRow[] = variants.map((v) => {
+    const added = addMap.get(v.id) ?? 0;
+    const sold = soldMap.get(v.id) ?? 0;
+    const interest = intMap.get(v.id) ?? 0;
+    const stock = v.active ? Math.max(0, v.stock - v.reserved) : 0;
+    // Lo vendido más la demanda que no se pudo atender, menos lo que hay.
+    const demand = sold + interest + Math.max(0, added - sold);
+    return {
+      variantId: v.id,
+      productName: v.product.name,
+      colorName: v.color.name,
+      size: v.size,
+      sku: v.sku,
+      active: v.active,
+      added,
+      sold,
+      abandoned: Math.max(0, added - sold),
+      interest,
+      stock,
+      suggested: Math.max(0, demand - stock),
+    };
+  });
+
+  const bySize = new Map<string, SizeDemandRow>();
+  for (const r of rows) {
+    const acc = bySize.get(r.size) ?? { size: r.size, added: 0, sold: 0, abandoned: 0, interest: 0, stock: 0 };
+    acc.added += r.added;
+    acc.sold += r.sold;
+    acc.abandoned += r.abandoned;
+    acc.interest += r.interest;
+    acc.stock += r.stock;
+    bySize.set(r.size, acc);
+  }
+
+  return {
+    sizes: [...bySize.values()].sort((a, b) => orden(a.size, b.size)),
+    variants: rows
+      .filter((r) => r.added + r.sold + r.interest > 0)
+      .sort((a, b) => b.suggested - a.suggested || b.interest - a.interest || b.abandoned - a.abandoned),
+  };
+}
+
+/** Últimos pedidos de aviso con correo, para contactar cuando llegue la reposición. */
+export async function recentSizeInterests(from: Date, to: Date, limit = 50) {
+  return prisma.sizeInterest.findMany({
+    where: { createdAt: { gte: from, lte: to }, email: { not: null } },
+    orderBy: { createdAt: 'desc' },
+    take: limit,
+    select: {
+      id: true, email: true, createdAt: true,
+      variant: { select: { size: true, sku: true, stock: true, reserved: true, product: { select: { name: true } }, color: { select: { name: true } } } },
+    },
+  });
+}
