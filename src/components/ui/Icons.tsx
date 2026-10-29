@@ -204,3 +204,10 @@ export const IconCopy = (p: P) => (
     <path d="M15.5 8.5V4.5h-11v11h4" />
   </svg>
 );
+
+export const IconBell = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z" />
+    <path d="M10 20.5h4" />
+  </svg>
+);

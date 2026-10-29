@@ -14,7 +14,7 @@ import { announceCart, flyToCart } from './CartLink';
 import { ProductGallery, type GalleryImage } from './ProductGallery';
 import { MetaEvent, useMetaPixel } from './MetaPixel';
 import { SizeChart, type SizeChartRowData } from './SizeChart';
-import { IconCheck, IconExternal, IconShield, IconTruck } from '@/components/ui/Icons';
+import { IconBell, IconCheck, IconExternal, IconShield, IconTruck } from '@/components/ui/Icons';
 
 export interface ViewVariant {
   id: string;
@@ -333,6 +333,8 @@ export function ProductView({
   const [enviando, setEnviando] = useState(false);
   // Talla agotada sobre la que se preguntó "¿Te interesa esta talla?".
   const [interesId, setInteresId] = useState<string | null>(null);
+  // Se pidió aviso con el color agotado: la pista de las tallas se destaca.
+  const [resaltarAviso, setResaltarAviso] = useState(false);
 
   /**
    * La acción se llama a mano en vez de pasarla como `action` del formulario.
@@ -400,6 +402,7 @@ export function ProductView({
   // Al cambiar de color se conserva la talla si sigue existiendo con stock.
   useEffect(() => {
     setInteresId(null);
+    setResaltarAviso(false);
     if (!color) return;
     const current = color.variants.find((v) => v.id === variantId);
     if (current) return;
@@ -580,14 +583,17 @@ export function ProductView({
                         ? 'accent-border accent-text bg-ink-800'
                         : out
                           ? v.id === interesId
-                            ? 'border-chalk-faint text-chalk-faint'
-                            : 'border-line-soft text-chalk-faint/40 hover:border-line hover:text-chalk-faint'
+                            ? 'border-dashed border-chalk-faint text-chalk-dim'
+                            : 'border-dashed border-line text-chalk-faint/70 hover:border-chalk-faint hover:text-chalk-dim'
                           : 'border-line text-chalk hover:border-chalk-faint',
                     )}
                   >
                     {v.size}
                     {out ? (
-                      <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 rotate-[-20deg] bg-line-bright" aria-hidden />
+                      <>
+                        <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 rotate-[-20deg] bg-line" aria-hidden />
+                        <IconBell className="absolute right-0.5 top-0.5 h-3 w-3 accent-text" />
+                      </>
                     ) : v.available <= SHOW_UNITS_LEFT ? (
                       <span className="absolute right-1 top-1 h-1.5 w-1.5 bg-signal-warn" aria-hidden />
                     ) : null}
@@ -596,6 +602,23 @@ export function ProductView({
               })}
             </div>
             )}
+
+            {!interesId && !unicaVariante && color?.variants.some((v) => v.available <= 0) ? (
+              <p
+                className={cn(
+                  'mt-3 flex items-start gap-2 border px-3 py-2.5 text-[13px] leading-snug transition-colors',
+                  resaltarAviso
+                    ? 'accent-border accent-text bg-ink-800'
+                    : 'border-line-soft text-chalk-dim',
+                )}
+              >
+                <IconBell className="mt-px h-4 w-4 shrink-0 accent-text" />
+                <span>
+                  ¿No está tu talla? <strong className="text-chalk">Toca una talla agotada</strong> y te
+                  avisamos cuando vuelva.
+                </span>
+              </p>
+            ) : null}
 
             {interesId ? (
               <SizeInterestPanel
@@ -620,7 +643,7 @@ export function ProductView({
                 )
               ) : colorStock === 0 ? (
                 <span className="text-chalk-faint">
-                  Este color está agotado. Toca una talla para avisarte cuando vuelva.
+                  Este color está agotado por ahora.
                 </span>
               ) : (
                 <span className="text-chalk-faint">
@@ -633,7 +656,23 @@ export function ProductView({
           </fieldset>
 
           <div ref={compraRef} className="mt-6 space-y-3">
-            <AddButton disabled={!variant} comingSoon={product.comingSoon} pending={enviando} />
+            {colorStock === 0 && !product.comingSoon && !unicaVariante ? (
+              // Con el color agotado el botón de compra era un callejón sin
+              // salida; ahora lleva a pedir la talla.
+              <button
+                type="button"
+                onClick={() => {
+                  setResaltarAviso(true);
+                  document.getElementById('tallas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }}
+                className="flex h-14 w-full items-center justify-center gap-2 border border-line-bright font-display text-[13px] font-bold uppercase tracking-widest text-chalk clip-notch-sm"
+              >
+                <IconBell className="h-4 w-4" />
+                Avísame cuando vuelva
+              </button>
+            ) : (
+              <AddButton disabled={!variant} comingSoon={product.comingSoon} pending={enviando} />
+            )}
 
             {state ? (
               <p
@@ -703,7 +742,11 @@ export function ProductView({
                   {formatCLP(price)}
                 </p>
                 <p className="mt-1 truncate text-[12px] text-chalk-faint">
-                  {variant ? `Talla ${variant.size} · ${color ? colorLabel(color) : ''}` : 'Elige tu talla'}
+                  {variant
+                    ? `Talla ${variant.size} · ${color ? colorLabel(color) : ''}`
+                    : colorStock === 0
+                      ? 'Agotado · te avisamos'
+                      : 'Elige tu talla'}
                 </p>
               </div>
 
@@ -718,12 +761,13 @@ export function ProductView({
               ) : (
                 <button
                   type="button"
-                  onClick={() =>
-                    document.getElementById('tallas')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                  }
+                  onClick={() => {
+                    if (colorStock === 0) setResaltarAviso(true);
+                    document.getElementById('tallas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
                   className="h-12 shrink-0 border border-line-bright px-6 font-display text-[12px] font-bold uppercase tracking-widest text-chalk clip-notch-sm"
                 >
-                  Ver tallas
+                  {colorStock === 0 ? 'Avísame' : 'Ver tallas'}
                 </button>
               )}
             </div>
