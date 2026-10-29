@@ -63,6 +63,8 @@ export async function setStock(params: {
 /** Descuenta el stock de un pedido pagado. */
 export async function commitStockForOrder(orderId: string) {
   await prisma.$transaction(async (tx) => {
+    const changed = await tx.order.updateMany({where:{id:orderId,stockCommitted:false},data:{stockCommitted:true}});
+    if (!changed.count) return;
     const items = await tx.orderItem.findMany({ where: { orderId }, select: { variantId: true, quantity: true } });
     for (const item of items) {
       if (!item.variantId) continue;
@@ -81,6 +83,8 @@ export async function commitStockForOrder(orderId: string) {
 /** Devuelve el stock de un pedido cancelado o reembolsado. */
 export async function restoreStockForOrder(orderId: string, type: MovementType = 'CANCEL') {
   await prisma.$transaction(async (tx) => {
+    const changed = await tx.order.updateMany({where:{id:orderId,stockCommitted:true},data:{stockCommitted:false}});
+    if (!changed.count) return;
     const items = await tx.orderItem.findMany({ where: { orderId }, select: { variantId: true, quantity: true } });
     for (const item of items) {
       if (!item.variantId) continue;

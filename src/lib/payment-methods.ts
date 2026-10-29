@@ -6,9 +6,10 @@
  * lado redondeara a su manera, el cliente vería un monto y pagaría otro.
  */
 
-export type PaymentMethodId = 'MERCADOPAGO' | 'TRANSFER' | 'PAYPAL';
+export type PaymentMethodId = 'MERCADOPAGO' | 'TRANSFER' | 'PAYPAL' | 'MANUAL';
 
 export const PAYMENT_METHOD_LABEL: Record<PaymentMethodId, string> = {
+  MANUAL: 'Manual',
   MERCADOPAGO: 'Mercado Pago',
   TRANSFER: 'Transferencia bancaria',
   PAYPAL: 'PayPal',

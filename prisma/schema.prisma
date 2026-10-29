@@ -620,6 +620,7 @@ enum PaymentStatus {
 /// Cómo paga el cliente. Mercado Pago se confirma solo por webhook; la
 /// transferencia la confirma el equipo desde el panel al ver el abono.
 enum PaymentMethod {
+  MANUAL
   MERCADOPAGO
   TRANSFER
   PAYPAL
@@ -697,6 +698,8 @@ model Order {
   coupon Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
   items  OrderItem[]
   events OrderEvent[]
+  creationKey String? @unique
+  stockCommitted Boolean @default(false)
 
   @@index([status])
   @@index([paymentStatus])

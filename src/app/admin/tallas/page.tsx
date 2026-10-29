@@ -48,10 +48,11 @@ export default async function SizeDemandPage({
     (acc, s) => ({
       added: acc.added + s.added,
       sold: acc.sold + s.sold,
+      onlineSold: acc.onlineSold + s.onlineSold,
       abandoned: acc.abandoned + s.abandoned,
       interest: acc.interest + s.interest,
     }),
-    { added: 0, sold: 0, abandoned: 0, interest: 0 },
+    { added: 0, sold: 0, onlineSold: 0, abandoned: 0, interest: 0 },
   );
   const maxBar = Math.max(1, ...sizes.map((s) => Math.max(s.added, s.sold + s.abandoned) + s.interest));
   const toOrder = variants.filter((v) => v.suggested > 0);
@@ -67,7 +68,7 @@ export default async function SizeDemandPage({
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Agregadas al carrito" value={String(totals.added)} hint="Unidades" />
-        <StatCard label="Vendidas" value={String(totals.sold)} hint={`Conversión ${pct(totals.sold, totals.added)}`} tone="accent" />
+        <StatCard label="Vendidas" value={String(totals.sold)} hint={`Conversión web ${pct(totals.onlineSold, totals.added)}`} tone="accent" />
         <StatCard label="Agregadas sin comprar" value={String(totals.abandoned)} hint={`Abandono ${pct(totals.abandoned, totals.added)}`} />
         <StatCard label="Interés en agotadas" value={String(totals.interest)} hint="Clics en «¿Te interesa esta talla?»" />
       </div>
