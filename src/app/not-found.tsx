@@ -1,8 +1,25 @@
 import Link from 'next/link';
 import { ButtonLink } from '@/components/ui/Button';
 import { Logo } from '@/components/ui/Logo';
+import { IntlFooter, IntlHeader } from '@/components/intl/Shell';
+import { IntlNotFoundContent } from '@/components/intl/NotFound';
+import { getStore } from '@/lib/storefront-server';
+// Sus reglas solo aplican con data-store="intl": en taupoc.cl no cambian nada.
+import './intl/intl.css';
 
-export default function NotFound() {
+export default async function NotFound() {
+  // Una ruta que no existe en taupoc.lat llega acá, fuera del layout de /intl.
+  if ((await getStore()) === 'INTL') {
+    return (
+      <div className="flex min-h-screen flex-col bg-paper text-graphite">
+        <IntlHeader />
+        <main id="contenido" className="flex-1">
+          <IntlNotFoundContent />
+        </main>
+        <IntlFooter />
+      </div>
+    );
+  }
   return (
     <div className="flex min-h-screen flex-col">
       <div className="border-b border-line">

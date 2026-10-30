@@ -1,0 +1,49 @@
+/*
+ * taupoc.lat. Solo se carga en las páginas de /intl.
+ *
+ * globals.css trae la base oscura de taupoc.cl para todo el sitio; acá se
+ * anula para esta tienda: papel claro, texto grafito, títulos editoriales en
+ * caja normal y un único acento (cobalto) reservado para las acciones.
+ * Sin degradados, sin sombras, sin bordes decorativos.
+ */
+
+html[data-store='intl'] {
+  --accent: #1a3cff;
+  --accent-contrast: #ffffff;
+  color-scheme: light;
+}
+
+html[data-store='intl'] * {
+  border-color: #e6e6e3;
+}
+
+html[data-store='intl'] body {
+  background: #ffffff;
+  color: #111214;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+html[data-store='intl'] h1,
+html[data-store='intl'] h2,
+html[data-store='intl'] h3,
+html[data-store='intl'] h4 {
+  font-family: 'Inter Tight', Inter, system-ui, sans-serif;
+  text-transform: none;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+html[data-store='intl'] ::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+
+html[data-store='intl'] ::-webkit-scrollbar-thumb {
+  background: #d9d9d6;
+  border-color: #ffffff;
+}
+
+html[data-store='intl'] ::selection {
+  background: #111214;
+  color: #ffffff;
+}

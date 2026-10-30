@@ -1,4 +1,8 @@
-export default function Loading() {
+import { getStore } from '@/lib/storefront-server';
+
+export default async function Loading() {
+  // taupoc.lat no muestra los esqueletos oscuros de taupoc.cl.
+  if ((await getStore()) === 'INTL') return <div className="min-h-[60vh] bg-paper" aria-busy="true" />;
   return (
     <div className="container py-20">
       <div className="skeleton h-8 w-56" />

@@ -43,6 +43,11 @@ services:
       PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
       # Libera reservas de stock vencidas desde una tarea programada. Vacío lo deja apagado.
       CRON_TOKEN: ${CRON_TOKEN:-}
+      # Tienda internacional: dominios, URLs públicas y si se deja indexar.
+      STORE_INTL_HOSTS: ${STORE_INTL_HOSTS:-taupoc.lat}
+      SITE_URL_CL: ${SITE_URL_CL:-}
+      SITE_URL_INTL: ${SITE_URL_INTL:-https://taupoc.lat}
+      INTL_INDEXABLE: ${INTL_INDEXABLE:-false}
       UPLOAD_DIR: /app/public/uploads
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
