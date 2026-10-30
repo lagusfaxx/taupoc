@@ -151,6 +151,10 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
   // La dirección elegida no traía código postal: se le pide al comprador.
   const [zipMissingFromSearch, setZipMissingFromSearch] = useState(false);
   const postalRef = useRef<HTMLInputElement>(null);
+  // La sugerencia elegida era una calle sin numeración: se pide el número.
+  const [numberMissingFromSearch, setNumberMissingFromSearch] = useState(false);
+  const numberRef = useRef<HTMLInputElement>(null);
+  const [intlExtra, setIntlExtra] = useState('');
 
   const resetQuote = () => {
     setOptions([]);
@@ -165,6 +169,8 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
     setZipStatus('idle');
     setIntl({ state: '', city: '', postalCode: '', street: '', number: '' });
     setShowIntlFields(!ADDRESS_SEARCH_ENABLED);
+    setIntlExtra('');
+    setNumberMissingFromSearch(false);
     if (!international) return;
     setStates([]);
     fetchStates(country).then(setStates).catch(() => setStates([]));
@@ -190,8 +196,19 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
     }));
     setShowIntlFields(true);
     setZipMissingFromSearch(!a.postalCode);
+    setNumberMissingFromSearch(!a.number);
     if (!a.postalCode) setTimeout(() => postalRef.current?.focus(), 50);
+    else if (!a.number) setTimeout(() => numberRef.current?.focus(), 50);
     resetQuote();
+  };
+
+  // Mapbox no encontró la dirección: se abren los campos para escribirla.
+  // Un Plus Code de Google Maps (F3XM+FPF) se guarda como referencia, que al
+  // courier le sirve para ubicar la entrega donde no hay numeración.
+  const onAddressNotFound = (query: string) => {
+    setShowIntlFields(true);
+    const plusCode = query.match(/\b[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}\b/i)?.[0];
+    if (plusCode) setIntlExtra((current) => current || `Plus Code ${plusCode.toUpperCase()}`);
   };
 
   // El código postal manda: con él Envía devuelve estado y ciudad, y el
@@ -364,6 +381,7 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
                 country={country}
                 onPick={applyPicked}
                 onManual={showIntlFields ? undefined : () => setShowIntlFields(true)}
+                onNoResults={onAddressNotFound}
               />
               {showIntlFields || (state && !state.ok) ? (
               <>
@@ -442,9 +460,22 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
                 name="streetNumber"
                 value={intl.number}
                 onChange={(e) => updateIntl('number', e.target.value)}
-                error={errors.streetNumber}
+                ref={numberRef}
+                error={
+                  errors.streetNumber ??
+                  (numberMissingFromSearch && !intl.number.trim()
+                    ? 'Agrega el número de tu casa o edificio.'
+                    : undefined)
+                }
               />
-              <Input label="Depto. / referencia" hint="opcional" name="addressExtra" autoComplete="address-line2" />
+              <Input
+                label="Depto. / referencia"
+                hint="opcional"
+                name="addressExtra"
+                value={intlExtra}
+                onChange={(e) => setIntlExtra(e.target.value)}
+                autoComplete="address-line2"
+              />
               </>
               ) : null}
             </div>

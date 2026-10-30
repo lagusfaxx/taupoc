@@ -37,26 +37,38 @@ export const ADDRESS_SEARCH_ENABLED = Boolean(TOKEN);
 /**
  * Buscador de direcciones con Mapbox (Geocoding v6) para el comprador extranjero.
  * Al elegir una sugerencia rellena los campos de abajo, que siguen editables.
+ *
+ * Busca direcciones con número y también calles: en buena parte de
+ * Latinoamérica Mapbox no tiene numeración (Ecuador, Bolivia, Centroamérica)
+ * y solo direcciones no sugeriría nada. En otros países no tiene ni calles
+ * (Venezuela, Paraguay); ahí avisa y abre los campos para escribirla.
  */
 export function AddressSearch({
   country,
   onPick,
   onManual,
+  onNoResults,
 }: {
   country: string;
   onPick: (a: PickedAddress) => void;
   /** Si se pasa, muestra el enlace para escribir la dirección a mano. */
   onManual?: () => void;
+  /** Mapbox no encontró nada para lo escrito: el formulario abre los campos. */
+  onNoResults?: (query: string) => void;
 }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Feature[]>([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [noResults, setNoResults] = useState(false);
   const skipNext = useRef(false);
+  const onNoResultsRef = useRef(onNoResults);
+  onNoResultsRef.current = onNoResults;
 
   useEffect(() => {
     setQuery('');
     setResults([]);
+    setNoResults(false);
   }, [country]);
 
   useEffect(() => {
@@ -67,6 +79,7 @@ export function AddressSearch({
     const q = query.trim();
     if (!TOKEN || q.length < 4) {
       setResults([]);
+      setNoResults(false);
       return;
     }
     const controller = new AbortController();
@@ -74,7 +87,7 @@ export function AddressSearch({
       const params = new URLSearchParams({
         q,
         country: country.toLowerCase(),
-        types: 'address',
+        types: 'address,street',
         autocomplete: 'true',
         language: 'es',
         limit: '5',
@@ -86,9 +99,12 @@ export function AddressSearch({
         });
         if (!res.ok) return;
         const json = (await res.json()) as { features?: Feature[] };
-        setResults(json.features ?? []);
+        const features = json.features ?? [];
+        setResults(features);
         setActive(0);
         setOpen(true);
+        setNoResults(features.length === 0);
+        if (features.length === 0) onNoResultsRef.current?.(q);
       } catch {
         // Abortado o sin red: el comprador sigue con los campos manuales.
       }
@@ -102,6 +118,7 @@ export function AddressSearch({
   const pick = async (f: Feature) => {
     const ctx = f.properties.context ?? {};
     skipNext.current = true;
+    setNoResults(false);
     setQuery(f.properties.full_address ?? f.properties.name ?? '');
     setOpen(false);
     // Muchas direcciones fuera de EE.UU. y Europa vienen sin código postal:
@@ -162,13 +179,15 @@ export function AddressSearch({
             void pick(results[active]);
           }
         }}
-        placeholder="Calle y número, ej.: Av. 9 de Octubre 100"
+        placeholder="Calle y número, ej.: Av. José Larco 1200, Miraflores"
         autoComplete="off"
         className="w-full border border-line bg-ink-900 px-3.5 py-3 text-base text-chalk transition-colors sm:text-[15px] placeholder:text-chalk-faint/60 focus:border-[var(--accent)] focus:outline-none"
       />
       <p className="mt-1.5 text-[13px] text-chalk-faint">
-        Elige una sugerencia y completamos el resto.
-        {onManual ? (
+        {noResults
+          ? 'No encontramos esa dirección en el mapa. Escríbela en los campos de abajo.'
+          : 'Elige una sugerencia y completamos el resto.'}
+        {onManual && !noResults ? (
           <>
             {' '}
             <button type="button" onClick={onManual} className="underline underline-offset-2 hover:text-chalk">
