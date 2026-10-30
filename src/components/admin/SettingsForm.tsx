@@ -120,6 +120,20 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                       defaultValue={String(settings.installmentsMax)}
                       help="Se muestra en la ficha y se envía a Mercado Pago."
                     />
+                    <Input
+                      label="Reserva de stock al pagar (minutos)"
+                      name="reservationMinutes"
+                      type="number"
+                      defaultValue={String(settings.reservationMinutes)}
+                      help="Las tallas de un pedido se apartan mientras el cliente paga con Mercado Pago o PayPal. Si no paga en este plazo, vuelven a estar disponibles. Entre 5 y 120."
+                    />
+                    <Input
+                      label="Reserva de stock por transferencia (horas)"
+                      name="transferReservationHours"
+                      type="number"
+                      defaultValue={String(settings.transferReservationHours)}
+                      help="Cuánto se apartan las tallas de un pedido que espera la transferencia. Confirmarla después igual descuenta el stock. Entre 1 y 168."
+                    />
                     <Textarea
                       label="Barra de anuncio"
                       name="announcementBar"

@@ -700,6 +700,11 @@ model Order {
   events OrderEvent[]
   creationKey String? @unique
   stockCommitted Boolean @default(false)
+  // Unidades apartadas en Variant.reserved mientras el cliente paga. Al
+  // confirmarse el pago pasan a descontarse del stock; si vence el plazo,
+  // vuelven a quedar disponibles.
+  stockReserved Boolean   @default(false)
+  reservedUntil DateTime?
 
   @@index([status])
   @@index([paymentStatus])
@@ -708,6 +713,7 @@ model Order {
   @@index([email])
   @@index([mpPaymentId])
   @@index([paypalOrderId])
+  @@index([stockReserved, reservedUntil])
 }
 
 model OrderItem {

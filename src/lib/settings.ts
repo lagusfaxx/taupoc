@@ -41,6 +41,13 @@ export interface SiteSettings {
    * colores, así que el inventario y los pedidos no se parten.
    */
   catalogSplitByColor: boolean;
+  /**
+   * Minutos que se aparta el stock de un pedido mientras el cliente paga con
+   * Mercado Pago o PayPal. Si no paga en ese plazo, las tallas se liberan.
+   */
+  reservationMinutes: number;
+  /** Horas que se aparta el stock de un pedido que espera una transferencia. */
+  transferReservationHours: number;
 
   // Medios de pago
   mercadoPagoEnabled: boolean;
@@ -86,6 +93,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   announcementBar: 'Despacho a todo Chile · Envío gratis sobre {envio_gratis}',
   announcementActive: true,
   catalogSplitByColor: true,
+  reservationMinutes: 15,
+  transferReservationHours: 24,
 
   mercadoPagoEnabled: true,
   mercadoPagoDiscount: 0,

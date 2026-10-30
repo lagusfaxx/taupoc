@@ -15,6 +15,7 @@ import { sendAdminTransferPending, sendOrderPlaced, type OrderMailData } from '@
 import { methodsForDestination, paymentMethodDiscount, paymentMethodOptions } from '@/lib/payment-methods';
 import { clpToUsdCents, createPaypalOrder, paypalConfigured } from '@/lib/paypal';
 import { isValidRut } from '@/lib/chile';
+import { OutOfStockError, reservationDeadline, reserveOrderStock, sweepExpiredReservations } from '@/lib/reservations';
 import {
   enviaQuotes,
   enviaStates,
@@ -127,10 +128,12 @@ const checkoutSchema = z
 /**
  * Crea el pedido y la preferencia de pago.
  *
- * El pedido nace en PENDING y no descuenta stock: el descuento ocurre cuando
- * el webhook de Mercado Pago confirma el pago, o cuando el equipo confirma la
- * transferencia desde el panel. Así un checkout abandonado nunca deja stock
- * bloqueado.
+ * El pedido nace en PENDING con sus tallas apartadas (Variant.reserved) por
+ * un plazo corto: quien llega primero a pagar se queda con la última unidad,
+ * y la siguiente compra ve que se agotó antes de pagar. El stock se descuenta
+ * cuando el pago se confirma (webhook de Mercado Pago, retorno o webhook de
+ * PayPal, o la transferencia confirmada en el panel). Si el plazo vence sin
+ * pago, la reserva se libera y un checkout abandonado no deja stock bloqueado.
  */
 export async function createCheckout(
   _prev: CheckoutState | null,
@@ -240,61 +243,87 @@ export async function createCheckout(
     ? await prisma.coupon.findUnique({ where: { code: cart.couponCode } })
     : null;
 
-  const number = await nextOrderNumber();
+  // Antes de apartar, se sueltan las reservas vencidas de otros pedidos.
+  await sweepExpiredReservations();
+  const reservedUntil = reservationDeadline(method.id, settings);
 
-  const order = await prisma.order.create({
-    data: {
-      number,
-      userId: session?.id ?? null,
-      email: data.email.toLowerCase().trim(),
-      phone: data.phone,
-      status: 'PENDING',
-      paymentStatus: 'PENDING',
-      paymentMethod: method.id,
-      subtotal: cart.subtotal,
-      discountTotal,
-      paymentDiscount,
-      shippingTotal,
-      total,
-      couponId: coupon?.id ?? null,
-      couponCode: cart.couponCode,
-      shippingRateId: shipping.rateId,
-      shippingLabel: shipping.label,
-      shippingCarrier: shipping.carrier,
-      isPickup: shipping.isPickup,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      street: shipping.isPickup ? null : data.street,
-      streetNumber: shipping.isPickup ? null : data.streetNumber,
-      addressExtra: shipping.isPickup ? null : data.addressExtra,
-      country: shipping.isPickup ? 'CL' : data.country,
-      commune: shipping.isPickup ? null : international ? data.city : data.commune,
-      city: shipping.isPickup ? null : international ? data.city : data.commune,
-      region: shipping.isPickup ? null : international ? data.state : data.region,
-      postalCode: shipping.isPickup ? null : data.postalCode,
-      customerNote: data.customerNote,
-      items: {
-        create: cart.lines.map((line) => ({
-          variantId: line.variantId,
-          productId: line.productId,
-          productName: line.productName,
-          colorName: line.colorName,
-          size: line.size,
-          sku: line.sku,
-          imageUrl: line.imageUrl,
-          unitPrice: line.unitPrice,
-          quantity: line.quantity,
-          lineTotal: line.lineTotal,
-        })),
-      },
-    },
-    include: { items: true },
-  });
+  let order;
+  try {
+    order = await prisma.$transaction(async (tx) => {
+      const number = await nextOrderNumber(tx);
+      const created = await tx.order.create({
+        data: {
+          number,
+          userId: session?.id ?? null,
+          email: data.email.toLowerCase().trim(),
+          phone: data.phone,
+          status: 'PENDING',
+          paymentStatus: 'PENDING',
+          paymentMethod: method.id,
+          subtotal: cart.subtotal,
+          discountTotal,
+          paymentDiscount,
+          shippingTotal,
+          total,
+          couponId: coupon?.id ?? null,
+          couponCode: cart.couponCode,
+          shippingRateId: shipping.rateId,
+          shippingLabel: shipping.label,
+          shippingCarrier: shipping.carrier,
+          isPickup: shipping.isPickup,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          street: shipping.isPickup ? null : data.street,
+          streetNumber: shipping.isPickup ? null : data.streetNumber,
+          addressExtra: shipping.isPickup ? null : data.addressExtra,
+          country: shipping.isPickup ? 'CL' : data.country,
+          commune: shipping.isPickup ? null : international ? data.city : data.commune,
+          city: shipping.isPickup ? null : international ? data.city : data.commune,
+          region: shipping.isPickup ? null : international ? data.state : data.region,
+          postalCode: shipping.isPickup ? null : data.postalCode,
+          customerNote: data.customerNote,
+          items: {
+            create: cart.lines.map((line) => ({
+              variantId: line.variantId,
+              productId: line.productId,
+              productName: line.productName,
+              colorName: line.colorName,
+              size: line.size,
+              sku: line.sku,
+              imageUrl: line.imageUrl,
+              unitPrice: line.unitPrice,
+              quantity: line.quantity,
+              lineTotal: line.lineTotal,
+            })),
+          },
+        },
+        include: { items: true },
+      });
+      await reserveOrderStock(tx, created.id, reservedUntil);
+      return created;
+    });
+  } catch (error) {
+    if (error instanceof OutOfStockError) {
+      revalidatePath('/carrito');
+      return { ok: false, message: error.customerMessage };
+    }
+    throw error;
+  }
 
   await logOrderEvent({
     orderId: order.id,
     type: 'created',
     message: `Pedido creado por ${data.email}. Entrega: ${shipping.label}. Pago: ${method.label}.`,
+  });
+  await logOrderEvent({
+    orderId: order.id,
+    type: 'stock_reserved',
+    message: `Tallas apartadas hasta las ${reservedUntil.toLocaleTimeString('es-CL', {
+      timeZone: 'America/Santiago',
+      hour: '2-digit',
+      minute: '2-digit',
+    })} mientras el cliente paga.`,
+    actor: 'Sistema',
   });
 
   if (session && data.rut) {
