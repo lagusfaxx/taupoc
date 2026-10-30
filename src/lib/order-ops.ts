@@ -2,7 +2,8 @@ import 'server-only';
 import type { OrderStatus } from '@prisma/client';
 import { prisma } from './db';
 import { logOrderEvent, ORDER_STATUS_LABEL } from './orders';
-import { adjustStock, checkLowStock } from './inventory';
+import { adjustStock, checkLowStock, reportOversold } from './inventory';
+import { oversoldUnits, releaseOrderReservation } from './reservations';
 import { formatCLP } from './money';
 import { trackingUrlFor } from './shipping';
 import {
@@ -95,6 +96,11 @@ export async function changeOrderStatus(params: {
       };
     const willCommit = COMPROMETE_STOCK.includes(status);
     const willRestore = status === 'CANCELLED' || status === 'REFUNDED';
+    // Las unidades apartadas mientras el cliente pagaba se sueltan siempre
+    // que el pedido se paga o se cancela: si se paga, el stock se descuenta
+    // justo abajo; si se cancela, vuelven a estar disponibles.
+    if ((willCommit && !order.stockCommitted) || willRestore) await releaseOrderReservation(tx, id);
+    let oversold: Awaited<ReturnType<typeof oversoldUnits>> = [];
     if ((willCommit && !order.stockCommitted) || (willRestore && order.stockCommitted)) {
       const items = await tx.orderItem.findMany({ where: { orderId: id } });
       for (const item of items)
@@ -107,6 +113,7 @@ export async function changeOrderStatus(params: {
             actorEmail: actor,
             orderId: id,
           });
+      if (willCommit) oversold = await oversoldUnits(tx, id);
     }
     await tx.order.update({
       where: { id },
@@ -138,8 +145,10 @@ export async function changeOrderStatus(params: {
       ok: true,
       message: `Pedido marcado como ${ORDER_STATUS_LABEL[status].toLowerCase()}.`,
       notify: status !== 'PAID' || order.paymentStatus !== 'APPROVED',
+      oversold,
     };
   });
+  if (result.oversold?.length) await reportOversold(id, result.oversold);
   if (result.ok && COMPROMETE_STOCK.includes(status)) void checkLowStock();
   if (params.notify !== false && result.notify) await notifyOrderStatus(id, status, actor);
   return { ok: result.ok, message: result.message };

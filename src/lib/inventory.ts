@@ -2,7 +2,8 @@ import 'server-only';
 import type { MovementType, Prisma } from '@prisma/client';
 import { prisma } from './db';
 import { getSettings } from './settings';
-import { sendLowStockAlert } from './mail';
+import { sendAdminOversold, sendLowStockAlert } from './mail';
+import { oversoldUnits, releaseOrderReservation } from './reservations';
 
 type Tx = Prisma.TransactionClient;
 
@@ -60,11 +61,18 @@ export async function setStock(params: {
   });
 }
 
-/** Descuenta el stock de un pedido pagado. */
+/**
+ * Descuenta el stock de un pedido pagado.
+ *
+ * Si el pedido tenía unidades apartadas, la reserva se suelta en la misma
+ * transacción en que se descuenta el stock: lo disponible no cambia, solo
+ * pasa de "reservado" a "vendido".
+ */
 export async function commitStockForOrder(orderId: string) {
-  await prisma.$transaction(async (tx) => {
+  const oversold = await prisma.$transaction(async (tx) => {
     const changed = await tx.order.updateMany({where:{id:orderId,stockCommitted:false},data:{stockCommitted:true}});
-    if (!changed.count) return;
+    if (!changed.count) return [];
+    await releaseOrderReservation(tx, orderId);
     const items = await tx.orderItem.findMany({ where: { orderId }, select: { variantId: true, quantity: true } });
     for (const item of items) {
       if (!item.variantId) continue;
@@ -76,8 +84,36 @@ export async function commitStockForOrder(orderId: string) {
         orderId,
       });
     }
+    return oversoldUnits(tx, orderId);
   });
+  if (oversold.length > 0) await reportOversold(orderId, oversold);
   void checkLowStock();
+}
+
+/** Deja constancia en el pedido y avisa al equipo de que se vendió sin stock. */
+export async function reportOversold(
+  orderId: string,
+  variants: { sku: string; stock: number; reserved: number }[],
+) {
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      select: { id: true, number: true, email: true },
+    });
+    if (!order) return;
+    await prisma.orderEvent.create({
+      data: {
+        orderId,
+        type: 'oversold',
+        message: `Pagado sin stock suficiente: ${variants.map((v) => v.sku).join(', ')}. Hay que reembolsar o conseguir la prenda.`,
+        actor: 'Sistema',
+      },
+    });
+    console.error('[stock:vendido-de-mas]', order.number, variants);
+    await sendAdminOversold(order, variants).catch(() => {});
+  } catch (error) {
+    console.error('[stock:vendido-de-mas:error]', error);
+  }
 }
 
 /** Devuelve el stock de un pedido cancelado o reembolsado. */

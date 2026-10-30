@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 import { getOrCreateCart, readCartToken } from '@/lib/cart';
 import { evaluateCoupon } from '@/lib/pricing';
 import { getSession } from '@/lib/auth';
+import { sweepExpiredReservations } from '@/lib/reservations';
 import type { MetaEventData } from '@/lib/meta-pixel';
 
 export interface CartActionState {
@@ -42,6 +43,8 @@ export async function addToCart(
     return { ok: false, message: parsed.error.issues[0]?.message ?? 'Selecciona una talla.' };
   }
 
+  // Una reserva vencida no debe dejar una talla como agotada.
+  await sweepExpiredReservations();
   const variant = await prisma.variant.findUnique({
     where: { id: parsed.data.variantId },
     include: { product: { select: { status: true, name: true, basePrice: true } }, color: { select: { name: true } } },

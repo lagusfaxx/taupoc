@@ -573,6 +573,40 @@ export async function sendAdminTransferPending(order: OrderMailData, opts?: Envi
   await sendMail({ to, subject: `[TAUPOC] Transferencia por confirmar ${order.number} · ${formatCLP(order.total)}`, html });
 }
 
+/**
+ * Aviso interno: se confirmó el pago de un pedido cuyo stock ya no alcanzaba.
+ * Pasa cuando el pago llega después de vencida la reserva y otra compra se
+ * llevó la talla, o cuando se marca pagado desde el panel sin stock. No sale
+ * en silencio porque hay que reembolsar o conseguir la prenda.
+ */
+export async function sendAdminOversold(
+  order: { id: string; number: string; email: string },
+  variants: { sku: string; stock: number; reserved: number }[],
+) {
+  const to = process.env.ADMIN_ALERT_EMAIL;
+  if (!to || variants.length === 0) return;
+  const b = await brand();
+  const rows = variants
+    .map(
+      (v) => `<tr>
+        <td style="padding:9px 0;border-bottom:1px solid ${LINE_SOFT};font-family:'SF Mono',Consolas,monospace;font-size:12.5px;color:${CHALK_DIM};">${esc(v.sku)}</td>
+        <td align="right" style="padding:9px 0;border-bottom:1px solid ${LINE_SOFT};color:${BAD};font-weight:700;">${v.stock - v.reserved}</td>
+      </tr>`,
+    )
+    .join('');
+  const html = layout({
+    title: `Pedido pagado sin stock ${order.number}`,
+    preheader: `${order.number} quedó pagado pero faltan unidades.`,
+    brand: b,
+    body:
+      heading('Pagado sin stock', BAD, `Pedido <span style="color:${ACCENT};">${esc(order.number)}</span>`) +
+      `<p style="margin:0;">El pago de este pedido se confirmó, pero estas tallas ya no tenían unidades libres. La cifra es lo disponible después de descontarlo: un número negativo es lo que falta para cumplir con todos los pedidos. Contacta al cliente (${esc(order.email)}) para cambiar la talla o reembolsar.</p>` +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;">${rows}</table>` +
+      button(`${b.siteUrl}/admin/pedidos/${order.id}`, 'Abrir el pedido'),
+  });
+  await sendMail({ to, subject: `[TAUPOC] Pedido ${order.number} pagado sin stock`, html });
+}
+
 export async function sendLowStockAlert(
   items: { sku: string; productName: string; colorName: string; size: string; stock: number }[],
   opts?: EnvioOpts,

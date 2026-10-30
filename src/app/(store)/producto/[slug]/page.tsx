@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { sweepExpiredReservations } from '@/lib/reservations';
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -42,6 +43,8 @@ async function resolverFicha(
   slug: string,
   query: Record<string, string | string[] | undefined>,
 ) {
+  // Antes de leer el stock: una reserva vencida no debe mostrar la talla agotada.
+  await sweepExpiredReservations();
   const [resolved, settings] = await Promise.all([resolveProductRoute(slug), getSettings()]);
   if (!resolved) return null;
 

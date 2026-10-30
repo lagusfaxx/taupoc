@@ -39,6 +39,10 @@ services:
       MCP_TOKEN: ${MCP_TOKEN:-}
       # Agente de impresión (packing slips). Vacío lo deja apagado.
       PRINT_AGENT_TOKEN: ${PRINT_AGENT_TOKEN:-}
+      # Webhook de PayPal (cobra aunque el comprador no vuelva). Vacío lo deja apagado.
+      PAYPAL_WEBHOOK_ID: ${PAYPAL_WEBHOOK_ID:-}
+      # Libera reservas de stock vencidas desde una tarea programada. Vacío lo deja apagado.
+      CRON_TOKEN: ${CRON_TOKEN:-}
       UPLOAD_DIR: /app/public/uploads
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
