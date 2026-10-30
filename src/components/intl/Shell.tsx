@@ -1,18 +1,34 @@
 import Link from 'next/link';
 
 /*
- * Marco de taupoc.lat: la marca a la izquierda y nada más que lo necesario.
- * La interfaz se aparta para que mande la fotografía. Los enlaces de
- * navegación entran a medida que existan sus páginas.
+ * Marco de taupoc.lat: la marca a la izquierda, tres palabras de navegación
+ * y nada más. La interfaz se aparta para que mande la fotografía.
  */
+
+const NAV = [
+  { href: '/catalogo?genero=hombre', label: 'Hombre' },
+  { href: '/catalogo?genero=mujer', label: 'Mujer' },
+  { href: '/catalogo', label: 'Catálogo' },
+];
 
 export function IntlHeader() {
   return (
     <header className="bg-paper">
-      <div className="mx-auto flex h-16 max-w-[1600px] items-center px-4 sm:h-20 sm:px-8">
+      <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-6 px-4 sm:h-20 sm:px-8">
         <Link href="/" className="font-editorial text-[19px] font-semibold tracking-[0.18em] text-graphite">
           TAUPOC
         </Link>
+        <nav aria-label="Principal">
+          <ul className="flex items-center gap-5 text-[15px] text-graphite sm:gap-8">
+            {NAV.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="underline-offset-[6px] hover:underline">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
       </div>
     </header>
   );

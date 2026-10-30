@@ -815,6 +815,40 @@ model NewsletterSubscriber {
 }
 
 /// Configuración editable desde el panel: analytics, correos, umbrales, textos.
+/**
+ * Cómo se redondea el precio en dólares de taupoc.lat a un valor comercial.
+ * Siempre hacia arriba: nunca se cobra menos que lo calculado.
+ */
+enum PriceRounding {
+  CENTS_99 // 138,99
+  WHOLE // 139
+  WHOLE_9 // 139, 149, 199: el entero terminado en 9
+  WHOLE_5 // 135, 145: el entero terminado en 5
+}
+
+/**
+ * Tipo de cambio de la tienda internacional. Cada cambio es una fila nueva:
+ * la vigente es la última con effectiveFrom ya cumplido, y el historial queda
+ * para saber con qué valores se cobró cada pedido.
+ *
+ * El precio en dólares se calcula desde el precio chileno: se le quita el IVA
+ * (la venta al extranjero es exportación, exenta), se divide por el tipo de
+ * cambio, se suma el margen y se redondea.
+ */
+model ExchangeRate {
+  id            String        @id @default(cuid())
+  clpPerUsd     Decimal       @db.Decimal(10, 2)
+  marginPct     Decimal       @db.Decimal(5, 2)
+  vatPct        Decimal       @default(19) @db.Decimal(5, 2)
+  rounding      PriceRounding @default(WHOLE_9)
+  effectiveFrom DateTime      @default(now())
+  createdBy     String?
+  note          String?
+  createdAt     DateTime      @default(now())
+
+  @@index([effectiveFrom])
+}
+
 model Setting {
   key       String   @id
   value     Json
