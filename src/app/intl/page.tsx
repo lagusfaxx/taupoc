@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { getIntlCards } from '@/lib/intl-catalog';
 import { intlMetadata } from '@/lib/intl-seo';
 import { ProductGrid } from '@/components/intl/ProductGrid';
+import { Hero } from '@/components/intl/Hero';
+import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,21 +18,48 @@ export const metadata: Metadata = intlMetadata({
 });
 
 export default async function IntlHome() {
-  const [men, women] = await Promise.all([getIntlCards({ gender: 'MALE' }), getIntlCards({ gender: 'FEMALE' })]);
+  const [men, women, banner] = await Promise.all([
+    getIntlCards({ gender: 'MALE' }),
+    getIntlCards({ gender: 'FEMALE' }),
+    prisma.intlBanner.findFirst({
+      where: { active: true },
+      orderBy: { position: 'asc' },
+    }),
+  ]);
 
   return (
     <>
-      <section className="mx-auto max-w-[1600px] px-4 pb-20 pt-12 sm:px-8 sm:pb-28 sm:pt-24">
-        <h1 className="max-w-[13ch] text-[clamp(44px,8vw,128px)] leading-[0.95]">
-          Trajes de competencia para nadar más rápido.
-        </h1>
-        <p className="mt-8 max-w-xl text-[17px] leading-relaxed text-graphite-soft">
-          Jammers y knee suits homologados por World Aquatics, con envío a toda Latinoamérica y pago en dólares.
-        </p>
-      </section>
+      {banner ? (
+        <div className='mb-20 sm:mb-28'>
+          <Hero data={banner} />
+        </div>
+      ) : (
+        <section className='mx-auto max-w-[1600px] px-4 pb-20 pt-12 sm:px-8 sm:pb-28 sm:pt-24'>
+          <h1 className='max-w-[13ch] text-[clamp(44px,8vw,128px)] leading-[0.95]'>
+            Trajes de competencia para nadar más rápido.
+          </h1>
+          <p className='mt-8 max-w-xl text-[17px] leading-relaxed text-graphite-soft'>
+            Jammers y knee suits homologados por World Aquatics, con envío a
+            toda Latinoamérica y pago en dólares.
+          </p>
+        </section>
+      )}
 
-      <Collection id="hombre" title="Hombre" subtitle="Jammer" href="/catalogo?genero=hombre" cards={men} priority={2} />
-      <Collection id="mujer" title="Mujer" subtitle="Knee suit" href="/catalogo?genero=mujer" cards={women} />
+      <Collection
+        id='hombre'
+        title='Hombre'
+        subtitle='Jammer'
+        href='/catalogo?genero=hombre'
+        cards={men}
+        priority={2}
+      />
+      <Collection
+        id='mujer'
+        title='Mujer'
+        subtitle='Knee suit'
+        href='/catalogo?genero=mujer'
+        cards={women}
+      />
     </>
   );
 }
@@ -52,13 +81,18 @@ function Collection({
 }) {
   if (cards.length === 0) return null;
   return (
-    <section id={id} className="mx-auto max-w-[1600px] px-4 pb-28 sm:px-8">
-      <div className="mb-10 flex items-end justify-between gap-6">
+    <section id={id} className='mx-auto max-w-[1600px] px-4 pb-28 sm:px-8'>
+      <div className='mb-10 flex items-end justify-between gap-6'>
         <div>
-          <h2 className="text-[clamp(32px,4.5vw,64px)] leading-none">{title}</h2>
-          <p className="mt-3 text-[15px] text-graphite-soft">{subtitle}</p>
+          <h2 className='text-[clamp(32px,4.5vw,64px)] leading-none'>
+            {title}
+          </h2>
+          <p className='mt-3 text-[15px] text-graphite-soft'>{subtitle}</p>
         </div>
-        <Link href={href} className="shrink-0 text-[15px] text-cobalt underline-offset-[6px] hover:underline">
+        <Link
+          href={href}
+          className='shrink-0 text-[15px] text-cobalt underline-offset-[6px] hover:underline'
+        >
           Ver todo
         </Link>
       </div>

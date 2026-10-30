@@ -1,0 +1,103 @@
+/*
+ * Banner de taupoc.lat. Usa consultas de contenedor en vez de tamaños de
+ * pantalla: así la vista previa del panel, que lo dibuja dentro de un marco
+ * de teléfono o de escritorio, se ve exactamente como en la tienda.
+ *
+ * En teléfono el texto va debajo de la foto (siempre legible); desde 768 px
+ * va encima, con el color elegido en el panel.
+ */
+
+.root {
+  container-type: inline-size;
+}
+
+.media {
+  position: relative;
+  height: calc(var(--hero-vh, 1svh) * 62);
+  min-height: 360px;
+  overflow: hidden;
+  background: #f5f5f3;
+}
+
+.image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.veil {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0.25;
+}
+
+.content {
+  padding: 24px 16px 0;
+  color: #111214;
+}
+
+.title {
+  font-family: 'Inter Tight', Inter, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  text-transform: none;
+  line-height: 0.95;
+  font-size: clamp(36px, 11cqw, 128px);
+  max-width: 14ch;
+}
+
+.body {
+  margin-top: 14px;
+  max-width: 36ch;
+  font-size: 16px;
+  line-height: 1.5;
+  color: #55585e;
+}
+
+.cta {
+  display: inline-block;
+  margin-top: 22px;
+  background: #1a3cff;
+  color: #fff;
+  padding: 14px 26px;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.cta:hover {
+  background: #0f2bd6;
+}
+
+@container (min-width: 768px) {
+  .slide {
+    position: relative;
+  }
+  .media {
+    height: calc(var(--hero-vh, 1svh) * 82);
+  }
+  .content {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0 32px 64px;
+  }
+  .title {
+    font-size: clamp(48px, 7.5cqw, 128px);
+  }
+  .body {
+    font-size: 18px;
+    color: inherit;
+  }
+  .light .content {
+    color: #fff;
+  }
+  .light .veil {
+    display: block;
+  }
+}
