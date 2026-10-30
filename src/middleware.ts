@@ -17,6 +17,9 @@ export function middleware(request: NextRequest) {
     const newHost = host.slice(4); // Quita "www."
     const url = request.nextUrl.clone();
     url.host = newHost;
+    // Detrás del proxy la URL interna trae el puerto de la app (3000): si el
+    // dominio público no lo lleva, la redirección tampoco.
+    if (!newHost.includes(':')) url.port = '';
     return NextResponse.redirect(url, 301);
   }
 
