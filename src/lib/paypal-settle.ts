@@ -126,7 +126,14 @@ async function settleLocked(
       chargedCents: capture.cents ?? order.chargedCents,
     },
   });
-  const changed = await changeOrderStatus({ orderId: order.id, status: 'PAID', actor });
+  // Los correos al cliente están en pesos y con la marca de taupoc.cl: a un
+  // pedido de taupoc.lat no se le mandan (PayPal ya le envía su recibo).
+  const changed = await changeOrderStatus({
+    orderId: order.id,
+    status: 'PAID',
+    actor,
+    notify: order.storefront !== 'INTL',
+  });
   if (changed.ok) {
     const payload = await orderMailPayload(order.id);
     if (payload) await sendAdminNewOrder(payload).catch(() => {});

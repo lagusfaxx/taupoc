@@ -705,6 +705,12 @@ model Order {
   // vuelven a quedar disponibles.
   stockReserved Boolean   @default(false)
   reservedUntil DateTime?
+  // Tienda donde se compró: "CL" (taupoc.cl) o "INTL" (taupoc.lat). En las
+  // de taupoc.lat los montos del pedido son el equivalente en pesos de lo
+  // cobrado en dólares (chargedCents).
+  storefront       String    @default("CL")
+  buyerTaxId       String?
+  dutiesAcceptedAt DateTime?
 
   @@index([status])
   @@index([paymentStatus])

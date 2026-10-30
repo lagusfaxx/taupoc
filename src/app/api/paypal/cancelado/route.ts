@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db';
 import { siteUrl } from '@/lib/mercadopago';
 import { logOrderEvent } from '@/lib/orders';
 import { releaseOrderReservation } from '@/lib/reservations';
+import { storeSiteUrl } from '@/lib/storefront';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  return NextResponse.redirect(
-    `${siteUrl()}/checkout/resultado?order=${encodeURIComponent(number)}&estado=paypal-cancelado`,
-  );
+  const storefront =
+    order?.storefront ??
+    (await prisma.order.findUnique({ where: { number }, select: { storefront: true } }))?.storefront;
+  const base = storefront === 'INTL' ? storeSiteUrl('INTL') : siteUrl();
+  return NextResponse.redirect(`${base}/checkout/resultado?order=${encodeURIComponent(number)}&estado=paypal-cancelado`);
 }
