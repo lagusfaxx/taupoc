@@ -729,6 +729,8 @@ export function ProductView({
         {/* Barra de compra del teléfono */}
         {!product.comingSoon ? (
           <div
+            // El botón de WhatsApp sube cuando esta barra está a la vista.
+            data-buy-bar
             aria-hidden={!barraVisible}
             className={cn(
               'fixed inset-x-0 bottom-0 z-40 border-t border-line bg-ink/95 backdrop-blur',
