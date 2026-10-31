@@ -6,6 +6,7 @@ import { adjustStock, checkLowStock, reportOversold } from './inventory';
 import { oversoldUnits, releaseOrderReservation } from './reservations';
 import { formatCLP } from './money';
 import { trackingUrlFor } from './shipping';
+import { hasIntlStatusMail, sendIntlOrderStatus } from './mail-intl';
 import {
   sendAdminNewOrder,
   sendOrderPlaced,
@@ -260,13 +261,21 @@ export async function saveOrderTracking(params: {
 
 /** El historial distingue aceptación, omisión y fallo de entrega al proveedor. */
 export async function notifyOrderStatus(orderId: string, status: OrderStatus, actor: string) {
+  // Los pedidos de taupoc.lat tienen sus propios correos: en dólares y con su marca.
+  const intl =
+    (await prisma.order.findUnique({ where: { id: orderId }, select: { storefront: true } }))?.storefront === 'INTL';
   const send = AVISO_POR_ESTADO[status];
-  if (!send) return;
+  if (intl ? !hasIntlStatusMail(status) : !send) return;
   let message: string;
   try {
-    const payload = await orderMailPayload(orderId);
-    if (!payload) return;
-    const result = (await send(payload)) as { skipped?: boolean; error?: unknown } | undefined;
+    let result: { skipped?: boolean; error?: unknown } | undefined;
+    if (intl) {
+      result = await sendIntlOrderStatus(orderId, status);
+    } else {
+      const payload = await orderMailPayload(orderId);
+      if (!payload || !send) return;
+      result = (await send(payload)) as { skipped?: boolean; error?: unknown } | undefined;
+    }
     message = result?.error
       ? 'El proveedor rechazó el correo de estado. Revisa la configuración del correo.'
       : !result || result.skipped

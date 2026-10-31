@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { INTL_PREFIX, STORE_HEADER, storeFromHost, storeSiteUrl } from '@/lib/storefront';
+import { INTL_PREFIX, STORE_HEADER, intlIndexable, storeFromHost, storeSiteUrl } from '@/lib/storefront';
 
 /**
  * Redirige www → sin www, decide la tienda por el dominio y expone la ruta
@@ -42,6 +42,16 @@ export function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = pathname === '/' ? INTL_PREFIX : `${INTL_PREFIX}${pathname}`;
     return NextResponse.rewrite(url, { request: { headers } });
+  }
+
+  // Las guías de envío al extranjero pasan a taupoc.lat cuando esa tienda se
+  // abre a los buscadores: así los dos dominios no compiten por las mismas
+  // búsquedas. Antes de eso se quedan, para no perder sus visitas.
+  if (
+    (pathname === '/envios-internacionales' || pathname.startsWith('/envios-internacionales/')) &&
+    intlIndexable()
+  ) {
+    return NextResponse.redirect(`${storeSiteUrl('INTL')}/`, 301);
   }
 
   // Las páginas de taupoc.lat no se ven desde taupoc.cl.

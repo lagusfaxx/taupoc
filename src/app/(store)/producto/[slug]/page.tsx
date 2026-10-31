@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { isStudioImage } from '@/lib/intl-catalog';
 import { sweepExpiredReservations } from '@/lib/reservations';
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
@@ -105,6 +106,8 @@ export async function generateMetadata({
         `${rango} con stock en Chile.`,
       path: resolved.canonicalPath,
       image: color.images[0]?.url ?? product.images[0]?.url ?? null,
+      // taupoc.lat publica la misma ficha solo si el color tiene foto real.
+      intlPath: color.images.some((i) => isStudioImage(i.url)) ? resolved.canonicalPath : undefined,
     });
   }
 

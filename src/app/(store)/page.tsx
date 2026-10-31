@@ -14,13 +14,18 @@ import { HomeBlocks } from '@/components/store/home/HomeBlocks';
 import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
 
-export const metadata: Metadata = buildMetadata({
-  title: 'Trajes de baño de competencia homologados',
-  description:
-    'Trajes de baño de competencia TAUPOC homologados World Aquatics: jammers y knee suits. Envío a ' +
-    'todo Chile y retiro sin costo en Santiago.',
-  path: '/',
-});
+// Se arma al servir la página: el hreflang hacia taupoc.lat depende de la
+// configuración del servidor, no del momento de compilar.
+export async function generateMetadata(): Promise<Metadata> {
+  return buildMetadata({
+    title: 'Trajes de baño de competencia homologados',
+    description:
+      'Trajes de baño de competencia TAUPOC homologados World Aquatics: jammers y knee suits. Envío a ' +
+      'todo Chile y retiro sin costo en Santiago.',
+    path: '/',
+    intlPath: '/',
+  });
+}
 
 // El encabezado lee el cookie del carrito: estas páginas ya se renderizan por
 // solicitud. Declararlo permite compilar la imagen sin base de datos.
