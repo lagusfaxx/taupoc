@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
 import { getIntlProduct } from '@/lib/intl-catalog';
@@ -7,6 +6,7 @@ import { intlMetadata } from '@/lib/intl-seo';
 import { formatUsdCents } from '@/lib/fx';
 import { cn } from '@/lib/utils';
 import { AddToCart } from '@/components/intl/AddToCart';
+import { ProductGallery } from '@/components/intl/ProductGallery';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,29 +41,20 @@ export default async function IntlProductPage({ params }: { params: Params }) {
 
   return (
     <article className="mx-auto max-w-[1600px] px-4 pb-16 pt-4 sm:px-8 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_460px]">
-      {/* Fotografía a todo lo ancho de la columna, una debajo de otra. */}
-      <div className="space-y-4">
-        {images.map((image, i) => (
-          <div key={image.url} className="relative aspect-[4/5] bg-paper">
-            <Image
-              src={image.url}
-              alt={image.alt || `${product.name} ${color.name}`}
-              fill
-              priority={i === 0}
-              sizes="(max-width: 1024px) 100vw, 60vw"
-              className="object-contain"
-            />
-          </div>
-        ))}
+      <div>
+        <ProductGallery
+          images={images.map((i) => ({ url: i.url, alt: i.alt }))}
+          fallbackAlt={`${product.name} ${color.name}`}
+        />
       </div>
 
-      <div className="mt-10 lg:mt-0">
+      <div className="mt-6 lg:mt-0">
         <div className="lg:sticky lg:top-8">
           <p className="text-[13px] text-graphite-soft">{product.line?.name ?? 'TAUPOC'}</p>
-          <h1 className="mt-2 text-[clamp(36px,4vw,56px)] leading-[0.98]">{product.name}</h1>
-          <p className="mt-3 text-[17px] text-graphite-soft">{color.name}</p>
+          <h1 className="mt-1 text-[30px] leading-[0.98] lg:mt-2 lg:text-[clamp(36px,4vw,56px)]">{product.name}</h1>
+          <p className="mt-1.5 text-[16px] text-graphite-soft lg:mt-3 lg:text-[17px]">{color.name}</p>
 
-          <p className="mt-8 text-[22px] text-graphite">
+          <p className="mt-4 text-[22px] lg:mt-8 text-graphite">
             {product.status === 'COMING_SOON'
               ? 'Próximamente'
               : priceCents != null
@@ -71,11 +62,14 @@ export default async function IntlProductPage({ params }: { params: Params }) {
                 : 'Precio por confirmar'}
           </p>
           <p className="mt-1 text-[13px] text-graphite-soft">
-            Precio en dólares. Impuestos y derechos de importación del país de destino por cuenta del comprador.
+            <span className="lg:hidden">En dólares. Impuestos de importación por cuenta del comprador.</span>
+            <span className="hidden lg:inline">
+              Precio en dólares. Impuestos y derechos de importación del país de destino por cuenta del comprador.
+            </span>
           </p>
 
           {colors.length > 1 ? (
-            <div className="mt-10">
+            <div className="mt-6 lg:mt-10">
               <p className="text-[13px] text-graphite-soft">Color</p>
               <ul className="mt-3 flex flex-wrap gap-2.5">
                 {colors.map((c) => (
@@ -102,7 +96,7 @@ export default async function IntlProductPage({ params }: { params: Params }) {
           {product.status === 'ACTIVE' && anyAvailable ? (
             <AddToCart sizes={sizes} />
           ) : (
-            <p className="mt-10 text-[15px] text-graphite-soft">
+            <p className="mt-6 text-[15px] lg:mt-10 text-graphite-soft">
               {product.status === 'COMING_SOON' ? 'Disponible muy pronto.' : 'Este color está agotado por ahora.'}
             </p>
           )}

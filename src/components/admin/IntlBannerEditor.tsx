@@ -77,6 +77,9 @@ export function IntlBannerEditor({ initial }: { initial: (HeroData & { active: b
     ctaLabel: initial?.ctaLabel ?? '',
     ctaHref: initial?.ctaHref ?? '',
     tone: initial?.tone ?? ('DARK' as 'DARK' | 'LIGHT'),
+    titleSize: initial?.titleSize ?? 'M',
+    focalX: String(initial?.focalX ?? 50),
+    focalY: String(initial?.focalY ?? 50),
   });
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -99,11 +102,48 @@ export function IntlBannerEditor({ initial }: { initial: (HeroData & { active: b
           <MediaField
             name="imageMobileUrl"
             label="Imagen de teléfono"
-            hint="opcional, vertical 1080 × 1600"
+            hint="recomendada, vertical 1080 × 1600"
             value={form.imageMobileUrl}
             onChange={set('imageMobileUrl')}
           />
+          <div className="space-y-3 border border-line p-3">
+            <p className="text-[12.5px] text-chalk-faint">
+              Qué parte de la foto se mantiene al recortarla (sobre todo en teléfono). Míralo en la vista previa.
+            </p>
+            {(
+              [
+                ['focalX', 'Horizontal', 'izquierda', 'derecha'],
+                ['focalY', 'Vertical', 'arriba', 'abajo'],
+              ] as const
+            ).map(([key, label, from, to]) => (
+              <label key={key} className="block text-[13px] text-chalk-dim">
+                <span className="flex justify-between">
+                  <span>{label}</span>
+                  <span className="text-chalk-faint">
+                    {from} · {form[key]} % · {to}
+                  </span>
+                </span>
+                <input
+                  type="range"
+                  name={key}
+                  min={0}
+                  max={100}
+                  value={form[key]}
+                  onChange={(e) => {
+                    set(key)(e.target.value);
+                    setDevice('mobile');
+                  }}
+                  className="mt-1 w-full accent-[var(--accent)]"
+                />
+              </label>
+            ))}
+          </div>
           <Input label="Título" name="title" value={form.title} onChange={(e) => set('title')(e.target.value)} />
+          <Select label="Tamaño del título" name="titleSize" value={form.titleSize} onChange={(e) => set('titleSize')(e.target.value)}>
+            <option value="S">Pequeño</option>
+            <option value="M">Mediano</option>
+            <option value="L">Grande</option>
+          </Select>
           <Textarea label="Texto" hint="opcional" name="body" rows={2} value={form.body} onChange={(e) => set('body')(e.target.value)} />
           <div className="grid grid-cols-2 gap-3">
             <Input label="Botón" hint="opcional" name="ctaLabel" placeholder="Ver catálogo" value={form.ctaLabel} onChange={(e) => set('ctaLabel')(e.target.value)} />
@@ -135,7 +175,7 @@ export function IntlBannerEditor({ initial }: { initial: (HeroData & { active: b
           </div>
         }
       >
-        <Preview data={form} device={device} />
+        <Preview data={{ ...form, focalX: Number(form.focalX), focalY: Number(form.focalY) }} device={device} />
       </Card>
     </form>
   );
