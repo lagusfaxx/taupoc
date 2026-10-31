@@ -14,6 +14,9 @@ const schema = z.object({
   ctaLabel: z.string().trim().max(40).optional(),
   ctaHref: z.string().trim().max(300).optional(),
   tone: z.enum(['DARK', 'LIGHT']),
+  titleSize: z.enum(['S', 'M', 'L']).default('M'),
+  focalX: z.coerce.number().int().min(0).max(100).default(50),
+  focalY: z.coerce.number().int().min(0).max(100).default(50),
   active: z.string().optional(),
 });
 
@@ -34,6 +37,9 @@ export async function saveIntlBanner(_prev: AdminState | null, formData: FormDat
     ctaLabel: d.ctaLabel || null,
     ctaHref: d.ctaHref || null,
     tone: d.tone,
+    titleSize: d.titleSize,
+    focalX: d.focalX,
+    focalY: d.focalY,
     active: d.active === 'on',
   };
   const current = await prisma.intlBanner.findFirst({ orderBy: { position: 'asc' } });

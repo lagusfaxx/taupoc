@@ -904,6 +904,8 @@ model IntlBanner {
   /** Velo liso sobre la foto para leer el texto, 0–60 %. Sin degradados. */
   overlay        Int                @default(0)
   height         IntlBannerHeight   @default(LARGE)
+  /** Tamaño del título: S, M o L. */
+  titleSize      String             @default("M")
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 

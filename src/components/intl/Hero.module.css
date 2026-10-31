@@ -46,8 +46,19 @@
   letter-spacing: -0.035em;
   text-transform: none;
   line-height: 0.95;
-  font-size: clamp(36px, 11cqw, 128px);
   max-width: 14ch;
+}
+
+/* Tamaño del título, elegido en el panel. */
+.sizeS .title {
+  font-size: clamp(26px, 7cqw, 44px);
+  line-height: 1.02;
+}
+.sizeM .title {
+  font-size: clamp(30px, 8.5cqw, 64px);
+}
+.sizeL .title {
+  font-size: clamp(36px, 11cqw, 128px);
 }
 
 .body {
@@ -87,7 +98,13 @@
     bottom: 0;
     padding: 0 32px 64px;
   }
-  .title {
+  .sizeS .title {
+    font-size: clamp(32px, 3.4cqw, 56px);
+  }
+  .sizeM .title {
+    font-size: clamp(40px, 5cqw, 84px);
+  }
+  .sizeL .title {
     font-size: clamp(48px, 7.5cqw, 128px);
   }
   .body {

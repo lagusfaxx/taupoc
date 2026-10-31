@@ -25,7 +25,7 @@ export function AddToCart({ sizes }: { sizes: { variantId: string; size: string;
   }
 
   return (
-    <div className="mt-10">
+    <div className="mt-6 lg:mt-10">
       <p className="text-[13px] text-graphite-soft">Talla</p>
       <ul className="mt-3 flex flex-wrap gap-2">
         {sizes.map((s) => {
