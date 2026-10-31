@@ -1,5 +1,6 @@
 import { mediaSrcSet } from '@/lib/media-url';
 import { cn } from '@/lib/utils';
+import { HeroVideo } from './HeroVideo';
 import styles from './Hero.module.css';
 
 export interface HeroData {
@@ -16,6 +17,9 @@ export interface HeroData {
   /** Punto de la foto que se mantiene al recortar, en porcentaje. */
   focalX?: number;
   focalY?: number;
+  /** Video de fondo; la imagen queda de portada mientras carga. */
+  videoUrl?: string | null;
+  videoMobileUrl?: string | null;
 }
 
 /**
@@ -32,14 +36,24 @@ function srcSet(url: string): string | undefined {
   return set ? `${set}, ${url} 2560w` : undefined;
 }
 
-export function Hero({ data, device }: { data: HeroData; device?: 'desktop' | 'mobile' }) {
+export function Hero({
+  data,
+  device,
+  heading = true,
+}: {
+  data: HeroData;
+  device?: 'desktop' | 'mobile';
+  /** Solo el primer banner de la portada es el título principal (h1). */
+  heading?: boolean;
+}) {
   const mobile = data.imageMobileUrl || data.imageUrl;
   // Sin imagen de teléfono, la horizontal se recorta para llenar una pantalla
   // vertical y se ve unas tres veces más ancha que la pantalla: se pide en
   // ese tamaño para que no se vea borrosa.
   const mobileSizes = data.imageMobileUrl ? '100vw' : '300vw';
   const objectPosition = `${data.focalX ?? 50}% ${data.focalY ?? 50}%`;
-  const Title = device ? 'p' : 'h1';
+  const Title = device || !heading ? 'p' : 'h1';
+  const hasVideo = Boolean(data.videoUrl || data.videoMobileUrl);
   return (
     <section
       className={cn(
@@ -50,10 +64,10 @@ export function Hero({ data, device }: { data: HeroData; device?: 'desktop' | 'm
     >
       <div className={styles.slide}>
         <div className={styles.media}>
-          {device ? (
+          {!data.imageUrl && !data.imageMobileUrl ? null : device ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={device === 'mobile' ? mobile : data.imageUrl}
+              src={device === 'mobile' ? mobile : data.imageUrl || mobile}
               alt=""
               className={styles.image}
               style={{ objectPosition }}
@@ -62,8 +76,8 @@ export function Hero({ data, device }: { data: HeroData; device?: 'desktop' | 'm
             <picture>
               <source media="(max-width: 767px)" srcSet={srcSet(mobile) ?? mobile} sizes={mobileSizes} />
               <img
-                src={data.imageUrl}
-                srcSet={srcSet(data.imageUrl)}
+                src={data.imageUrl || mobile}
+                srcSet={srcSet(data.imageUrl || mobile)}
                 sizes="100vw"
                 alt={data.alt || data.title}
                 fetchPriority="high"
@@ -72,6 +86,16 @@ export function Hero({ data, device }: { data: HeroData; device?: 'desktop' | 'm
               />
             </picture>
           )}
+          {hasVideo ? (
+            <HeroVideo
+              src={data.videoUrl}
+              mobileSrc={data.videoMobileUrl}
+              poster={data.imageUrl || undefined}
+              device={device}
+              className={styles.image}
+              style={{ objectPosition }}
+            />
+          ) : null}
           <div className={styles.veil} />
         </div>
         <div className={styles.content}>

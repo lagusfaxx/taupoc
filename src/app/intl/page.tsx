@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { getIntlCards } from '@/lib/intl-catalog';
 import { intlMetadata } from '@/lib/intl-seo';
 import { ProductGrid } from '@/components/intl/ProductGrid';
-import { Hero } from '@/components/intl/Hero';
+import { HeroCarousel } from '@/components/intl/HeroCarousel';
 import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -18,10 +18,10 @@ export const metadata: Metadata = intlMetadata({
 });
 
 export default async function IntlHome() {
-  const [men, women, banner] = await Promise.all([
+  const [men, women, banners] = await Promise.all([
     getIntlCards({ gender: 'MALE' }),
     getIntlCards({ gender: 'FEMALE' }),
-    prisma.intlBanner.findFirst({
+    prisma.intlBanner.findMany({
       where: { active: true },
       orderBy: { position: 'asc' },
     }),
@@ -29,9 +29,11 @@ export default async function IntlHome() {
 
   return (
     <>
-      {banner ? (
+      {banners.length > 0 ? (
         <div className="mb-20 sm:mb-28">
-          <Hero data={banner} />
+          {/* Los banners pueden no traer texto: el título de la página va igual, para buscadores y lectores de pantalla. */}
+          <h1 className="sr-only">Trajes de competencia TAUPOC homologados World Aquatics</h1>
+          <HeroCarousel slides={banners} />
         </div>
       ) : (
         <section className="mx-auto max-w-[1600px] px-4 pb-20 pt-12 sm:px-8 sm:pb-28 sm:pt-24">
