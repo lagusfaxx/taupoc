@@ -7,13 +7,15 @@ import { ROUNDING_LABEL } from '@/lib/fx';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { Card } from '@/components/admin/Card';
 import { ExchangeRateForm } from '@/components/admin/ExchangeRateForm';
+import { IntlLogoForm } from '@/components/admin/IntlLogoForm';
+import { getSettings } from '@/lib/settings';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({ title: 'Panel — Internacional', noIndex: true });
 
 export default async function AdminInternationalPage() {
   await requireAdmin();
-  const [current, history, products] = await Promise.all([
+  const [current, history, products, settings] = await Promise.all([
     getCurrentFx(),
     prisma.exchangeRate.findMany({ orderBy: { effectiveFrom: 'desc' }, take: 12 }),
     prisma.product.findMany({
@@ -21,6 +23,7 @@ export default async function AdminInternationalPage() {
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       select: { id: true, name: true, basePrice: true },
     }),
+    getSettings(),
   ]);
 
   return (
@@ -34,6 +37,10 @@ export default async function AdminInternationalPage() {
         current={current}
         products={products.map((p) => ({ id: p.id, name: p.name, clp: p.basePrice }))}
       />
+
+      <div className="mt-5 max-w-xl">
+        <IntlLogoForm url={settings.intlLogoUrl} hasName={settings.intlLogoHasName} />
+      </div>
 
       <div className="mt-5">
         <Card title="Historial" description="Cada cambio queda registrado; los precios usan siempre el más reciente.">
