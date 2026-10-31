@@ -76,7 +76,7 @@ export default async function HomePage() {
       ...COUNTRIES.map((c) => ({ '@type': 'Country', name: c.name })),
     ],
     currenciesAccepted: 'CLP, USD',
-    paymentAccepted: 'Tarjeta de crédito, tarjeta de débito, Mercado Pago, transferencia bancaria, PayPal',
+    paymentAccepted: 'Tarjeta de crédito, tarjeta de débito, Mercado Pago, transferencia bancaria',
   };
 
   const grafo = { '@context': 'https://schema.org', '@graph': [website, store] };

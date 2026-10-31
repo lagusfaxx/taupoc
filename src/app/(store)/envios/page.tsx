@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
 import { buildMetadata } from '@/lib/seo';
@@ -96,9 +95,8 @@ export default async function ShippingPage() {
 
       <h2>Envíos fuera de Chile</h2>
       <p>
-        También despachamos a Perú, Argentina, Colombia, México, Ecuador y el resto de Latinoamérica por
-        FedEx o DHL, con pago en dólares por PayPal. Revisa{' '}
-        <Link href="/envios-internacionales">cómo comprar desde tu país</Link>.
+        Esta tienda despacha dentro de Chile. Si compras desde otro país, hazlo en{' '}
+        <a href="https://taupoc.lat">taupoc.lat</a>, con envío a toda Latinoamérica.
       </p>
     </LegalPage>
   );

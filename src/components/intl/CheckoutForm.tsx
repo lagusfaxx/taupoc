@@ -12,6 +12,7 @@ import {
 import { formatUsdCents } from '@/lib/fx';
 import { taxIdRule } from '@/lib/intl-checkout';
 import { cn } from '@/lib/utils';
+import { AddressSearch, type PickedAddress } from './AddressSearch';
 
 interface Line {
   itemId: string;
@@ -71,6 +72,22 @@ export function IntlCheckoutForm({
   const errors = state?.fieldErrors ?? {};
   const tax = taxIdRule(addr.country);
   const set = (k: keyof typeof addr) => (e: { target: { value: string } }) => setAddr((a) => ({ ...a, [k]: e.target.value }));
+  const [extra, setExtra] = useState('');
+
+  // Lo elegido en el buscador completa los campos. El estado se busca por
+  // nombre en la lista de Envía, que es el código que pide para cotizar.
+  const applyPicked = (p: PickedAddress) => {
+    const norm = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const state = states.find((st) => norm(st.name) === norm(p.stateName))?.code;
+    setAddr((a) => ({
+      ...a,
+      postalCode: p.postalCode || a.postalCode,
+      city: p.city || a.city,
+      state: state ?? a.state,
+      street: p.street || a.street,
+      streetNumber: p.number || a.streetNumber,
+    }));
+  };
 
   // Estados del país elegido.
   useEffect(() => {
@@ -163,6 +180,14 @@ export function IntlCheckoutForm({
               ))}
             </select>
           </Field>
+          <AddressSearch
+            country={addr.country}
+            onPick={applyPicked}
+            onNoResults={(_q, plusCode) => {
+              // Un Plus Code le sirve al courier donde no hay numeración.
+              if (plusCode) setExtra((e) => e || `Plus Code ${plusCode}`);
+            }}
+          />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Código postal" error={errors.postalCode}>
               <input name="postalCode" value={addr.postalCode} onChange={set('postalCode')} autoComplete="postal-code" className={FIELD} />
@@ -194,7 +219,13 @@ export function IntlCheckoutForm({
             </Field>
           </div>
           <Field label="Depto., casa o referencia" hint="opcional">
-            <input name="addressExtra" autoComplete="address-line2" className={FIELD} />
+            <input
+              name="addressExtra"
+              value={extra}
+              onChange={(e) => setExtra(e.target.value)}
+              autoComplete="address-line2"
+              className={FIELD}
+            />
           </Field>
           {addr.country ? (
             <Field label={tax.label} hint={tax.required ? 'lo pide la aduana' : 'opcional'} error={errors.taxId}>

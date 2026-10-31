@@ -3,9 +3,7 @@ import { prisma } from '@/lib/db';
 import { absoluteUrl } from '@/lib/seo';
 import { colorPagePath, getLineComparison } from '@/lib/catalog';
 import { LANDINGS } from '@/lib/landings';
-import { COUNTRIES, INTERNATIONAL_PATH, countryPath } from '@/lib/international';
 import { getSettings } from '@/lib/settings';
-import { intlIndexable } from '@/lib/storefront';
 
 export const revalidate = 3600;
 
@@ -27,17 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'weekly' as const,
       priority: 0.9,
     })),
-    // Con taupoc.lat abierta a los buscadores estas páginas redirigen allá.
-    ...(intlIndexable()
-      ? []
-      : [
-          { url: absoluteUrl(INTERNATIONAL_PATH), changeFrequency: 'weekly' as const, priority: 0.8 },
-          ...COUNTRIES.map((c) => ({
-            url: absoluteUrl(countryPath(c)),
-            changeFrequency: 'weekly' as const,
-            priority: 0.8,
-          })),
-        ]),
+    // Las guías de envío al extranjero redirigen a taupoc.lat: no van acá.
   ];
 
   try {
