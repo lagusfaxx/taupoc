@@ -906,6 +906,9 @@ model IntlBanner {
   height         IntlBannerHeight   @default(LARGE)
   /** Tamaño del título: S, M o L. */
   titleSize      String             @default("M")
+  /** Video de fondo (MP4/WebM, sin sonido y en bucle). La imagen queda de portada. */
+  videoUrl       String?
+  videoMobileUrl String?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 

@@ -10,11 +10,11 @@ export const metadata: Metadata = buildMetadata({ title: 'Panel — Banner taupo
 
 export default async function IntlBannerPage() {
   await requireAdmin();
-  const banner = await prisma.intlBanner.findFirst({ orderBy: { position: 'asc' } });
+  const banners = await prisma.intlBanner.findMany({ orderBy: { position: 'asc' } });
   return (
     <>
-      <PageHeader title="Banner de taupoc.lat" description="La imagen grande de la portada internacional. Mira cómo queda en escritorio y en teléfono antes de guardar." />
-      <IntlBannerEditor initial={banner} />
+      <PageHeader title="Banner de taupoc.lat" description="Lo primero que se ve en la portada internacional. Con más de un banner se muestran como carrusel. Mira cómo queda en escritorio y en teléfono antes de guardar." />
+      <IntlBannerEditor banners={banners} />
     </>
   );
 }

@@ -24,6 +24,12 @@ export interface SiteSettings {
   logoHasName: boolean;
   // Imagen que se ve al compartir un enlace del sitio.
   shareImageUrl: string;
+  /**
+   * Logo de taupoc.lat. Vacío: se usa el de taupoc.cl pasado a negro, porque
+   * esa tienda es clara y el logo de taupoc.cl es blanco.
+   */
+  intlLogoUrl: string;
+  intlLogoHasName: boolean;
 
   // Comercial
   freeShippingOver: number | null;
@@ -85,6 +91,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   logoHeight: 28,
   logoHasName: false,
   shareImageUrl: '',
+  intlLogoUrl: '',
+  intlLogoHasName: false,
 
   freeShippingOver: 120000,
   lowStockThreshold: 1,

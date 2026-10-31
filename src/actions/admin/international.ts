@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { invalidateFx } from '@/lib/fx-server';
+import { saveSettings } from '@/lib/settings';
 import type { AdminState } from './products';
 
 const decimal = (label: string, min: number, max: number) =>
@@ -46,4 +47,16 @@ export async function saveExchangeRate(_prev: AdminState | null, formData: FormD
   invalidateFx();
   revalidatePath('/admin/internacional');
   return { ok: true, message: 'Tipo de cambio guardado. Los precios de taupoc.lat ya usan el nuevo valor.' };
+}
+
+/** Logo de taupoc.lat. Vacío vuelve a usar el de taupoc.cl en negro. */
+export async function saveIntlLogo(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  await requireAdmin();
+  const url = String(formData.get('intlLogoUrl') ?? '').trim();
+  await saveSettings({ intlLogoUrl: url, intlLogoHasName: formData.get('intlLogoHasName') === 'on' });
+  revalidatePath('/admin/internacional');
+  return {
+    ok: true,
+    message: url ? 'Logo de taupoc.lat guardado.' : 'taupoc.lat usa el logo de taupoc.cl en negro.',
+  };
 }

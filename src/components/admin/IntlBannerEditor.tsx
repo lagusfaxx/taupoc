@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
-import { saveIntlBanner } from '@/actions/admin/intl-banner';
+import { copyClBanners, deleteIntlBanner, moveIntlBanner, saveIntlBanner } from '@/actions/admin/intl-banner';
 import type { AdminState } from '@/actions/admin/products';
 import { Hero, type HeroData } from '@/components/intl/Hero';
 import { cn } from '@/lib/utils';
@@ -53,11 +53,11 @@ function Preview({ data, device }: { data: HeroData; device: 'desktop' | 'mobile
           <div className="flex h-16 items-center bg-white px-4 font-[Inter_Tight,Inter,sans-serif] text-[19px] font-semibold tracking-[0.18em] text-[#111214]">
             TAUPOC
           </div>
-          {data.imageUrl ? (
+          {data.imageUrl || data.imageMobileUrl || data.videoUrl || data.videoMobileUrl ? (
             <Hero data={data} device={device} />
           ) : (
             <div className="flex h-[70%] items-center justify-center bg-[#f5f5f3] text-[15px] text-[#55585e]">
-              Sube una imagen para ver el banner
+              Sube una imagen o un video para ver el banner
             </div>
           )}
         </div>
@@ -66,37 +66,157 @@ function Preview({ data, device }: { data: HeroData; device: 'desktop' | 'mobile
   );
 }
 
-export function IntlBannerEditor({ initial }: { initial: (HeroData & { active: boolean }) | null }) {
+export interface BannerRow extends HeroData {
+  id: string;
+  active: boolean;
+}
+
+const EMPTY: Omit<BannerRow, 'id'> = {
+  imageUrl: '',
+  imageMobileUrl: '',
+  videoUrl: '',
+  videoMobileUrl: '',
+  title: '',
+  body: '',
+  ctaLabel: '',
+  ctaHref: '',
+  tone: 'DARK',
+  titleSize: 'M',
+  focalX: 50,
+  focalY: 50,
+  active: true,
+};
+
+function Status({ state }: { state: AdminState | null }) {
+  if (!state) return null;
+  return (
+    <p
+      role="status"
+      className={cn(
+        'mb-5 border px-3.5 py-2.5 text-[13.5px]',
+        state.ok ? 'border-signal-ok/40 bg-signal-ok/10 text-signal-ok' : 'border-signal-bad/40 bg-signal-bad/10 text-signal-bad',
+      )}
+    >
+      {state.message}
+    </p>
+  );
+}
+
+/**
+ * Editor de los banners de taupoc.lat, al estilo de un editor de tienda: una
+ * pestaña por diapositiva, el formulario de la elegida y su vista previa en
+ * escritorio y teléfono.
+ */
+export function IntlBannerEditor({ banners }: { banners: BannerRow[] }) {
+  const [selected, setSelected] = useState<string>(banners[0]?.id ?? 'new');
+  const [notice, setNotice] = useState<AdminState | null>(null);
+  const [pending, start] = useTransition();
+  const known = useRef(banners.map((b) => b.id));
+
+  // Al crear o copiar, el servidor devuelve banners nuevos: se elige el recién llegado.
+  useEffect(() => {
+    const fresh = banners.find((b) => !known.current.includes(b.id));
+    known.current = banners.map((b) => b.id);
+    if (fresh) setSelected(fresh.id);
+    else if (selected !== 'new' && !banners.some((b) => b.id === selected)) setSelected(banners[0]?.id ?? 'new');
+  }, [banners, selected]);
+
+  const current = banners.find((b) => b.id === selected) ?? null;
+  const run = (fn: () => Promise<AdminState>) => start(async () => setNotice(await fn()));
+
+  return (
+    <div className="space-y-5">
+      <Status state={notice} />
+      <div className="flex flex-wrap items-center gap-2">
+        {banners.map((b, i) => (
+          <button
+            key={b.id}
+            type="button"
+            onClick={() => setSelected(b.id)}
+            className={cn(
+              'h-10 border px-4 text-[13px]',
+              selected === b.id ? 'border-[var(--accent)] text-chalk' : 'border-line text-chalk-faint hover:text-chalk',
+            )}
+          >
+            Banner {i + 1}
+            {b.videoUrl || b.videoMobileUrl ? ' · video' : ''}
+            {b.active ? '' : ' · oculto'}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setSelected('new')}
+          className={cn(
+            'h-10 border border-dashed px-4 text-[13px]',
+            selected === 'new' ? 'border-[var(--accent)] text-chalk' : 'border-line text-chalk-faint hover:text-chalk',
+          )}
+        >
+          + Agregar banner
+        </button>
+        <span className="flex-1" />
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            if (confirm('¿Reemplazar los banners de taupoc.lat por los de la portada de taupoc.cl?')) run(copyClBanners);
+          }}
+          className="h-10 border border-line px-4 text-[13px] text-chalk hover:border-chalk disabled:opacity-50"
+        >
+          {pending ? 'Trabajando…' : 'Copiar los banners de taupoc.cl'}
+        </button>
+      </div>
+
+      {current ? (
+        <div className="flex flex-wrap gap-2 text-[12.5px]">
+          <button type="button" disabled={pending} onClick={() => run(() => moveIntlBanner(current.id, -1))} className="border border-line px-3 py-1.5 text-chalk-dim hover:text-chalk">
+            ← Mover antes
+          </button>
+          <button type="button" disabled={pending} onClick={() => run(() => moveIntlBanner(current.id, 1))} className="border border-line px-3 py-1.5 text-chalk-dim hover:text-chalk">
+            Mover después →
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => {
+              if (confirm('¿Eliminar este banner?')) run(() => deleteIntlBanner(current.id));
+            }}
+            className="border border-line px-3 py-1.5 text-signal-bad hover:border-signal-bad"
+          >
+            Eliminar
+          </button>
+        </div>
+      ) : null}
+
+      <SlideForm key={current?.id ?? 'new'} initial={current} />
+    </div>
+  );
+}
+
+function SlideForm({ initial }: { initial: BannerRow | null }) {
   const [state, action] = useActionState<AdminState | null, FormData>(saveIntlBanner, null);
   const [device, setDevice] = useState<'desktop' | 'mobile'>('desktop');
+  const base = initial ?? { ...EMPTY, id: '' };
   const [form, setForm] = useState({
-    imageUrl: initial?.imageUrl ?? '',
-    imageMobileUrl: initial?.imageMobileUrl ?? '',
-    title: initial?.title ?? '',
-    body: initial?.body ?? '',
-    ctaLabel: initial?.ctaLabel ?? '',
-    ctaHref: initial?.ctaHref ?? '',
-    tone: initial?.tone ?? ('DARK' as 'DARK' | 'LIGHT'),
-    titleSize: initial?.titleSize ?? 'M',
-    focalX: String(initial?.focalX ?? 50),
-    focalY: String(initial?.focalY ?? 50),
+    imageUrl: base.imageUrl ?? '',
+    imageMobileUrl: base.imageMobileUrl ?? '',
+    videoUrl: base.videoUrl ?? '',
+    videoMobileUrl: base.videoMobileUrl ?? '',
+    title: base.title ?? '',
+    body: base.body ?? '',
+    ctaLabel: base.ctaLabel ?? '',
+    ctaHref: base.ctaHref ?? '',
+    tone: base.tone ?? ('DARK' as 'DARK' | 'LIGHT'),
+    titleSize: base.titleSize ?? 'M',
+    focalX: String(base.focalX ?? 50),
+    focalY: String(base.focalY ?? 50),
   });
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
     <form action={action} className="grid gap-5 xl:grid-cols-[400px_minmax(0,1fr)]">
-      <Card title="Banner de inicio" description="Se muestra arriba de todo en la portada de taupoc.lat.">
-        {state ? (
-          <p
-            role="status"
-            className={cn(
-              'mb-5 border px-3.5 py-2.5 text-[13.5px]',
-              state.ok ? 'border-signal-ok/40 bg-signal-ok/10 text-signal-ok' : 'border-signal-bad/40 bg-signal-bad/10 text-signal-bad',
-            )}
-          >
-            {state.message}
-          </p>
-        ) : null}
+      {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
+      <Card title={initial ? 'Editar banner' : 'Nuevo banner'} description="Imagen o video, con texto y botón opcionales.">
+        <Status state={state} />
         <div className="space-y-4">
           <MediaField name="imageUrl" label="Imagen de escritorio" hint="horizontal, 2400 × 1350 o más" value={form.imageUrl} onChange={set('imageUrl')} />
           <MediaField
@@ -106,9 +226,31 @@ export function IntlBannerEditor({ initial }: { initial: (HeroData & { active: b
             value={form.imageMobileUrl}
             onChange={set('imageMobileUrl')}
           />
+          <MediaField
+            name="videoUrl"
+            kind="video"
+            label="Video de escritorio"
+            hint="opcional, MP4 sin sonido"
+            value={form.videoUrl}
+            onChange={set('videoUrl')}
+          />
+          <MediaField
+            name="videoMobileUrl"
+            kind="video"
+            label="Video de teléfono"
+            hint="opcional, vertical"
+            value={form.videoMobileUrl}
+            onChange={(v) => {
+              set('videoMobileUrl')(v);
+              setDevice('mobile');
+            }}
+          />
+          <p className="text-[12.5px] text-chalk-faint">
+            Con video, la imagen se muestra mientras carga y a quien tiene activado reducir el movimiento.
+          </p>
           <div className="space-y-3 border border-line p-3">
             <p className="text-[12.5px] text-chalk-faint">
-              Qué parte de la foto se mantiene al recortarla (sobre todo en teléfono). Míralo en la vista previa.
+              Qué parte de la foto o el video se mantiene al recortarlo (sobre todo en teléfono). Míralo en la vista previa.
             </p>
             {(
               [
