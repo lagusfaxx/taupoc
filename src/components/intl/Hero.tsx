@@ -98,17 +98,20 @@ export function Hero({
           ) : null}
           <div className={styles.veil} />
         </div>
-        <div className={styles.content}>
-          <div className="mx-auto max-w-[1600px]">
-            {data.title ? <Title className={styles.title}>{data.title}</Title> : null}
-            {data.body ? <p className={styles.body}>{data.body}</p> : null}
-            {data.ctaLabel && data.ctaHref ? (
-              <a href={data.ctaHref} className={styles.cta}>
-                {data.ctaLabel}
-              </a>
-            ) : null}
+        {/* Sin título, texto ni botón no se dibuja el bloque: quedaría un margen vacío. */}
+        {data.title || data.body || (data.ctaLabel && data.ctaHref) ? (
+          <div className={styles.content}>
+            <div className="mx-auto max-w-[1600px]">
+              {data.title ? <Title className={styles.title}>{data.title}</Title> : null}
+              {data.body ? <p className={styles.body}>{data.body}</p> : null}
+              {data.ctaLabel && data.ctaHref ? (
+                <a href={data.ctaHref} className={styles.cta}>
+                  {data.ctaLabel}
+                </a>
+              ) : null}
+            </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </section>
   );

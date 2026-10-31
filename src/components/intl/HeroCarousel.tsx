@@ -15,6 +15,20 @@ export function HeroCarousel({ slides, intervalMs = 7000 }: { slides: (HeroData 
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [heights, setHeights] = useState<number[]>([]);
+
+  // En teléfono el texto va debajo de la foto: una diapositiva con texto es
+  // más alta que una sin texto. El carrusel toma la altura de la que se ve,
+  // para no dejar una franja vacía bajo la más corta.
+  useEffect(() => {
+    const els = slideRefs.current.filter(Boolean) as HTMLDivElement[];
+    const measure = () => setHeights(els.map((el) => el.offsetHeight));
+    measure();
+    const ro = new ResizeObserver(measure);
+    els.forEach((el) => ro.observe(el));
+    return () => ro.disconnect();
+  }, [slides.length]);
 
   // El índice sale de la posición del carrusel: funciona igual al deslizar.
   useEffect(() => {
@@ -48,9 +62,20 @@ export function HeroCarousel({ slides, intervalMs = 7000 }: { slides: (HeroData 
       onTouchStart={() => setPaused(true)}
       aria-roledescription="carrusel"
     >
-      <div ref={track} className="flex snap-x snap-mandatory overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div
+        ref={track}
+        className="flex snap-x snap-mandatory items-start overflow-x-auto overflow-y-hidden transition-[height] duration-300 ease-out [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={heights[index] ? { height: heights[index] } : undefined}
+      >
         {slides.map((slide, i) => (
-          <div key={slide.id} className="w-full shrink-0 snap-start" aria-hidden={i !== index}>
+          <div
+            key={slide.id}
+            ref={(el) => {
+              slideRefs.current[i] = el;
+            }}
+            className="w-full shrink-0 snap-start"
+            aria-hidden={i !== index}
+          >
             <Hero data={slide} heading={false} />
           </div>
         ))}
