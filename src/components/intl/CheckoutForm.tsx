@@ -249,7 +249,7 @@ export function IntlCheckoutForm({
       </div>
 
       <aside className="mt-12 lg:mt-0">
-        <div className="lg:sticky lg:top-8">
+        <div className="lg:sticky lg:top-28">
           <h2 className="font-editorial text-[24px] font-semibold tracking-tight">Tu pedido</h2>
           <ul className="mt-5 space-y-3 text-[15px]">
             {lines.map((l) => (

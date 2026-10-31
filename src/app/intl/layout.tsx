@@ -2,6 +2,7 @@ import { IntlFooter, IntlHeader } from '@/components/intl/Shell';
 import { getCartCount } from '@/lib/cart';
 import { getSettings } from '@/lib/settings';
 import { WhatsAppButton } from '@/components/shared/WhatsAppButton';
+import { IntlCartDrawer } from '@/components/intl/CartDrawer';
 import './intl.css';
 
 /**
@@ -27,6 +28,7 @@ export default async function IntlLayout({ children }: { children: React.ReactNo
       </main>
       <IntlFooter />
       <WhatsAppButton phone={settings.whatsapp} message="Hola, les escribo desde taupoc.lat." />
+      <IntlCartDrawer />
     </div>
   );
 }
