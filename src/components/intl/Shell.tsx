@@ -6,12 +6,13 @@ import Link from 'next/link';
  */
 
 const NAV = [
-  { href: '/catalogo?genero=hombre', label: 'Hombre' },
-  { href: '/catalogo?genero=mujer', label: 'Mujer' },
-  { href: '/catalogo', label: 'Catálogo' },
+  { href: '/catalogo?genero=hombre', label: 'Hombre', className: '' },
+  { href: '/catalogo?genero=mujer', label: 'Mujer', className: '' },
+  // En teléfono no cabe: Hombre y Mujer ya llevan al catálogo.
+  { href: '/catalogo', label: 'Catálogo', className: 'hidden sm:list-item' },
 ];
 
-export function IntlHeader() {
+export function IntlHeader({ cartCount = 0 }: { cartCount?: number }) {
   return (
     <header className="bg-paper">
       <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-6 px-4 sm:h-20 sm:px-8">
@@ -21,12 +22,17 @@ export function IntlHeader() {
         <nav aria-label="Principal">
           <ul className="flex items-center gap-5 text-[15px] text-graphite sm:gap-8">
             {NAV.map((item) => (
-              <li key={item.href}>
+              <li key={item.href} className={item.className}>
                 <Link href={item.href} className="underline-offset-[6px] hover:underline">
                   {item.label}
                 </Link>
               </li>
             ))}
+            <li>
+              <a href="/carrito" className="underline-offset-[6px] hover:underline">
+                Carrito{cartCount > 0 ? ` (${cartCount})` : ''}
+              </a>
+            </li>
           </ul>
         </nav>
       </div>

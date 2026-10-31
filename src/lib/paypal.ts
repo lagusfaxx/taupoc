@@ -110,8 +110,12 @@ export async function createPaypalOrder(input: {
   orderId: string;
   orderNumber: string;
   amountCents: number;
+  /** Dominio al que vuelve el comprador. Por defecto, taupoc.cl. */
+  baseUrl?: string;
+  /** Nombre que muestra PayPal. Por defecto, "TAUPOC Chile". */
+  brandName?: string;
 }): Promise<{ id: string; approveUrl: string }> {
-  const base = siteUrl();
+  const base = input.baseUrl ?? siteUrl();
   const order = await call<PaypalOrder>('/v2/checkout/orders', {
     method: 'POST',
     requestId: `create-${input.orderId}`,
@@ -122,14 +126,14 @@ export async function createPaypalOrder(input: {
           reference_id: input.orderId,
           custom_id: input.orderId,
           invoice_id: input.orderNumber,
-          description: `TAUPOC Chile · Pedido ${input.orderNumber}`,
+          description: `${input.brandName ?? 'TAUPOC Chile'} · Pedido ${input.orderNumber}`,
           amount: { currency_code: 'USD', value: (input.amountCents / 100).toFixed(2) },
         },
       ],
       payment_source: {
         paypal: {
           experience_context: {
-            brand_name: 'TAUPOC Chile',
+            brand_name: input.brandName ?? 'TAUPOC Chile',
             locale: 'es-CL',
             shipping_preference: 'NO_SHIPPING',
             user_action: 'PAY_NOW',

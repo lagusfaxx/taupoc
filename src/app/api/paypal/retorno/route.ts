@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { siteUrl } from '@/lib/mercadopago';
 import { settlePaypalOrder } from '@/lib/paypal-settle';
+import { prisma } from '@/lib/db';
+import { storeSiteUrl } from '@/lib/storefront';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +22,10 @@ export async function GET(request: NextRequest) {
   });
   if (!orderNumber) return NextResponse.redirect(`${siteUrl()}/carrito`);
 
-  const result = `${siteUrl()}/checkout/resultado?order=${orderNumber}`;
+  // Cada pedido vuelve a la tienda donde se hizo.
+  const order = await prisma.order.findUnique({ where: { number: orderNumber }, select: { storefront: true } });
+  const base = order?.storefront === 'INTL' ? storeSiteUrl('INTL') : siteUrl();
+  const result = `${base}/checkout/resultado?order=${orderNumber}`;
   if (outcome === 'out_of_stock') return NextResponse.redirect(`${result}&estado=agotado`);
   if (outcome === 'error') return NextResponse.redirect(`${result}&estado=paypal-error`);
   return NextResponse.redirect(result);

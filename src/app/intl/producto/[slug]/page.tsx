@@ -6,6 +6,7 @@ import { getIntlProduct } from '@/lib/intl-catalog';
 import { intlMetadata } from '@/lib/intl-seo';
 import { formatUsdCents } from '@/lib/fx';
 import { cn } from '@/lib/utils';
+import { AddToCart } from '@/components/intl/AddToCart';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,23 +99,13 @@ export default async function IntlProductPage({ params }: { params: Params }) {
             </div>
           ) : null}
 
-          <div className="mt-10">
-            <p className="text-[13px] text-graphite-soft">Tallas</p>
-            <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-[17px]">
-              {sizes.map((s) => (
-                <li
-                  key={s.variantId}
-                  className={s.available > 0 ? 'text-graphite' : 'text-graphite-faint line-through'}
-                  aria-label={`Talla ${s.size}${s.available > 0 ? '' : ', agotada'}`}
-                >
-                  {s.size}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-6 text-[15px] text-graphite-soft">
-              {anyAvailable ? 'La compra en línea abre muy pronto.' : 'Este color está agotado por ahora.'}
+          {product.status === 'ACTIVE' && anyAvailable ? (
+            <AddToCart sizes={sizes} />
+          ) : (
+            <p className="mt-10 text-[15px] text-graphite-soft">
+              {product.status === 'COMING_SOON' ? 'Disponible muy pronto.' : 'Este color está agotado por ahora.'}
             </p>
-          </div>
+          )}
 
           {paragraphs.length > 0 ? (
             <div className="mt-12 space-y-4 text-[16px] leading-relaxed text-graphite">

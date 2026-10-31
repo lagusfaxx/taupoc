@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { getIntlCards } from '@/lib/intl-catalog';
 import { intlMetadata } from '@/lib/intl-seo';
 import { ProductGrid } from '@/components/intl/ProductGrid';
+import { Hero } from '@/components/intl/Hero';
+import { prisma } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,20 +18,41 @@ export const metadata: Metadata = intlMetadata({
 });
 
 export default async function IntlHome() {
-  const [men, women] = await Promise.all([getIntlCards({ gender: 'MALE' }), getIntlCards({ gender: 'FEMALE' })]);
+  const [men, women, banner] = await Promise.all([
+    getIntlCards({ gender: 'MALE' }),
+    getIntlCards({ gender: 'FEMALE' }),
+    prisma.intlBanner.findFirst({
+      where: { active: true },
+      orderBy: { position: 'asc' },
+    }),
+  ]);
 
   return (
     <>
-      <section className="mx-auto max-w-[1600px] px-4 pb-20 pt-12 sm:px-8 sm:pb-28 sm:pt-24">
-        <h1 className="max-w-[13ch] text-[clamp(44px,8vw,128px)] leading-[0.95]">
-          Trajes de competencia para nadar más rápido.
-        </h1>
-        <p className="mt-8 max-w-xl text-[17px] leading-relaxed text-graphite-soft">
-          Jammers y knee suits homologados por World Aquatics, con envío a toda Latinoamérica y pago en dólares.
-        </p>
-      </section>
+      {banner ? (
+        <div className="mb-20 sm:mb-28">
+          <Hero data={banner} />
+        </div>
+      ) : (
+        <section className="mx-auto max-w-[1600px] px-4 pb-20 pt-12 sm:px-8 sm:pb-28 sm:pt-24">
+          <h1 className="max-w-[13ch] text-[clamp(44px,8vw,128px)] leading-[0.95]">
+            Trajes de competencia para nadar más rápido.
+          </h1>
+          <p className="mt-8 max-w-xl text-[17px] leading-relaxed text-graphite-soft">
+            Jammers y knee suits homologados por World Aquatics, con envío a toda Latinoamérica y pago en
+            dólares.
+          </p>
+        </section>
+      )}
 
-      <Collection id="hombre" title="Hombre" subtitle="Jammer" href="/catalogo?genero=hombre" cards={men} priority={2} />
+      <Collection
+        id="hombre"
+        title="Hombre"
+        subtitle="Jammer"
+        href="/catalogo?genero=hombre"
+        cards={men}
+        priority={2}
+      />
       <Collection id="mujer" title="Mujer" subtitle="Knee suit" href="/catalogo?genero=mujer" cards={women} />
     </>
   );

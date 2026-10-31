@@ -705,6 +705,12 @@ model Order {
   // vuelven a quedar disponibles.
   stockReserved Boolean   @default(false)
   reservedUntil DateTime?
+  // Tienda donde se compró: "CL" (taupoc.cl) o "INTL" (taupoc.lat). En las
+  // de taupoc.lat los montos del pedido son el equivalente en pesos de lo
+  // cobrado en dólares (chargedCents).
+  storefront       String    @default("CL")
+  buyerTaxId       String?
+  dutiesAcceptedAt DateTime?
 
   @@index([status])
   @@index([paymentStatus])
@@ -847,6 +853,61 @@ model ExchangeRate {
   createdAt     DateTime      @default(now())
 
   @@index([effectiveFrom])
+}
+
+enum IntlBannerAlign {
+  LEFT
+  CENTER
+}
+
+enum IntlBannerVertical {
+  TOP
+  CENTER
+  BOTTOM
+}
+
+enum IntlBannerTone {
+  DARK // texto grafito, para fotos claras
+  LIGHT // texto blanco, para fotos oscuras
+}
+
+enum IntlBannerHeight {
+  FULL // toda la pantalla
+  LARGE
+  MEDIUM
+}
+
+/**
+ * Banners de la portada de taupoc.lat, editables desde el panel. Con más de
+ * uno activo la portada los muestra como carrusel, en el orden de position.
+ * Tabla propia: la portada de taupoc.cl sigue con sus bloques (HomeBlock).
+ */
+model IntlBanner {
+  id             String             @id @default(cuid())
+  position       Int                @default(0)
+  active         Boolean            @default(true)
+  imageUrl       String
+  /** Imagen para teléfono. Vacía: se usa la de escritorio recortada. */
+  imageMobileUrl String?
+  alt            String             @default("")
+  /** Punto de la foto que nunca se recorta, en porcentaje (0–100). */
+  focalX         Int                @default(50)
+  focalY         Int                @default(50)
+  eyebrow        String?
+  title          String             @default("")
+  body           String?
+  ctaLabel       String?
+  ctaHref        String?
+  align          IntlBannerAlign    @default(LEFT)
+  vertical       IntlBannerVertical @default(BOTTOM)
+  tone           IntlBannerTone     @default(DARK)
+  /** Velo liso sobre la foto para leer el texto, 0–60 %. Sin degradados. */
+  overlay        Int                @default(0)
+  height         IntlBannerHeight   @default(LARGE)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([active, position])
 }
 
 model Setting {
