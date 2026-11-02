@@ -49,7 +49,7 @@ export default async function IntlProductPage({ params }: { params: Params }) {
       </div>
 
       <div className="mt-6 lg:mt-0">
-        <div className="lg:sticky lg:top-8">
+        <div className="lg:sticky lg:top-28">
           <p className="text-[13px] text-graphite-soft">{product.line?.name ?? 'TAUPOC'}</p>
           <h1 className="mt-1 text-[30px] leading-[0.98] lg:mt-2 lg:text-[clamp(36px,4vw,56px)]">{product.name}</h1>
           <p className="mt-1.5 text-[16px] text-graphite-soft lg:mt-3 lg:text-[17px]">{color.name}</p>
@@ -94,7 +94,10 @@ export default async function IntlProductPage({ params }: { params: Params }) {
           ) : null}
 
           {product.status === 'ACTIVE' && anyAvailable ? (
-            <AddToCart sizes={sizes} />
+            <AddToCart
+              sizes={sizes}
+              product={{ name: product.name, color: color.name, imageUrl: images[0]?.url ?? null }}
+            />
           ) : (
             <p className="mt-6 text-[15px] lg:mt-10 text-graphite-soft">
               {product.status === 'COMING_SOON' ? 'Disponible muy pronto.' : 'Este color está agotado por ahora.'}

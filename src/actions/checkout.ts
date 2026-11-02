@@ -160,7 +160,12 @@ export async function createCheckout(
     return { ok: false, message: 'Hay productos sin stock suficiente. Ajusta el carrito.' };
   }
 
-  const international = data.country !== 'CL';
+  // taupoc.cl despacha solo dentro de Chile: las compras desde otros países
+  // van por taupoc.lat, en dólares y con PayPal.
+  if (data.country !== 'CL') {
+    return { ok: false, message: 'Para envíos fuera de Chile compra en taupoc.lat.' };
+  }
+  const international = false;
 
   if (international) {
     const missing: Record<string, string> = {};

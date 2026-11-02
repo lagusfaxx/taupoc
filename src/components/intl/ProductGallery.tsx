@@ -25,7 +25,7 @@ export function ProductGallery({ images, fallbackAlt }: { images: GalleryImage[]
     <>
       {/* Teléfono y tablet */}
       <div className="lg:hidden">
-        <div className="relative aspect-[5/4] bg-paper">
+        <div data-gallery-main className="relative aspect-[5/4] bg-paper">
           <Image
             key={current.url}
             src={current.url}
@@ -61,7 +61,7 @@ export function ProductGallery({ images, fallbackAlt }: { images: GalleryImage[]
       {/* Escritorio */}
       <div className="hidden space-y-4 lg:block">
         {images.map((image, i) => (
-          <div key={image.url} className="relative aspect-[4/5] bg-paper">
+          <div key={image.url} data-gallery-main={i === 0 ? '' : undefined} className="relative aspect-[4/5] bg-paper">
             <Image
               src={image.url}
               alt={image.alt || fallbackAlt}

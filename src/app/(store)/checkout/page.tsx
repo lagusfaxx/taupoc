@@ -10,8 +10,6 @@ import { mpConfigured, mpMode } from '@/lib/mercadopago';
 import { MetaEvent } from '@/components/store/MetaPixel';
 import { metaCartData } from '@/lib/meta-pixel';
 import { paymentMethodOptions } from '@/lib/payment-methods';
-import { enviaCountries } from '@/lib/envia';
-import { paypalConfigured, usdRate } from '@/lib/paypal';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,16 +20,12 @@ export const metadata: Metadata = buildMetadata({
 });
 
 export default async function CheckoutPage() {
-  const [cart, user, settings, countries] = await Promise.all([
-    getCart(),
-    getCurrentUser(),
-    getSettings(),
-    enviaCountries(),
-  ]);
+  // taupoc.cl despacha solo dentro de Chile; el resto compra en taupoc.lat.
+  const [cart, user, settings] = await Promise.all([getCart(), getCurrentUser(), getSettings()]);
 
   if (cart.lines.length === 0) redirect('/carrito');
 
-  const paymentMethods = paymentMethodOptions({ ...settings, paypalEnabled: paypalConfigured() });
+  const paymentMethods = paymentMethodOptions({ ...settings, paypalEnabled: false });
   const offersMercadoPago = paymentMethods.some((m) => m.id === 'MERCADOPAGO');
   const offersTransfer = paymentMethods.some((m) => m.id === 'TRANSFER');
 
@@ -72,8 +66,8 @@ export default async function CheckoutPage() {
           cart={cart}
           installmentsMax={settings.installmentsMax}
           paymentMethods={paymentMethods}
-          countries={countries}
-          usdRate={paypalConfigured() ? usdRate() : 0}
+          countries={[]}
+          usdRate={0}
           defaults={{
             email: user?.email ?? '',
             firstName: user?.name ?? address?.firstName ?? '',

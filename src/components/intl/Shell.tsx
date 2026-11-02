@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { mediaSrcSet } from '@/lib/media-url';
+import { IntlCartLink } from './CartLink';
 
 /*
  * Marco de taupoc.lat: la marca a la izquierda, tres palabras de navegación
@@ -43,7 +44,8 @@ function Brand({ logo }: { logo?: IntlLogo | null }) {
 
 export function IntlHeader({ cartCount = 0, logo }: { cartCount?: number; logo?: IntlLogo | null }) {
   return (
-    <header className="bg-paper">
+    // Fijo arriba, como en taupoc.cl: el carrito queda siempre a la vista.
+    <header className="sticky top-0 z-50 bg-paper/95 backdrop-blur supports-[backdrop-filter]:bg-paper/85">
       <div className="mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-6 px-4 sm:h-20 sm:px-8">
         <Link href="/" aria-label="TAUPOC, inicio" className="shrink-0">
           <Brand logo={logo} />
@@ -58,9 +60,7 @@ export function IntlHeader({ cartCount = 0, logo }: { cartCount?: number; logo?:
               </li>
             ))}
             <li>
-              <a href="/carrito" className="underline-offset-[6px] hover:underline">
-                Carrito{cartCount > 0 ? ` (${cartCount})` : ''}
-              </a>
+              <IntlCartLink initial={cartCount} />
             </li>
           </ul>
         </nav>

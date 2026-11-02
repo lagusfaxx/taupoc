@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { INTL_PREFIX, STORE_HEADER, intlIndexable, storeFromHost, storeSiteUrl } from '@/lib/storefront';
+import { INTL_PREFIX, STORE_HEADER, storeFromHost, storeSiteUrl } from '@/lib/storefront';
 
 /**
  * Redirige www → sin www, decide la tienda por el dominio y expone la ruta
@@ -44,13 +44,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.rewrite(url, { request: { headers } });
   }
 
-  // Las guías de envío al extranjero pasan a taupoc.lat cuando esa tienda se
-  // abre a los buscadores: así los dos dominios no compiten por las mismas
-  // búsquedas. Antes de eso se quedan, para no perder sus visitas.
-  if (
-    (pathname === '/envios-internacionales' || pathname.startsWith('/envios-internacionales/')) &&
-    intlIndexable()
-  ) {
+  // taupoc.cl es solo para Chile: las guías de envío al extranjero pasan a
+  // taupoc.lat, que es la tienda para el resto de Latinoamérica.
+  if (pathname === '/envios-internacionales' || pathname.startsWith('/envios-internacionales/')) {
     return NextResponse.redirect(`${storeSiteUrl('INTL')}/`, 301);
   }
 
