@@ -18,6 +18,8 @@ const SAME_DEVICE_MS = 1000 * 60 * 60 * 24 * 30;
 export interface InterestState {
   ok: boolean;
   message: string;
+  /** Falta el correo: la ficha muestra el campo. */
+  needEmail?: boolean;
 }
 
 const schema = z.object({
@@ -69,6 +71,10 @@ export async function registerSizeInterest(variantId: string, email?: string): P
     .digest('hex')
     .slice(0, 32);
   const correo = parsed.data.email ? parsed.data.email.toLowerCase() : session?.email || null;
+  // Sin correo no cuenta: un clic anónimo es fácil de inflar y no sirve para avisar.
+  if (!correo) {
+    return { ok: false, needEmail: true, message: 'Déjanos tu correo para anotarte.' };
+  }
 
   // Es la misma persona si coincide cualquiera de sus huellas: cookie, carrito,
   // cuenta, correo o la misma IP y navegador en el último mes. Así borrar
@@ -107,8 +113,6 @@ export async function registerSizeInterest(variantId: string, email?: string): P
 
   return {
     ok: true,
-    message: correo
-      ? `Listo. Te avisamos a ${correo} cuando vuelva la talla ${variant.size}.`
-      : `Anotado tu interés por la talla ${variant.size}.`,
+    message: `Listo. Te avisamos a ${correo} cuando vuelva la talla ${variant.size}.`,
   };
 }
