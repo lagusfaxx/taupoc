@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useActionState, useState, type ReactNode } from 'react';
-import { sendBulkOrderEmail } from '@/actions/admin/orders';
+import { bulkDeleteOrders, sendBulkOrderEmail } from '@/actions/admin/orders';
 import type { AdminState } from '@/actions/admin/products';
 import { Input, Select, Textarea } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
@@ -10,7 +10,7 @@ const Selection = createContext<{ selected: Set<string>; toggle: (id: string) =>
 
 export function BulkOrderCheckbox({ id, number }: { id: string; number: string }) {
   const { selected, toggle } = useContext(Selection);
-  return <input type="checkbox" name="orderIds" value={id} aria-label={`Enviar aviso de ${number}`} checked={selected.has(id)} onChange={() => toggle(id)} />;
+  return <input type="checkbox" name="orderIds" value={id} aria-label={`Seleccionar ${number}`} checked={selected.has(id)} onChange={() => toggle(id)} />;
 }
 
 export function BulkOrderMail({ children }: { children: ReactNode }) {
@@ -24,6 +24,12 @@ export function BulkOrderMail({ children }: { children: ReactNode }) {
     setSelected(new Set());
     return result;
   }, null);
+  const [deleteState, deleteAction, deleting] = useActionState(async (prev: AdminState | null, data: FormData) => {
+    const result = await bulkDeleteOrders(prev, data);
+    if (result.ok) setSelected(new Set());
+    return result;
+  }, null);
+  const busy = pending || deleting;
   return (
     <Selection.Provider value={{ selected, toggle: (id) => setSelected((current) => {
       const next = new Set(current);
@@ -32,9 +38,31 @@ export function BulkOrderMail({ children }: { children: ReactNode }) {
     }) }}>
     <form action={action} onReset={(event) => event.preventDefault()}
       onSubmit={(event) => {
-        if (!window.confirm(`¿Enviar «${subject}» a los destinatarios de ${selected.size} pedidos?`)) event.preventDefault();
+        const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+        const message = submitter?.dataset.bulkDelete === 'true'
+          ? `¿Eliminar ${selected.size} ${selected.size === 1 ? 'pedido' : 'pedidos'} para siempre? Si descontaron stock, vuelve al inventario. No reembolsa pagos.`
+          : `¿Enviar «${subject}» a los destinatarios de ${selected.size} pedidos?`;
+        if (!window.confirm(message)) event.preventDefault();
       }}>
-      <fieldset disabled={pending}>
+      <fieldset disabled={busy}>
+        <div className="mb-4 flex flex-wrap items-center gap-3 border border-signal-bad/30 p-4">
+          <p className="min-w-0 flex-1 text-sm text-chalk-faint">
+            ¿Pedidos de prueba? Márcalos en la tabla y elimínalos. No se puede deshacer.
+          </p>
+          <button
+            type="submit"
+            data-bulk-delete="true"
+            formAction={deleteAction}
+            formNoValidate
+            disabled={busy || selected.size === 0}
+            className="h-9 border border-signal-bad/50 bg-signal-bad/10 px-4 font-display text-[10.5px] font-bold uppercase tracking-widest text-signal-bad transition hover:bg-signal-bad/20 disabled:opacity-40"
+          >
+            {deleting ? 'Eliminando…' : `Eliminar seleccionados (${selected.size})`}
+          </button>
+          {deleteState ? (
+            <p role="status" className={`w-full text-sm ${deleteState.ok ? 'text-signal-ok' : 'text-signal-bad'}`}>{deleteState.message}</p>
+          ) : null}
+        </div>
         <div className="mb-4 space-y-3 border border-line p-4">
           <h2 className="font-display text-lg text-chalk">Correo personalizado a pedidos</h2>
           <p className="text-sm text-chalk-faint">Selecciona hasta 25 pedidos y escribe tu correo. Se enviará un mensaje individual al correo de cada pedido, cualquiera sea su estado.</p>

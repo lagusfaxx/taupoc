@@ -14,6 +14,10 @@ import { OrderTimeline } from '@/components/store/OrderTimeline';
 import { TransferInstructions } from '@/components/store/TransferInstructions';
 import { PAYMENT_METHOD_LABEL } from '@/lib/payment-methods';
 import { getSettings } from '@/lib/settings';
+import {
+  RETURN_FEE_STATUS_LABEL, RETURN_KIND_LABEL, RETURN_STATUS_LABEL, returnFeeTone, returnStatusTone,
+} from '@/lib/order-labels';
+import { ButtonLink } from '@/components/ui/Button';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +33,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
 
   const order = await prisma.order.findFirst({
     where: { number, ...(preview ? {} : { OR: [{ userId: user.id }, { email: user.email }] }) },
-    include: { items: true, events: { orderBy: { createdAt: 'asc' } } },
+    include: { items: true, events: { orderBy: { createdAt: 'asc' } }, orderReturn: true },
   });
   if (!order) notFound();
 
@@ -37,6 +41,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
     order.paymentMethod === 'TRANSFER' && order.status === 'PENDING' && order.paymentStatus === 'PENDING';
   const settings = awaitingTransfer ? await getSettings() : null;
   const couponDiscount = order.discountTotal - order.paymentDiscount;
+  const ret = order.orderReturn;
 
   return (
     <div className="space-y-8">
@@ -71,6 +76,37 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
               total={order.total}
               orderNumber={order.number}
             />
+          </div>
+        ) : null}
+
+        {ret ? (
+          <div className="border-t border-line px-5 py-5 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="font-display text-[10px] uppercase tracking-mega text-chalk-faint">
+                Devolución · {RETURN_KIND_LABEL[ret.kind]}
+              </p>
+              <Badge tone={returnStatusTone(ret.status)}>{RETURN_STATUS_LABEL[ret.status]}</Badge>
+            </div>
+            {ret.reason ? (
+              <p className="mt-2 whitespace-pre-line text-[13.5px] leading-relaxed text-chalk-dim">{ret.reason}</p>
+            ) : null}
+            {ret.feeStatus !== 'NONE' ? (
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border border-line bg-ink-800 px-4 py-3">
+                <div>
+                  <p className="text-[13px] text-chalk">{ret.feeLabel || 'Costo de envío de la devolución'}</p>
+                  <p className="mt-0.5 text-[12.5px] text-chalk-faint">
+                    {ret.feeStatus === 'WAIVED' ? 'Sin cargo' : formatCLP(ret.feeAmount)}
+                  </p>
+                </div>
+                {ret.feeStatus === 'PENDING' && ret.feeToken && ret.status !== 'CANCELLED' ? (
+                  <ButtonLink href={`/devoluciones/pago/${ret.feeToken}`} size="sm">
+                    Pagar con Mercado Pago
+                  </ButtonLink>
+                ) : (
+                  <Badge tone={returnFeeTone(ret.feeStatus)}>{RETURN_FEE_STATUS_LABEL[ret.feeStatus]}</Badge>
+                )}
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -166,7 +202,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ nu
         <div className="surface p-5">
           <h3 className="font-display text-[11px] uppercase tracking-mega text-chalk-faint">Historial</h3>
           <ol className="mt-3 space-y-3">
-            {order.events.filter((event) => ['created', 'status_change', 'tracking'].includes(event.type)).map((event) => (
+            {order.events.filter((event) => ['created', 'status_change', 'tracking', 'return'].includes(event.type)).map((event) => (
               <li key={event.id} className="border-l border-line pl-3.5 text-[13px]">
                 <p className="text-chalk-dim">{event.message}</p>
                 <p className="mt-0.5 text-[11.5px] text-chalk-faint">{formatDateTime(event.createdAt)}</p>
