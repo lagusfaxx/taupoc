@@ -529,6 +529,59 @@ export async function sendOrderRefunded(order: OrderMailData, opts?: EnvioOpts) 
   return await sendMail({ to: opts?.to ?? order.email, subject: `Reembolso emitido · Pedido ${order.number}`, html });
 }
 
+/**
+ * Cobro del envío de una devolución o cambio de talla. Lo dispara el panel al
+ * crear el cobro; no depende de la bandera de correos de estado porque sin
+ * este correo el cliente no tiene cómo pagar.
+ */
+export async function sendReturnFeeRequest(params: {
+  number: string;
+  email: string;
+  firstName?: string | null;
+  amount: number;
+  label: string;
+  reason?: string | null;
+  payUrl: string;
+}) {
+  const b = await brand();
+  const html = layout({
+    title: `Envío de tu devolución · Pedido ${params.number}`,
+    preheader: `Paga ${formatCLP(params.amount)} con Mercado Pago para gestionar tu devolución.`,
+    brand: b,
+    body:
+      heading('Devolución', WARN, `Falta pagar el envío de tu devolución del pedido <span style="color:${CHALK};">${esc(params.number)}</span>`) +
+      `<p style="margin:0;">${params.firstName ? `Hola ${esc(params.firstName)}, ` : ''}para seguir con tu devolución necesitamos que pagues el costo de envío.</p>` +
+      (params.reason ? panel('Motivo', esc(params.reason)) : '') +
+      panel(
+        esc(params.label),
+        `<span style="font-size:22px;font-weight:700;color:${ACCENT};">${formatCLP(params.amount)}</span>
+         <div style="margin-top:8px;color:${CHALK_FAINT};font-size:13px;">Se paga con Mercado Pago: tarjeta, débito o saldo.</div>`,
+        ACCENT,
+      ) +
+      button(params.payUrl, 'Pagar con Mercado Pago') +
+      `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿Dudas? Responde este correo y te ayudamos.</p>`,
+  });
+  return await sendMail({ to: params.email, subject: `Envío de tu devolución · Pedido ${params.number}`, html });
+}
+
+/** Aviso interno: el cliente pagó el envío de su devolución. */
+export async function sendAdminReturnFeePaid(params: { number: string; email: string; amount: number; orderId: string }) {
+  const s = await getSettings();
+  const to = process.env.ADMIN_ALERT_EMAIL;
+  if (!to || !s.notifyAdminNewOrder) return;
+  const b = await brand();
+  const html = layout({
+    title: `Envío de devolución pagado · ${params.number}`,
+    preheader: `${params.email} pagó ${formatCLP(params.amount)} por el envío de su devolución.`,
+    brand: b,
+    body:
+      heading('Pago recibido', OK, `Pagaron el envío de la devolución del pedido <span style="color:${CHALK};">${esc(params.number)}</span>`) +
+      panel('Monto', `<span style="font-size:20px;font-weight:700;color:${ACCENT};">${formatCLP(params.amount)}</span><div>${esc(params.email)}</div>`, OK) +
+      button(`${b.siteUrl}/admin/pedidos/${params.orderId}`, 'Ver pedido'),
+  });
+  return await sendMail({ to, subject: `Envío de devolución pagado · ${params.number}`, html });
+}
+
 // ── Avisos internos ───────────────────────────────────────────
 
 export async function sendAdminNewOrder(order: OrderMailData, opts?: EnvioOpts) {

@@ -61,3 +61,50 @@ export function paymentStatusTone(status: string): Tone {
       return 'muted';
   }
 }
+
+export const RETURN_KIND_LABEL: Record<string, string> = {
+  EXCHANGE: 'Cambio de talla o modelo',
+  REFUND: 'Devolución con reembolso',
+};
+
+export const RETURN_STATUS_LABEL: Record<string, string> = {
+  REQUESTED: 'Solicitada',
+  IN_TRANSIT: 'Prenda en camino',
+  RECEIVED: 'Prenda recibida',
+  COMPLETED: 'Finalizada',
+  CANCELLED: 'Anulada',
+};
+
+export const RETURN_FEE_STATUS_LABEL: Record<string, string> = {
+  NONE: 'Sin cobro',
+  PENDING: 'Pendiente de pago',
+  PAID: 'Pagado',
+  WAIVED: 'Sin cargo',
+};
+
+export function returnStatusTone(status: string): Tone {
+  switch (status) {
+    case 'COMPLETED':
+      return 'ok';
+    case 'IN_TRANSIT':
+    case 'RECEIVED':
+      return 'info';
+    case 'REQUESTED':
+      return 'warn';
+    case 'CANCELLED':
+      return 'muted';
+    default:
+      return 'muted';
+  }
+}
+
+export function returnFeeTone(status: string): Tone {
+  switch (status) {
+    case 'PAID':
+      return 'ok';
+    case 'PENDING':
+      return 'warn';
+    default:
+      return 'muted';
+  }
+}

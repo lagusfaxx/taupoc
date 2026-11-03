@@ -704,6 +704,8 @@ model Order {
   coupon Coupon?      @relation(fields: [couponId], references: [id], onDelete: SetNull)
   items  OrderItem[]
   events OrderEvent[]
+  /// Devolución o cambio de talla, si el cliente mandó la prenda de vuelta.
+  orderReturn OrderReturn?
   creationKey String? @unique
   stockCommitted Boolean @default(false)
   // Unidades apartadas en Variant.reserved mientras el cliente paga. Al
@@ -750,6 +752,62 @@ model OrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+/// Para qué devuelve el cliente la prenda.
+enum ReturnKind {
+  /// Cambio de talla o de modelo: se le manda otra prenda.
+  EXCHANGE
+  /// Devuelve la prenda y se le reembolsa.
+  REFUND
+}
+
+enum ReturnStatus {
+  /// Avisó que la va a devolver.
+  REQUESTED
+  /// La prenda viene en camino a la tienda.
+  IN_TRANSIT
+  /// Llegó a la tienda.
+  RECEIVED
+  /// Cambio despachado o reembolso emitido.
+  COMPLETED
+  CANCELLED
+}
+
+/// Costo de envío de la devolución que paga el cliente. Solo existe si el
+/// panel lo crea; sin cobro queda en NONE.
+enum ReturnFeeStatus {
+  NONE
+  PENDING
+  PAID
+  /// El equipo lo perdonó o lo cobró por fuera.
+  WAIVED
+}
+
+model OrderReturn {
+  id      String       @id @default(cuid())
+  orderId String       @unique
+  kind    ReturnKind   @default(EXCHANGE)
+  status  ReturnStatus @default(REQUESTED)
+  /// Motivo, visible para el cliente. Ej.: "Talla 28 le quedó chica, cambia a 30".
+  reason  String?
+
+  feeAmount       Int             @default(0)
+  feeStatus       ReturnFeeStatus @default(NONE)
+  /// Concepto que ve el cliente al pagar.
+  feeLabel        String?
+  /// Token del enlace público de pago (/devoluciones/pago/<token>).
+  feeToken        String?         @unique
+  feePreferenceId String?
+  feePaymentId    String?
+  feePaidAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([feeStatus])
 }
 
 model OrderEvent {

@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import type { PaymentStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
-import { getPayment, verifyWebhookSignature } from '@/lib/mercadopago';
+import { getPayment, verifyWebhookSignature, RETURN_FEE_REF } from '@/lib/mercadopago';
+import { applyReturnFeePayment } from '@/lib/order-returns';
 import { commitStockForOrder, restoreStockForOrder } from '@/lib/inventory';
 import { releaseOrderReservation } from '@/lib/reservations';
 import { logOrderEvent } from '@/lib/orders';
@@ -72,6 +73,12 @@ export async function GET() {
 async function processPayment(paymentId: string) {
   const payment = await getPayment(paymentId);
   if (!payment) return;
+
+  // Cobro del envío de una devolución: no es el pago de un pedido.
+  if (payment.externalReference?.startsWith(RETURN_FEE_REF)) {
+    await applyReturnFeePayment(payment.externalReference.slice(RETURN_FEE_REF.length), payment);
+    return;
+  }
 
   const order = payment.externalReference
     ? await prisma.order.findUnique({

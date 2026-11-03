@@ -288,3 +288,58 @@ export async function notifyOrderStatus(orderId: string, status: OrderStatus, ac
     console.error('[status-email:log]', error),
   );
 }
+
+/**
+ * Borra pedidos para siempre (pruebas, duplicados).
+ *
+ * Antes de borrar deja el inventario como si el pedido nunca hubiera
+ * existido: suelta las unidades apartadas, devuelve el stock si ya se había
+ * descontado y descuenta el uso del cupón. No reembolsa nada en Mercado Pago
+ * ni en PayPal: eso se hace aparte, antes de borrar.
+ */
+export async function deleteOrders(params: { orderIds: string[]; actor: string }): Promise<{ ok: boolean; message: string }> {
+  const ids = [...new Set(params.orderIds.filter(Boolean))];
+  if (ids.length === 0) return { ok: false, message: 'Selecciona al menos un pedido.' };
+
+  const deleted: string[] = [];
+  for (const id of ids) {
+    const number = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${id} FOR UPDATE`;
+      const order = await tx.order.findUnique({ where: { id }, include: { items: true } });
+      if (!order) return null;
+      await releaseOrderReservation(tx, id);
+      if (order.stockCommitted) {
+        for (const item of order.items)
+          if (item.variantId)
+            await adjustStock(tx, {
+              variantId: item.variantId,
+              delta: item.quantity,
+              type: 'CANCEL',
+              reason: `Pedido ${order.number} eliminado`,
+              actorEmail: params.actor,
+              orderId: id,
+            });
+      }
+      if (order.couponId && order.paymentStatus === 'APPROVED') {
+        await tx.coupon.updateMany({
+          where: { id: order.couponId, usedCount: { gt: 0 } },
+          data: { usedCount: { decrement: 1 } },
+        });
+      }
+      await tx.order.delete({ where: { id } });
+      return order.number;
+    });
+    if (number) deleted.push(number);
+  }
+
+  if (deleted.length) console.info('[pedidos:eliminados]', params.actor, deleted.join(', '));
+  return deleted.length
+    ? {
+        ok: true,
+        message:
+          deleted.length === 1
+            ? `Pedido ${deleted[0]} eliminado.`
+            : `${deleted.length} pedidos eliminados: ${deleted.join(', ')}.`,
+      }
+    : { ok: false, message: 'No se encontraron los pedidos.' };
+}

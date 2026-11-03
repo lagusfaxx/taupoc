@@ -2,12 +2,14 @@
 
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import type { OrderStatus } from '@prisma/client';
+import { redirect } from 'next/navigation';
+import type { OrderStatus, ReturnKind, ReturnStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { logOrderEvent } from '@/lib/orders';
-import { restoreStockForOrder } from '@/lib/inventory';
-import { changeOrderStatus, resolveTransfer, saveOrderTracking } from '@/lib/order-ops';
+import { adjustStock, restoreStockForOrder } from '@/lib/inventory';
+import { changeOrderStatus, deleteOrders, resolveTransfer, saveOrderTracking } from '@/lib/order-ops';
+import { clearReturnFee, deleteOrderReturn, saveOrderReturn, setReturnFee } from '@/lib/order-returns';
 import { mailTransport, sendMail } from '@/lib/mail';
 import { refundPayment } from '@/lib/mercadopago';
 import type { AdminState } from './products';
@@ -114,10 +116,47 @@ export async function updateOrderItem(_prev: AdminState | null, formData: FormDa
     return { ok: false, message: 'Variante no encontrada.' };
   }
 
+  if (newVariant.id === currentItem.variantId) {
+    return { ok: false, message: 'Es la misma variante.' };
+  }
+
   const imageUrl = newVariant.color.images[0]?.url ?? currentItem.imageUrl;
   const unitPrice = newVariant.priceOverride ?? newVariant.product.basePrice;
 
-  await prisma.orderItem.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;
+    const order = await tx.order.findUniqueOrThrow({ where: { id: orderId } });
+    const reason = `Pedido ${order.number}: cambio ${currentItem.sku} → ${newVariant.sku}`;
+    // Si el pedido ya descontó stock, la prenda que vuelve entra al
+    // inventario y la nueva sale: así un cambio de talla cuadra solo.
+    if (order.stockCommitted) {
+      if (currentItem.variantId) {
+        await adjustStock(tx, {
+          variantId: currentItem.variantId,
+          delta: currentItem.quantity,
+          type: 'RETURN',
+          reason,
+          actorEmail: admin.email,
+          orderId,
+        });
+      }
+      await adjustStock(tx, {
+        variantId: newVariant.id,
+        delta: -currentItem.quantity,
+        type: 'SALE',
+        reason,
+        actorEmail: admin.email,
+        orderId,
+      });
+    } else if (order.stockReserved) {
+      // Pedido esperando el pago: la reserva se pasa a la nueva variante.
+      if (currentItem.variantId) {
+        await tx.$executeRaw`UPDATE "Variant" SET reserved = GREATEST(reserved - ${currentItem.quantity}, 0) WHERE id = ${currentItem.variantId}`;
+      }
+      await tx.$executeRaw`UPDATE "Variant" SET reserved = reserved + ${currentItem.quantity} WHERE id = ${newVariant.id}`;
+    }
+
+    await tx.orderItem.update({
     where: { id: itemId },
     data: {
       variantId: newVariant.id,
@@ -130,6 +169,7 @@ export async function updateOrderItem(_prev: AdminState | null, formData: FormDa
       unitPrice,
       lineTotal: unitPrice * currentItem.quantity,
     },
+    });
   });
 
   await logOrderEvent({
@@ -233,4 +273,88 @@ export async function sendBulkOrderEmail(_prev: AdminState | null, formData: For
     revalidateOrder(id);
   }
   return { ok: sent === ids.length, message: `${sent} de ${ids.length} correos aceptados por el proveedor. ${results.join(' ')}` };
+}
+
+/** Borra un pedido desde su ficha y vuelve al listado. */
+export async function deleteOrderAction(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const id = String(formData.get('orderId') ?? '');
+  const confirmNumber = String(formData.get('confirmNumber') ?? '').trim().toUpperCase();
+  const order = await prisma.order.findUnique({ where: { id }, select: { number: true } });
+  if (!order) return { ok: false, message: 'Pedido no encontrado.' };
+  if (confirmNumber !== order.number.toUpperCase()) {
+    return { ok: false, message: `Escribe ${order.number} para confirmar.` };
+  }
+  const result = await deleteOrders({ orderIds: [id], actor: admin.email });
+  if (!result.ok) return result;
+  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin');
+  redirect('/admin/pedidos');
+}
+
+/** Borra los pedidos marcados en el listado. */
+export async function bulkDeleteOrders(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const parsed = z.array(z.string().min(1)).min(1).max(100).safeParse(formData.getAll('orderIds'));
+  if (!parsed.success) return { ok: false, message: 'Selecciona entre 1 y 100 pedidos.' };
+  const result = await deleteOrders({ orderIds: parsed.data, actor: admin.email });
+  revalidatePath('/admin/pedidos');
+  revalidatePath('/admin');
+  return result;
+}
+
+const RETURN_KINDS = ['EXCHANGE', 'REFUND'] as const;
+const RETURN_STATUSES = ['REQUESTED', 'IN_TRANSIT', 'RECEIVED', 'COMPLETED', 'CANCELLED'] as const;
+
+/** Registra o actualiza la devolución / cambio de talla del pedido. */
+export async function saveReturnAction(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const id = String(formData.get('orderId') ?? '');
+  const kind = String(formData.get('kind') ?? '') as ReturnKind;
+  const status = String(formData.get('status') ?? '') as ReturnStatus;
+  if (!RETURN_KINDS.includes(kind as never) || !RETURN_STATUSES.includes(status as never)) {
+    return { ok: false, message: 'Revisa el tipo y el estado.' };
+  }
+  const result = await saveOrderReturn({
+    orderId: id,
+    kind,
+    status,
+    reason: String(formData.get('reason') ?? ''),
+    actor: admin.email,
+  });
+  if (result.ok) revalidateOrder(id);
+  return result;
+}
+
+export async function deleteReturnAction(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const id = String(formData.get('orderId') ?? '');
+  const result = await deleteOrderReturn({ orderId: id, actor: admin.email });
+  if (result.ok) revalidateOrder(id);
+  return result;
+}
+
+/** Crea, cambia, quita o perdona el cobro del envío de la devolución. */
+export async function returnFeeAction(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const id = String(formData.get('orderId') ?? '');
+  const intent = String(formData.get('intent') ?? 'set');
+  let result: AdminState;
+  if (intent === 'remove' || intent === 'waive') {
+    result = await clearReturnFee({ orderId: id, mode: intent, actor: admin.email });
+  } else {
+    const amount = Number(String(formData.get('amount') ?? '').replace(/\D/g, ''));
+    result = await setReturnFee({
+      orderId: id,
+      amount,
+      label: String(formData.get('label') ?? ''),
+      notify: formData.get('notify') === 'on',
+      actor: admin.email,
+    });
+  }
+  if (result.ok) {
+    revalidateOrder(id);
+    revalidatePath('/devoluciones/pago/[token]', 'page');
+  }
+  return result;
 }

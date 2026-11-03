@@ -10,6 +10,7 @@ import {
   ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, orderStatusTone, paymentStatusTone,
 } from '@/lib/orders';
 import { PAYMENT_METHOD_LABEL } from '@/lib/payment-methods';
+import { RETURN_STATUS_LABEL, returnStatusTone } from '@/lib/order-labels';
 import { BulkOrderMail, BulkOrderCheckbox } from '@/components/admin/BulkOrderMail';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { Toolbar } from '@/components/admin/Toolbar';
@@ -38,6 +39,7 @@ export default async function AdminOrdersPage({
   const status = one('estado');
   const payment = one('pago');
   const method = one('metodo');
+  const devolucion = one('devolucion');
 
   const where: Prisma.OrderWhereInput = {
     ...(query
@@ -54,12 +56,20 @@ export default async function AdminOrdersPage({
     ...(status ? { status: status as never } : {}),
     ...(payment ? { paymentStatus: payment as never } : {}),
     ...(method ? { paymentMethod: method as never } : {}),
+    ...(devolucion === 'si'
+      ? { orderReturn: { isNot: null } }
+      : devolucion === 'cobro'
+        ? { orderReturn: { is: { feeStatus: 'PENDING' } } }
+        : {}),
   };
 
   const [orders, total, pending, processing, todayRevenue, transfers] = await Promise.all([
     prisma.order.findMany({
       where,
-      include: { items: { select: { quantity: true } } },
+      include: {
+        items: { select: { quantity: true } },
+        orderReturn: { select: { status: true, feeStatus: true } },
+      },
       orderBy: { createdAt: 'desc' },
       skip: (page - 1) * PER_PAGE,
       take: PER_PAGE,
@@ -125,6 +135,14 @@ export default async function AdminOrdersPage({
             label: 'Todos los medios',
             options: Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => ({ value, label })),
           },
+          {
+            name: 'devolucion',
+            label: 'Con y sin devolución',
+            options: [
+              { value: 'si', label: 'Con devolución' },
+              { value: 'cobro', label: 'Envío de devolución por cobrar' },
+            ],
+          },
         ]}
       />
 
@@ -133,7 +151,7 @@ export default async function AdminOrdersPage({
         <Table minWidth={900}>
           <thead>
             <tr>
-              <Th>Avisar</Th>
+              <Th>Sel.</Th>
               <Th>Pedido</Th>
               <Th>Cliente</Th>
               <Th>Entrega</Th>
@@ -163,7 +181,19 @@ export default async function AdminOrdersPage({
                     {order.isPickup ? 'Retiro' : `${order.commune ?? ''}${order.region ? `, ${regionName(order.region)}` : ''}`}
                   </p>
                 </Td>
-                <Td><Badge tone={orderStatusTone(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge></Td>
+                <Td>
+                  <Badge tone={orderStatusTone(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge>
+                  {order.orderReturn ? (
+                    <p className="mt-1">
+                      <Badge tone={returnStatusTone(order.orderReturn.status)}>
+                        Devolución: {RETURN_STATUS_LABEL[order.orderReturn.status]}
+                      </Badge>
+                    </p>
+                  ) : null}
+                  {order.orderReturn?.feeStatus === 'PENDING' ? (
+                    <p className="mt-1 text-[11.5px] text-signal-warn">Envío por cobrar</p>
+                  ) : null}
+                </Td>
                 <Td>
                   <Badge tone={paymentStatusTone(order.paymentStatus)}>{PAYMENT_STATUS_LABEL[order.paymentStatus]}</Badge>
                   <p className="mt-1 text-[11.5px] text-chalk-faint">{PAYMENT_METHOD_LABEL[order.paymentMethod]}</p>

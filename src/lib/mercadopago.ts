@@ -136,6 +136,61 @@ export async function createPreference(input: CreatePreferenceInput) {
   };
 }
 
+/** Prefijo de `external_reference` de los cobros que no son un pedido. */
+export const RETURN_FEE_REF = 'return:';
+
+/**
+ * Preferencia para el costo de envío de una devolución. Va aparte del pedido:
+ * su `external_reference` apunta a la devolución, así el webhook no la
+ * confunde con el pago de la compra.
+ */
+export async function createReturnFeePreference(input: {
+  returnId: string;
+  token: string;
+  orderNumber: string;
+  title: string;
+  amount: number;
+  payer: { name?: string | null; surname?: string | null; email: string };
+}) {
+  const preference = new Preference(client());
+  const base = siteUrl();
+  const back = `${base}/devoluciones/pago/${input.token}`;
+  const response = await preference.create({
+    body: {
+      items: [
+        {
+          id: `devolucion-${input.orderNumber}`,
+          title: input.title.slice(0, 250),
+          description: `Pedido ${input.orderNumber}`,
+          quantity: 1,
+          unit_price: input.amount,
+          currency_id: 'CLP',
+        },
+      ],
+      external_reference: `${RETURN_FEE_REF}${input.returnId}`,
+      statement_descriptor: 'TAUPOC CHILE',
+      payer: {
+        name: input.payer.name ?? undefined,
+        surname: input.payer.surname ?? undefined,
+        email: input.payer.email,
+      },
+      back_urls: { success: back, pending: back, failure: back },
+      auto_return: 'approved',
+      notification_url: `${base}/api/webhooks/mercadopago`,
+      payment_methods: { installments: 1, excluded_payment_types: [] },
+      metadata: { order_number: input.orderNumber, kind: 'return_fee' },
+      expires: true,
+      expiration_date_to: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  });
+  return {
+    id: response.id!,
+    initPoint: (mpMode() === 'live'
+      ? response.init_point
+      : (response.sandbox_init_point ?? response.init_point))!,
+  };
+}
+
 export interface MpPaymentInfo {
   id: string;
   status: PaymentStatus;

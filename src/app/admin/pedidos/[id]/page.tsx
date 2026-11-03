@@ -11,6 +11,8 @@ import { buildMetadata } from '@/lib/seo';
 import {
   ORDER_STATUS_LABEL, PAYMENT_STATUS_LABEL, orderStatusTone, paymentStatusTone,
 } from '@/lib/orders';
+import { RETURN_STATUS_LABEL, returnStatusTone } from '@/lib/order-labels';
+import { returnPayUrl } from '@/lib/order-returns';
 import { PAYMENT_METHOD_LABEL } from '@/lib/payment-methods';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { Card } from '@/components/admin/Card';
@@ -18,6 +20,7 @@ import { Table, Td, Th, Tr } from '@/components/admin/Table';
 import { Badge } from '@/components/ui/Badge';
 import {
   OrderNoteForm, OrderStatusForm, RefundForm, TrackingForm, OrderItemsForm, TransferForm,
+  ReturnForm, DeleteOrderForm,
   type AvailableVariant,
 } from '@/components/admin/OrderPanel';
 import { IconPrint } from '@/components/ui/Icons';
@@ -34,6 +37,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
     include: {
       items: true,
       events: { orderBy: { createdAt: 'desc' } },
+      orderReturn: true,
       user: { select: { id: true, email: true, name: true, clubName: true } },
     },
   });
@@ -78,6 +82,11 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             <Badge tone={paymentStatusTone(order.paymentStatus)}>
               Pago: {PAYMENT_STATUS_LABEL[order.paymentStatus]}
             </Badge>
+            {order.orderReturn ? (
+              <Badge tone={returnStatusTone(order.orderReturn.status)}>
+                Devolución: {RETURN_STATUS_LABEL[order.orderReturn.status]}
+              </Badge>
+            ) : null}
             <Link href={`/cuenta/pedidos/${order.number}`} target="_blank" className="text-sm underline">Ver seguimiento como cliente ↗</Link>
             <Link
               href={`/admin/pedidos/${order.id}/packing`}
@@ -296,6 +305,29 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
             orderId={order.id}
             total={order.total}
             canRefund={order.paymentStatus === 'APPROVED' && Boolean(order.mpPaymentId)}
+          />
+          <ReturnForm
+            orderId={order.id}
+            ret={
+              order.orderReturn
+                ? {
+                    kind: order.orderReturn.kind,
+                    status: order.orderReturn.status,
+                    reason: order.orderReturn.reason,
+                    feeAmount: order.orderReturn.feeAmount,
+                    feeStatus: order.orderReturn.feeStatus,
+                    feeLabel: order.orderReturn.feeLabel,
+                    payUrl: order.orderReturn.feeToken ? returnPayUrl(order.orderReturn.feeToken) : null,
+                    feePaidAt: order.orderReturn.feePaidAt ? formatDateTime(order.orderReturn.feePaidAt) : null,
+                    feePaymentId: order.orderReturn.feePaymentId,
+                  }
+                : null
+            }
+          />
+          <DeleteOrderForm
+            orderId={order.id}
+            number={order.number}
+            hasPayment={order.paymentStatus === 'APPROVED' && order.paymentMethod !== 'MANUAL'}
           />
         </div>
       </div>
