@@ -24,6 +24,7 @@ import {
   type AvailableVariant,
 } from '@/components/admin/OrderPanel';
 import { IconPrint } from '@/components/ui/Icons';
+import { AdminTabs } from '@/components/admin/AdminTabs';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({ title: 'Panel — Detalle de pedido', noIndex: true });
@@ -70,6 +71,10 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
     stock: v.stock,
   }));
 
+  const awaitingTransfer =
+    order.paymentMethod === 'TRANSFER' && order.status === 'PENDING' && order.paymentStatus === 'PENDING';
+  const canRefund = order.paymentStatus === 'APPROVED' && Boolean(order.mpPaymentId);
+
   return (
     <>
       <PageHeader
@@ -78,16 +83,13 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
         back={{ href: '/admin/pedidos', label: 'Pedidos' }}
         actions={
           <>
-            <Badge tone={orderStatusTone(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge>
-            <Badge tone={paymentStatusTone(order.paymentStatus)}>
-              Pago: {PAYMENT_STATUS_LABEL[order.paymentStatus]}
-            </Badge>
-            {order.orderReturn ? (
-              <Badge tone={returnStatusTone(order.orderReturn.status)}>
-                Devolución: {RETURN_STATUS_LABEL[order.orderReturn.status]}
-              </Badge>
-            ) : null}
-            <Link href={`/cuenta/pedidos/${order.number}`} target="_blank" className="text-sm underline">Ver seguimiento como cliente ↗</Link>
+            <Link
+              href={`/cuenta/pedidos/${order.number}`}
+              target="_blank"
+              className="inline-flex h-9 items-center border border-line px-3.5 font-display text-[10.5px] font-semibold uppercase tracking-widest text-chalk-dim hover:border-line-bright hover:text-chalk"
+            >
+              Vista del cliente ↗
+            </Link>
             <Link
               href={`/admin/pedidos/${order.id}/packing`}
               target="_blank"
@@ -99,6 +101,26 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           </>
         }
       />
+
+      <div className="-mt-3 mb-6 flex flex-wrap items-center gap-2">
+        <Badge tone={orderStatusTone(order.status)}>{ORDER_STATUS_LABEL[order.status]}</Badge>
+        <Badge tone={paymentStatusTone(order.paymentStatus)}>
+          Pago: {PAYMENT_STATUS_LABEL[order.paymentStatus]}
+        </Badge>
+        {order.orderReturn ? (
+          <Badge tone={returnStatusTone(order.orderReturn.status)}>
+            Devolución: {RETURN_STATUS_LABEL[order.orderReturn.status]}
+          </Badge>
+        ) : null}
+        {order.orderReturn?.feeStatus === 'PENDING' ? <Badge tone="warn">Envío de devolución por cobrar</Badge> : null}
+      </div>
+
+      {order.adminNote ? (
+        <p className="mb-5 border-l-2 border-signal-warn bg-ink-900 px-4 py-2.5 text-[13px] text-chalk-dim">
+          <span className="mr-2 font-display text-[10px] uppercase tracking-widest text-signal-warn">Nota interna</span>
+          {order.adminNote}
+        </p>
+      ) : null}
 
       <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-5">
@@ -277,57 +299,100 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
           </Card>
         </div>
 
-        <div className="min-w-0 space-y-5">
-          {order.paymentMethod === 'TRANSFER' && order.status === 'PENDING' && order.paymentStatus === 'PENDING' ? (
-            <TransferForm orderId={order.id} total={order.total} />
-          ) : null}
-          <OrderItemsForm
-            orderId={order.id}
-            items={order.items.map((item) => ({
-              id: item.id,
-              productId: item.productId,
-              productName: item.productName,
-              colorName: item.colorName,
-              size: item.size,
-              sku: item.sku,
-            }))}
-            availableVariants={availableVariants}
-          />
-          <OrderStatusForm orderId={order.id} status={order.status} />
-          <TrackingForm
-            orderId={order.id}
-            carrier={order.shippingCarrier}
-            trackingNumber={order.trackingNumber}
-            isShipped={order.status === 'SHIPPED' || order.status === 'DELIVERED'}
-          />
-          <OrderNoteForm orderId={order.id} note={order.adminNote} />
-          <RefundForm
-            orderId={order.id}
-            total={order.total}
-            canRefund={order.paymentStatus === 'APPROVED' && Boolean(order.mpPaymentId)}
-          />
-          <ReturnForm
-            orderId={order.id}
-            ret={
-              order.orderReturn
-                ? {
-                    kind: order.orderReturn.kind,
-                    status: order.orderReturn.status,
-                    reason: order.orderReturn.reason,
-                    feeAmount: order.orderReturn.feeAmount,
-                    feeStatus: order.orderReturn.feeStatus,
-                    feeLabel: order.orderReturn.feeLabel,
-                    payUrl: order.orderReturn.feeToken ? returnPayUrl(order.orderReturn.feeToken) : null,
-                    feePaidAt: order.orderReturn.feePaidAt ? formatDateTime(order.orderReturn.feePaidAt) : null,
-                    feePaymentId: order.orderReturn.feePaymentId,
-                  }
-                : null
-            }
-          />
-          <DeleteOrderForm
-            orderId={order.id}
-            number={order.number}
-            hasPayment={order.paymentStatus === 'APPROVED' && order.paymentMethod !== 'MANUAL'}
+        <div className="min-w-0">
+          <AdminTabs
+            keepMounted
+            defaultTab={awaitingTransfer ? 'pago' : 'despacho'}
+            tabs={[
+              {
+                id: 'despacho',
+                label: 'Estado',
+                content: (
+                  <div className="space-y-5">
+                    <OrderStatusForm orderId={order.id} status={order.status} />
+                    <TrackingForm
+                      orderId={order.id}
+                      carrier={order.shippingCarrier}
+                      trackingNumber={order.trackingNumber}
+                      isShipped={order.status === 'SHIPPED' || order.status === 'DELIVERED'}
+                    />
+                  </div>
+                ),
+              },
+              {
+                id: 'pago',
+                label: 'Pago',
+                attention: awaitingTransfer,
+                content: (
+                  <div className="space-y-5">
+                    {awaitingTransfer ? <TransferForm orderId={order.id} total={order.total} /> : null}
+                    <RefundForm orderId={order.id} total={order.total} canRefund={canRefund} />
+                    {!awaitingTransfer && !canRefund ? (
+                      <Card title="Pago">
+                        <p className="text-[13px] leading-relaxed text-chalk-faint">
+                          No hay acciones de pago para este pedido. Los reembolsos automáticos solo están
+                          disponibles para pagos aprobados de Mercado Pago; para otros medios cambia el estado a
+                          «Reembolsado» en la pestaña «Estado».
+                        </p>
+                      </Card>
+                    ) : null}
+                  </div>
+                ),
+              },
+              {
+                id: 'cambios',
+                label: 'Devoluciones',
+                attention: order.orderReturn?.feeStatus === 'PENDING' || order.orderReturn?.status === 'REQUESTED',
+                content: (
+                  <div className="space-y-5">
+                    <ReturnForm
+                      orderId={order.id}
+                      ret={
+                        order.orderReturn
+                          ? {
+                              kind: order.orderReturn.kind,
+                              status: order.orderReturn.status,
+                              reason: order.orderReturn.reason,
+                              feeAmount: order.orderReturn.feeAmount,
+                              feeStatus: order.orderReturn.feeStatus,
+                              feeLabel: order.orderReturn.feeLabel,
+                              payUrl: order.orderReturn.feeToken ? returnPayUrl(order.orderReturn.feeToken) : null,
+                              feePaidAt: order.orderReturn.feePaidAt ? formatDateTime(order.orderReturn.feePaidAt) : null,
+                              feePaymentId: order.orderReturn.feePaymentId,
+                            }
+                          : null
+                      }
+                    />
+                    <OrderItemsForm
+                      orderId={order.id}
+                      items={order.items.map((item) => ({
+                        id: item.id,
+                        productId: item.productId,
+                        productName: item.productName,
+                        colorName: item.colorName,
+                        size: item.size,
+                        sku: item.sku,
+                      }))}
+                      availableVariants={availableVariants}
+                    />
+                  </div>
+                ),
+              },
+              {
+                id: 'mas',
+                label: 'Más',
+                content: (
+                  <div className="space-y-5">
+                    <OrderNoteForm orderId={order.id} note={order.adminNote} />
+                    <DeleteOrderForm
+                      orderId={order.id}
+                      number={order.number}
+                      hasPayment={order.paymentStatus === 'APPROVED' && order.paymentMethod !== 'MANUAL'}
+                    />
+                  </div>
+                ),
+              },
+            ]}
           />
         </div>
       </div>

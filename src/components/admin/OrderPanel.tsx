@@ -320,7 +320,7 @@ export function OrderItemsForm({
   if (editableItems.length === 0) return null;
 
   return (
-    <Card title="Cambiar productos" description="Reemplaza la variante de cualquier ítem del pedido.">
+    <Card title="Cambiar talla o producto" description="Reemplaza la variante de un ítem. Si el pedido ya descontó stock, la talla anterior vuelve al inventario y se descuenta la nueva.">
       <div className="-mx-5 -mt-4">
         {editableItems.map((item) => (
           <ItemEditRow key={item.id} orderId={orderId} item={item} variants={availableVariants} />
@@ -434,7 +434,7 @@ export function ReturnForm({ orderId, ret }: { orderId: string; ret: ReturnRow |
           placeholder="Ej.: talla 28 le quedó chica, se cambia por talla 30."
         />
         <p className="text-[12px] leading-relaxed text-chalk-faint">
-          Para un cambio de talla usa «Cambiar productos»: devuelve la talla anterior al inventario y descuenta la nueva.
+          Para un cambio de talla usa «Cambiar talla o producto» (abajo): devuelve la talla anterior al inventario y descuenta la nueva.
           Para un reembolso usa «Reembolso» o el estado «Reembolsado».
         </p>
         <div className="flex flex-wrap gap-2">
