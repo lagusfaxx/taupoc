@@ -12,23 +12,20 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({
   title: 'Guía de tallas de trajes de competición',
   description:
-    'Cómo elegir la talla de un traje de competencia: medidas en cm, equivalencias USA, UK y AUS, y ' +
-    'cuántas tallas bajar según la prueba.',
+    'Tabla de tallas TAUPOC en cm con equivalencias USA, UK, AUS y NZ, y cuántas tallas bajar para competir.',
   path: '/guia-de-tallas',
 });
 
 const STEPS = [
-  ['Cintura', 'En el punto más angosto del torso, sobre el ombligo. Sin contraer el abdomen.'],
-  ['Cadera', 'En el punto más ancho del glúteo, con los pies juntos.'],
-  ['Pecho', 'Bajo las axilas, sobre la parte más ancha. Solo para knee suits.'],
+  ['Cintura', 'En la parte más angosta del torso, sin contraer el abdomen.'],
+  ['Cadera', 'En la parte más ancha, con los pies juntos.'],
+  ['Pecho', 'Bajo las axilas, en la parte más ancha. Solo knee suit.'],
   ['Estatura', 'Descalzo, con la espalda contra la pared.'],
 ];
 
 const ADJUST = [
-  ['50 y 100 metros', 'Baja 2 tallas', 'Compresión máxima, la prueba dura segundos.'],
-  ['200 y 400 metros', 'Baja 1 a 2 tallas', 'Equilibrio entre compresión y respiración.'],
-  ['800, 1500 y aguas abiertas', 'Baja 1 talla', 'Prioriza la mecánica respiratoria.'],
-  ['Primer traje de carrera', 'Baja 1 talla', 'En nadadores juveniles conviene no exagerar.'],
+  ['Entrenamiento / principiantes', 'Tu talla', 'La de la tabla.'],
+  ['Competencia / avanzados', 'Baja 1 a 2 tallas', 'Más compresión.'],
 ];
 
 export default async function SizeGuidePage() {
@@ -73,8 +70,8 @@ export default async function SizeGuidePage() {
       {
         '@type': 'HowToStep',
         position: STEPS.length + 1,
-        name: 'Aplicar el ajuste de competencia',
-        text: 'Sobre la talla de cuerpo, baja 1 o 2 tallas según la distancia que nades.',
+        name: 'Elegir según el uso',
+        text: 'Para entrenamiento usa tu talla; para competencia baja 1 a 2 tallas.',
       },
     ],
   };
@@ -90,8 +87,8 @@ export default async function SizeGuidePage() {
             Cómo elegir tu talla de competición
           </h1>
           <p className="mt-6 max-w-2xl text-pretty text-[16px] leading-relaxed text-chalk-dim">
-            La talla es el error más caro del rubro. Un traje de carrera funciona por compresión: si entra
-            cómodo, no está haciendo su trabajo.
+            Los trajes de competición van ajustados. Mide cintura y cadera, busca tu talla en la tabla y
+            ajústala según el uso.
           </p>
         </div>
       </section>
@@ -104,8 +101,7 @@ export default async function SizeGuidePage() {
                 1 · Toma las medidas
               </h2>
               <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-                Necesitas una huincha de costurera y alguien que te ayude. Mídete sin ropa gruesa, de pie y
-                relajado. Las medidas son del cuerpo, no de la prenda.
+                Con huincha, de pie y sin ropa gruesa.
               </p>
               <dl className="mt-7 divide-y divide-line border-y border-line">
                 {STEPS.map(([title, body]) => (
@@ -119,19 +115,18 @@ export default async function SizeGuidePage() {
 
             <div>
               <h2 className="font-display text-[24px] leading-tight tracking-tightest text-chalk sm:text-[30px]">
-                2 · Aplica el ajuste de competencia
+                2 · Elige según el uso
               </h2>
               <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-                La tabla te da tu talla de cuerpo. Sobre esa talla aplicas el descuento según la distancia
-                que nades.
+                Recomendación oficial de TAUPOC sobre la talla de la tabla.
               </p>
               <div className="mt-7 table-scroll">
                 <table className="w-full min-w-[440px] border-collapse text-[14px]">
                   <thead>
                     <tr>
-                      <th className="border-b border-line px-3 py-2.5 text-left font-display text-[10px] uppercase tracking-widest text-chalk-faint">Prueba</th>
+                      <th className="border-b border-line px-3 py-2.5 text-left font-display text-[10px] uppercase tracking-widest text-chalk-faint">Uso</th>
                       <th className="border-b border-line px-3 py-2.5 text-left font-display text-[10px] uppercase tracking-widest text-chalk-faint">Ajuste</th>
-                      <th className="border-b border-line px-3 py-2.5 text-left font-display text-[10px] uppercase tracking-widest text-chalk-faint">Por qué</th>
+                      <th className="border-b border-line px-3 py-2.5 text-left font-display text-[10px] uppercase tracking-widest text-chalk-faint">Nota</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -156,8 +151,7 @@ export default async function SizeGuidePage() {
             3 · Tablas de tallas
           </h2>
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-chalk-dim">
-            Medidas del cuerpo en centímetros y equivalencias internacionales. Si tus medidas caen entre dos
-            tallas, elige la menor.
+            Medidas del cuerpo en centímetros.
           </p>
           <div className="mt-8">
             <SizeGuideTables charts={charts} />
@@ -173,7 +167,7 @@ export default async function SizeGuidePage() {
                 Cómo ponerse el traje
               </h2>
               <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-                La mayoría de las roturas ocurre al ponérselo, no nadando. Tómate el tiempo.
+                La mayoría de las roturas ocurre al ponérselo.
               </p>
               <ol className="mt-6 space-y-4">
                 {[
@@ -197,7 +191,7 @@ export default async function SizeGuidePage() {
                 Cuidado y vida útil
               </h2>
               <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-                Un traje de competición bien cuidado rinde entre 25 y 30 carreras.
+                Bien cuidado, rinde entre 25 y 30 carreras.
               </p>
               <ul className="mt-6 space-y-2.5">
                 {[
@@ -225,8 +219,7 @@ export default async function SizeGuidePage() {
               ¿Sigues con dudas de talla?
             </h2>
             <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-              Escríbenos con las medidas del nadador y la prueba que nada, y te decimos exactamente qué
-              pedir. Es gratis y evita una devolución.
+              Envíanos las medidas y la prueba, y te decimos qué talla pedir.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <ButtonLink href="/contacto" size="lg">Consultar mi talla</ButtonLink>
