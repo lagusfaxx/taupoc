@@ -7,13 +7,18 @@ export interface AdminTab {
   id: string;
   label: string;
   content: ReactNode;
+  /** Marca la pestaña: algo dentro espera una acción (ej. transferencia por confirmar). */
+  attention?: boolean;
 }
 
 export function AdminTabs({
   tabs,
   keepMounted = false,
+  defaultTab,
 }: {
   tabs: AdminTab[];
+  /** Pestaña abierta al entrar; por omisión, la primera. */
+  defaultTab?: string;
   /**
    * Mantiene en el DOM el contenido de las pestañas ocultas.
    *
@@ -25,7 +30,7 @@ export function AdminTabs({
    */
   keepMounted?: boolean;
 }) {
-  const [active, setActive] = useState(tabs[0]?.id ?? '');
+  const [active, setActive] = useState(defaultTab && tabs.some((t) => t.id === defaultTab) ? defaultTab : (tabs[0]?.id ?? ''));
 
   return (
     <div>
@@ -45,6 +50,9 @@ export function AdminTabs({
             )}
           >
             {tab.label}
+            {tab.attention ? (
+              <span aria-label="requiere atención" className="ml-1.5 inline-block h-1.5 w-1.5 -translate-y-0.5 rounded-full bg-signal-warn" />
+            ) : null}
           </button>
         ))}
       </div>

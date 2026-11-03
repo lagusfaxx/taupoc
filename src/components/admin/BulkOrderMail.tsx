@@ -19,6 +19,7 @@ export function BulkOrderMail({ children }: { children: ReactNode }) {
   const [content, setContent] = useState('');
   const [format, setFormat] = useState('text');
   const [preview, setPreview] = useState(false);
+  const [mailOpen, setMailOpen] = useState(false);
   const [state, action, pending] = useActionState(async (prev: AdminState | null, data: FormData) => {
     const result = await sendBulkOrderEmail(prev, data);
     setSelected(new Set());
@@ -45,50 +46,60 @@ export function BulkOrderMail({ children }: { children: ReactNode }) {
         if (!window.confirm(message)) event.preventDefault();
       }}>
       <fieldset disabled={busy}>
-        <div className="mb-4 flex flex-wrap items-center gap-3 border border-signal-bad/30 p-4">
-          <p className="min-w-0 flex-1 text-sm text-chalk-faint">
-            ¿Pedidos de prueba? Márcalos en la tabla y elimínalos. No se puede deshacer.
+        <div className="mb-3 flex flex-wrap items-center gap-2 border border-line bg-ink-900 px-4 py-3">
+          <Button type="button" variant="outline" size="sm" onClick={(event) => {
+            const boxes = event.currentTarget.form?.querySelectorAll<HTMLInputElement>('input[name="orderIds"]:not(:disabled)');
+            if (!boxes) return;
+            const select = Array.from(boxes).some((box) => !selected.has(box.value));
+            setSelected(select ? new Set(Array.from(boxes, (box) => box.value)) : new Set());
+          }}>Seleccionar / quitar todos</Button>
+          <p className="min-w-0 flex-1 text-[13px] text-chalk-faint">
+            {selected.size === 0
+              ? 'Marca pedidos en la tabla para enviarles un correo o eliminarlos.'
+              : `${selected.size} ${selected.size === 1 ? 'pedido seleccionado' : 'pedidos seleccionados'}`}
           </p>
+          <Button type="button" variant={mailOpen ? 'solid' : 'outline'} size="sm" disabled={selected.size === 0 && !mailOpen} onClick={() => setMailOpen(!mailOpen)}>
+            {mailOpen ? 'Cerrar correo' : 'Enviar correo…'}
+          </Button>
           <button
             type="submit"
             data-bulk-delete="true"
             formAction={deleteAction}
             formNoValidate
             disabled={busy || selected.size === 0}
-            className="h-9 border border-signal-bad/50 bg-signal-bad/10 px-4 font-display text-[10.5px] font-bold uppercase tracking-widest text-signal-bad transition hover:bg-signal-bad/20 disabled:opacity-40"
+            className="h-9 border border-signal-bad/50 bg-signal-bad/10 px-4 font-display text-[11px] font-bold uppercase tracking-widest text-signal-bad transition hover:bg-signal-bad/20 disabled:opacity-40"
           >
-            {deleting ? 'Eliminando…' : `Eliminar seleccionados (${selected.size})`}
+            {deleting ? 'Eliminando…' : 'Eliminar'}
           </button>
           {deleteState ? (
             <p role="status" className={`w-full text-sm ${deleteState.ok ? 'text-signal-ok' : 'text-signal-bad'}`}>{deleteState.message}</p>
           ) : null}
+          {state && !mailOpen ? <p role="status" className="w-full text-sm text-chalk">{state.message}</p> : null}
         </div>
+        {mailOpen ? (
         <div className="mb-4 space-y-3 border border-line p-4">
-          <h2 className="font-display text-lg text-chalk">Correo personalizado a pedidos</h2>
-          <p className="text-sm text-chalk-faint">Selecciona hasta 25 pedidos y escribe tu correo. Se enviará un mensaje individual al correo de cada pedido, cualquiera sea su estado.</p>
+          <h2 className="font-display text-lg text-chalk">Correo a los pedidos seleccionados</h2>
+          <p className="text-sm text-chalk-faint">Hasta 25 pedidos. Se envía un mensaje individual al correo de cada pedido, cualquiera sea su estado.</p>
           <Input label="Asunto" name="subject" value={subject} onChange={(event) => setSubject(event.target.value)} required maxLength={200} />
           <Select label="Formato del mensaje" name="format" value={format} onChange={(event) => setFormat(event.target.value)}>
             <option value="text">Texto</option>
             <option value="html">HTML</option>
           </Select>
           <Textarea label={format === 'html' ? 'Código HTML del correo' : 'Mensaje'} name="content" value={content} onChange={(event) => setContent(event.target.value)} required maxLength={100000} rows={10} />
-          <Button type="button" variant="outline" size="sm" onClick={() => setPreview(!preview)}>{preview ? 'Ocultar vista previa' : 'Vista previa'}</Button>
           {preview ? <section aria-label="Vista previa del correo" className="border border-line p-3">
             <p className="mb-3 font-semibold text-chalk">{subject}</p>
             {format === 'html' ? <iframe title="Vista previa HTML" srcDoc={content} sandbox="" referrerPolicy="no-referrer" className="h-80 w-full bg-white" /> : <pre className="whitespace-pre-wrap font-sans text-chalk">{content}</pre>}
           </section> : null}
-          <Button type="button" variant="outline" size="sm" className="mr-3" onClick={(event) => {
-            const boxes = event.currentTarget.form?.querySelectorAll<HTMLInputElement>('input[name="orderIds"]:not(:disabled)');
-            if (!boxes) return;
-            const select = Array.from(boxes).some((box) => !selected.has(box.value));
-            setSelected(select ? new Set(Array.from(boxes, (box) => box.value)) : new Set());
-          }}>Seleccionar / quitar todos</Button>
-          <Button type="submit" size="sm" disabled={pending || selected.size === 0}>
-            {pending ? 'Enviando…' : `Enviar correo (${selected.size})`}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setPreview(!preview)}>{preview ? 'Ocultar vista previa' : 'Vista previa'}</Button>
+            <Button type="submit" size="sm" disabled={pending || selected.size === 0}>
+              {pending ? 'Enviando…' : `Enviar correo (${selected.size})`}
+            </Button>
+          </div>
           <p className="text-xs text-chalk-faint">El resultado confirma la aceptación del proveedor; no garantiza la entrega en la bandeja del cliente.</p>
           {state ? <p role="status" className="text-sm text-chalk">{state.message}</p> : null}
         </div>
+        ) : null}
         {children}
       </fieldset>
     </form>
