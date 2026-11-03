@@ -48,21 +48,21 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
   const [activeId, setActiveId] = useState(fixed?.id ?? product.colors[0]?.id ?? null);
 
   const active = useMemo(
-    () => (fixed ?? product.colors.find((c) => c.id === activeId) ?? product.colors[0] ?? null),
+    () => product.colors.find((c) => c.id === activeId) ?? fixed ?? product.colors[0] ?? null,
     [fixed, activeId, product.colors],
   );
 
-  // Tarjeta fijada a un color: va derecho a la ficha de ese color. Tarjeta de
-  // modelo con varios colores: lleva el elegido en la muestra, y la ficha
-  // decide si lo preselecciona o redirige a su propia página.
+  // La tarjeta va a la ficha del color que se está viendo: si la tarjeta es de
+  // un color concreto, a la página de ese color; si es del modelo, con el color
+  // elegido en la muestra.
   const href = fixed
-    ? `/producto/${product.slug}-${fixed.slug}`
+    ? `/producto/${product.slug}-${active?.slug ?? fixed.slug}`
     : active && product.colors.length > 1
       ? `/producto/${product.slug}?color=${active.slug}`
       : `/producto/${product.slug}`;
   const image = active?.imageUrl ?? product.fallbackImage;
-  // Con la tarjeta fijada a un color manda el stock de ese color, no el del modelo.
-  const unavailable = product.comingSoon || (fixed ? fixed.stock === 0 : product.totalStock === 0);
+  // En la tarjeta de un color manda el stock del color que se está viendo.
+  const unavailable = product.comingSoon || (fixed ? (active?.stock ?? 0) === 0 : product.totalStock === 0);
 
   // Las dos líneas comparten fotografía: la superior lleva el sello y el
   // filete de acento fijo.
@@ -124,9 +124,11 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
           </Link>
         </h3>
 
-        <div className="mt-2 flex min-h-[20px] items-center">
-          {!fixed && product.colors.length > 1 ? (
-            <div className="flex flex-wrap items-center gap-1.5">
+        {/* Todas las tarjetas muestran los colores del modelo: así se ve que
+            dos tarjetas de la grilla son el mismo traje en otro color. */}
+        <div className="mt-2 flex min-h-[20px] items-center gap-3">
+          {product.colors.length > 1 ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
               {product.colors.map((color) => (
                 <button
                   key={color.id}
@@ -139,7 +141,7 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
                   title={colorLabel(color)}
                   className={cn(
                     'relative h-3.5 w-3.5 rounded-full ring-1 ring-offset-2 ring-offset-ink transition-all duration-150',
-                    color.id === active?.id ? 'ring-chalk' : 'ring-transparent hover:ring-line-bright',
+                    color.id === active?.id ? 'ring-chalk' : 'ring-chalk-faint/50 hover:ring-chalk-faint',
                   )}
                   style={{ background: color.hex }}
                 >
@@ -152,14 +154,14 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
               ))}
             </div>
           ) : active ? (
-            <p className="flex items-center gap-2 text-[12.5px] text-chalk-faint">
-              <span
-                aria-hidden
-                className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-line-bright"
-                style={{ background: active.hex }}
-              />
-              {colorLabel(active)}
-            </p>
+            <span
+              aria-hidden
+              className="inline-block h-3.5 w-3.5 shrink-0 rounded-full ring-1 ring-line-bright"
+              style={{ background: active.hex }}
+            />
+          ) : null}
+          {active ? (
+            <span className="min-w-0 truncate text-[12.5px] text-chalk-faint">{active.name}</span>
           ) : null}
         </div>
 
