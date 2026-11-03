@@ -22,6 +22,7 @@ export function SizeGuideTables({ charts }: { charts: Chart[] }) {
   if (!chart) return null;
 
   const showChest = chart.rows.some((r) => r.chestMinCm != null);
+  const showHip = chart.rows.some((r) => r.hipMinCm != null);
 
   return (
     <div>
@@ -55,7 +56,7 @@ export function SizeGuideTables({ charts }: { charts: Chart[] }) {
               </th>
               {showChest ? <Th>Pecho</Th> : null}
               <Th>Cintura</Th>
-              <Th>Cadera</Th>
+              {showHip ? <Th>Cadera</Th> : null}
               <Th>Estatura</Th>
               <Th>CN</Th>
               <Th>USA</Th>
@@ -72,7 +73,7 @@ export function SizeGuideTables({ charts }: { charts: Chart[] }) {
                 </td>
                 {showChest ? <Td>{range(row.chestMinCm, row.chestMaxCm)}</Td> : null}
                 <Td>{range(row.waistMinCm, row.waistMaxCm)}</Td>
-                <Td>{range(row.hipMinCm, row.hipMaxCm)}</Td>
+                {showHip ? <Td>{range(row.hipMinCm, row.hipMaxCm)}</Td> : null}
                 <Td>{range(row.heightMinCm, row.heightMaxCm)}</Td>
                 <Td muted>{row.cn ?? '—'}</Td>
                 <Td muted>{row.usa ?? '—'}</Td>
@@ -85,8 +86,7 @@ export function SizeGuideTables({ charts }: { charts: Chart[] }) {
         </table>
       </div>
       <p className="mt-4 text-[12.5px] text-chalk-faint">
-        Medidas en centímetros, tomadas sobre el cuerpo. Las columnas CN, USA, UK, AUS y NZ son
-        equivalencias de talla de traje de competición, no de ropa de calle.
+        Medidas del cuerpo en cm. CN, USA, UK, AUS y NZ son tallas de traje de competición.
       </p>
     </div>
   );

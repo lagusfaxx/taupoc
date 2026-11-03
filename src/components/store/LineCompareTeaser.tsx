@@ -3,14 +3,7 @@ import { formatCLP } from '@/lib/money';
 import type { LineComparisonColumn } from '@/lib/catalog';
 import { IconArrow } from '@/components/ui/Icons';
 
-/**
- * La versión corta del comparador, para la portada y el catálogo.
- *
- * En la grilla las dos líneas comparten fotografía y se leen como el mismo
- * traje con otro precio. Esta cinta dice en dos líneas de texto qué separa una
- * de la otra y manda a la comparación completa, antes de que el visitante
- * tenga que abrir las dos fichas para descubrirlo.
- */
+/** Versión corta del comparador de líneas, para la portada y el catálogo. */
 export function LineCompareTeaser({ columns }: { columns: LineComparisonColumn[] }) {
   if (columns.length < 2) return null;
 
@@ -19,9 +12,9 @@ export function LineCompareTeaser({ columns }: { columns: LineComparisonColumn[]
       <div className="container py-10 lg:py-12">
         <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between lg:gap-12">
           <div className="min-w-0">
-            <p className="eyebrow-accent mb-3">Dos líneas, dos trajes distintos</p>
+            <p className="eyebrow-accent mb-3">Líneas</p>
             <h2 className="text-balance font-display text-[22px] leading-tight tracking-tight text-chalk lg:text-[26px]">
-              {columns.map((c) => c.name).join(' o ')}: se parecen en la foto, no en el agua
+              {columns.map((c) => c.name).join(' vs ')}
             </h2>
 
             <dl className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2">
@@ -54,7 +47,7 @@ export function LineCompareTeaser({ columns }: { columns: LineComparisonColumn[]
             href="/lineas"
             className="group inline-flex shrink-0 items-center gap-2 border border-line-bright px-5 py-3.5 font-display text-[11px] font-semibold uppercase tracking-widest text-chalk transition-colors hover:border-chalk"
           >
-            Ver la comparación
+            Comparar
             <IconArrow className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
           </Link>
         </div>

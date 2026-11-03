@@ -116,11 +116,7 @@ const ACCESOS = [
   { href: '/marca#homologacion', label: 'Qué es la homologación World Aquatics' },
 ];
 
-/**
- * Texto de la portada que no depende de los bloques del panel. La portada es
- * la página con más autoridad del sitio: desde acá se enlazan las páginas que
- * deben posicionar, con texto que dice qué vende la tienda.
- */
+/** Texto fijo de la portada con los enlaces a las páginas de categoría. */
 function IntroCompetencia() {
   return (
     <section className="border-t border-line">
@@ -129,15 +125,9 @@ function IntroCompetencia() {
           <h2 className="font-display text-[24px] leading-tight tracking-tightest text-chalk sm:text-[30px]">
             Trajes de baño de competencia en Chile
           </h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-            Somos el distribuidor oficial de TAUPOC en Chile. Vendemos fast skins de competencia —jammers
-            para hombre y knee suits para mujer— homologados por World Aquatics, en tallas 20 a 36: desde nadadores juveniles de
-            140 cm hasta adultos. Cada traje tiene su código de aprobación publicado en la ficha, para que
-            lo verifiques en la lista oficial antes de competir.
-          </p>
-          <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-            Despachamos a todo el país, puedes retirar sin costo en Santiago y te asesoramos con la talla
-            antes de comprar.
+          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-chalk-dim">
+            Distribuidor oficial de TAUPOC en Chile. Jammers y knee suits homologados por World Aquatics,
+            tallas 20 a 36. Envío a todo el país y retiro sin costo en Santiago.
           </p>
         </div>
         <ul className="divide-y divide-line border-y border-line self-start">
@@ -248,7 +238,7 @@ async function PortadaPorDefecto() {
 
       <section className="border-t border-line">
         <div className="container py-10 lg:py-12">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+          <div className={`grid grid-cols-2 gap-3 lg:gap-4 ${entries.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
             {entries.map((entry) => (
               <Link
                 key={entry.href}
@@ -282,8 +272,7 @@ async function PortadaPorDefecto() {
           <div>
             <h2 className="font-display text-[22px] leading-none tracking-tight text-chalk">Clubes</h2>
             <p className="mt-2.5 max-w-xl text-[14.5px] leading-relaxed text-chalk-dim">
-              Precio por volumen desde 10 unidades, con asesoría de tallas para el plantel y entrega
-              en la sede o en el torneo.
+              Precio por volumen desde 10 unidades.
             </p>
           </div>
           <ButtonLink href="/clubes" size="lg" className="shrink-0">

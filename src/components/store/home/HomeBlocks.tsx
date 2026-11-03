@@ -203,14 +203,19 @@ function Categories({ block, first }: { block: HomeBlockData; first: boolean }) 
     <section className={cn(borde(first), BACKGROUNDS[block.background])}>
       <div className="container py-10 lg:py-12">
         <Heading block={block} />
-        <div className={cn('grid gap-3 lg:gap-4', COLUMNS[block.columns] ?? COLUMNS[4])}>
-          {block.cards.map((card) => (
+        {/* Las columnas se ajustan a las tarjetas visibles: si una línea está
+            oculta, la grilla no deja un hueco. Con un número impar, la última
+            ocupa el ancho completo en móvil. */}
+        <div className={cn('grid gap-3 lg:gap-4', COLUMNS[Math.min(block.columns, Math.max(2, block.cards.length))] ?? COLUMNS[4])}>
+          {block.cards.map((card, i) => {
+            const ancha = block.cards.length % 2 === 1 && i === block.cards.length - 1;
+            return (
             <Link
               key={card.id}
               href={card.href || '/catalogo'}
-              className="group relative block overflow-hidden border border-line bg-ink-800"
+              className={cn('group relative block overflow-hidden bg-ink-800', ancha && 'col-span-2 lg:col-span-1')}
             >
-              <div className="relative aspect-[3/4]">
+              <div className={cn('relative', ancha ? 'aspect-[16/10] lg:aspect-[3/4]' : 'aspect-[3/4]')}>
                 <BlockMedia
                   imageUrl={card.imageUrl}
                   videoUrl={card.videoUrl}
@@ -218,19 +223,23 @@ function Categories({ block, first }: { block: HomeBlockData; first: boolean }) 
                   fit="cover"
                   className="transition-transform duration-700 ease-tech group-hover:scale-[1.05]"
                 />
-                <span className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
+                <span className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/10 to-transparent" />
               </div>
 
-              <span className="absolute inset-x-0 bottom-0 p-4">
-                <span className="block font-display text-[20px] leading-none tracking-tight text-chalk lg:text-[24px]">
-                  {card.label}
+              <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 lg:p-5">
+                <span>
+                  <span className="block font-display text-[15px] font-semibold uppercase leading-none tracking-widest text-chalk lg:text-[17px]">
+                    {card.label}
+                  </span>
+                  {card.caption ? (
+                    <span className="mt-1.5 block text-[13px] text-chalk-dim">{card.caption}</span>
+                  ) : null}
                 </span>
-                {card.caption ? (
-                  <span className="mt-1.5 block text-[13px] text-chalk-dim">{card.caption}</span>
-                ) : null}
+                <IconArrow className="h-4 w-4 shrink-0 text-chalk transition-transform duration-300 group-hover:translate-x-1" />
               </span>
             </Link>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
