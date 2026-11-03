@@ -486,14 +486,20 @@ model SizeInterest {
   variantId  String
   /// Carrito o visitante que lo pidió, para no contar dos veces el mismo clic.
   visitorKey String
+  /// Huella de IP + navegador: une al mismo visitante aunque borre cookies.
+  fingerprint String?
   email      String?
   userId     String?
   notifiedAt DateTime?
+  /// Descartado desde el panel (troll o prueba): no cuenta en la demanda.
+  discarded  Boolean   @default(false)
   createdAt  DateTime  @default(now())
 
   variant Variant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
   @@unique([variantId, visitorKey])
+  @@index([variantId, fingerprint])
+  @@index([variantId, email])
   @@index([createdAt])
 }
 

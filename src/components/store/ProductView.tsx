@@ -219,7 +219,8 @@ function SizeInterestPanel({
   onClose: () => void;
 }) {
   const [estado, setEstado] = useState<InterestState | null>(null);
-  const [registrado, setRegistrado] = useState(false);
+  // pregunta → (correo, si no hay sesión) → listo
+  const [paso, setPaso] = useState<'pregunta' | 'correo' | 'listo'>('pregunta');
   const [email, setEmail] = useState('');
   const [enviando, setEnviando] = useState(false);
   if (!variant) return null;
@@ -229,8 +230,14 @@ function SizeInterestPanel({
     setEnviando(true);
     try {
       const r = await registerSizeInterest(variant.id, correo);
+      if (r.needEmail) {
+        // Con sesión iniciada no se pide nada; sin ella el correo es obligatorio.
+        setPaso('correo');
+        setEstado(null);
+        return;
+      }
       setEstado(r);
-      if (r.ok) setRegistrado(true);
+      if (r.ok) setPaso('listo');
     } catch {
       setEstado({ ok: false, message: 'No se pudo registrar. Inténtalo de nuevo.' });
     } finally {
@@ -242,7 +249,11 @@ function SizeInterestPanel({
     <div className="mt-3 border border-line bg-ink-800 p-4 animate-rise-in">
       <div className="flex items-start justify-between gap-3">
         <p className="pt-0.5 text-[14px] leading-snug text-chalk">
-          La talla <strong>{variant.size}</strong> está agotada. ¿Te interesa esta talla?
+          {paso === 'correo' ? (
+            <>Déjanos tu correo y te avisamos cuando vuelva la talla <strong>{variant.size}</strong>.</>
+          ) : (
+            <>La talla <strong>{variant.size}</strong> está agotada. ¿Te interesa esta talla?</>
+          )}
         </p>
         <button
           type="button"
@@ -254,7 +265,7 @@ function SizeInterestPanel({
         </button>
       </div>
 
-      {!registrado ? (
+      {paso === 'pregunta' ? (
         <div className="mt-3 grid grid-cols-[1fr_auto] gap-2 sm:flex">
           <button
             type="button"
@@ -272,13 +283,21 @@ function SizeInterestPanel({
             No
           </button>
         </div>
-      ) : (
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+      ) : paso === 'correo' ? (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            enviar(email);
+          }}
+          className="mt-3 flex flex-col gap-2 sm:flex-row"
+        >
           <input
             type="email"
+            required
+            autoFocus
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Tu correo para avisarte (opcional)"
+            placeholder="tu@correo.cl"
             aria-label="Correo para avisarte de la reposición"
             autoComplete="email"
             inputMode="email"
@@ -286,15 +305,14 @@ function SizeInterestPanel({
             className="h-11 min-w-0 flex-1 border border-line bg-ink-900 px-3 text-[16px] text-chalk sm:text-[13.5px] placeholder:text-chalk-faint"
           />
           <button
-            type="button"
-            onClick={() => enviar(email)}
+            type="submit"
             disabled={enviando || !email.trim()}
-            className="h-11 shrink-0 border border-line-bright px-5 font-display text-[12px] font-bold uppercase tracking-widest text-chalk disabled:opacity-50"
+            className="h-11 shrink-0 accent-bg px-5 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm disabled:opacity-50"
           >
-            Avísame
+            {enviando ? 'Enviando…' : 'Avísame'}
           </button>
-        </div>
-      )}
+        </form>
+      ) : null}
 
       {estado ? (
         <p
