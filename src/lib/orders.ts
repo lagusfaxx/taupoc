@@ -1,12 +1,13 @@
 import 'server-only';
+import type { Prisma } from '@prisma/client';
 import { prisma } from './db';
 
 /**
  * Números de pedido correlativos y legibles: TP-1001, TP-1002...
  * Se generan con un contador atómico para evitar colisiones bajo carga.
  */
-export async function nextOrderNumber(): Promise<string> {
-  const counter = await prisma.counter.upsert({
+export async function nextOrderNumber(db: Prisma.TransactionClient = prisma): Promise<string> {
+  const counter = await db.counter.upsert({
     where: { key: 'order' },
     create: { key: 'order', value: 1001 },
     update: { value: { increment: 1 } },

@@ -3,6 +3,7 @@ import type { PaymentStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { getPayment, verifyWebhookSignature } from '@/lib/mercadopago';
 import { commitStockForOrder, restoreStockForOrder } from '@/lib/inventory';
+import { releaseOrderReservation } from '@/lib/reservations';
 import { logOrderEvent } from '@/lib/orders';
 import {
   sendAdminNewOrder,
@@ -162,6 +163,12 @@ async function processPayment(paymentId: string) {
     }
 
     await Promise.allSettled([sendOrderPaid(mailData), sendAdminNewOrder(mailData)]);
+  }
+
+  // Un pago anulado antes de aprobarse suelta las tallas apartadas sin
+  // esperar a que venza la reserva.
+  if (payment.status === 'CANCELLED' && previous !== 'APPROVED') {
+    await prisma.$transaction((tx) => releaseOrderReservation(tx, order.id));
   }
 
   // Si un pago aprobado se revierte, el stock vuelve al inventario.

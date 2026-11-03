@@ -79,13 +79,43 @@ interface PaypalOrder {
   }>;
 }
 
+/**
+ * Verifica con PayPal que un webhook es auténtico. Necesita PAYPAL_WEBHOOK_ID,
+ * el identificador del webhook que se registra en el panel de desarrollador
+ * de PayPal; sin él el webhook queda apagado.
+ *
+ * Docs: https://developer.paypal.com/docs/api/webhooks/v1/#verify-webhook-signature_post
+ */
+export async function verifyPaypalWebhook(headers: Headers, event: unknown): Promise<boolean> {
+  const webhookId = process.env.PAYPAL_WEBHOOK_ID;
+  if (!webhookId) return false;
+  const header = (name: string) => headers.get(name) ?? '';
+  const result = await call<{ verification_status?: string }>('/v1/notifications/verify-webhook-signature', {
+    method: 'POST',
+    body: {
+      auth_algo: header('paypal-auth-algo'),
+      cert_url: header('paypal-cert-url'),
+      transmission_id: header('paypal-transmission-id'),
+      transmission_sig: header('paypal-transmission-sig'),
+      transmission_time: header('paypal-transmission-time'),
+      webhook_id: webhookId,
+      webhook_event: event,
+    },
+  });
+  return result.verification_status === 'SUCCESS';
+}
+
 /** Crea la orden en PayPal y devuelve el enlace donde el comprador paga. */
 export async function createPaypalOrder(input: {
   orderId: string;
   orderNumber: string;
   amountCents: number;
+  /** Dominio al que vuelve el comprador. Por defecto, taupoc.cl. */
+  baseUrl?: string;
+  /** Nombre que muestra PayPal. Por defecto, "TAUPOC Chile". */
+  brandName?: string;
 }): Promise<{ id: string; approveUrl: string }> {
-  const base = siteUrl();
+  const base = input.baseUrl ?? siteUrl();
   const order = await call<PaypalOrder>('/v2/checkout/orders', {
     method: 'POST',
     requestId: `create-${input.orderId}`,
@@ -96,19 +126,20 @@ export async function createPaypalOrder(input: {
           reference_id: input.orderId,
           custom_id: input.orderId,
           invoice_id: input.orderNumber,
-          description: `TAUPOC Chile · Pedido ${input.orderNumber}`,
+          description: `${input.brandName ?? 'TAUPOC Chile'} · Pedido ${input.orderNumber}`,
           amount: { currency_code: 'USD', value: (input.amountCents / 100).toFixed(2) },
         },
       ],
       payment_source: {
         paypal: {
           experience_context: {
-            brand_name: 'TAUPOC Chile',
+            brand_name: input.brandName ?? 'TAUPOC Chile',
             locale: 'es-CL',
             shipping_preference: 'NO_SHIPPING',
             user_action: 'PAY_NOW',
             return_url: `${base}/api/paypal/retorno`,
-            cancel_url: `${base}/checkout/resultado?order=${input.orderNumber}&estado=paypal-cancelado`,
+            // Pasa por el servidor para soltar la reserva de stock al tiro.
+            cancel_url: `${base}/api/paypal/cancelado?order=${input.orderNumber}`,
           },
         },
       },

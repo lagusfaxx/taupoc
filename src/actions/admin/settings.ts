@@ -27,6 +27,8 @@ const schema = z.object({
   announcementBar: z.string().optional(),
   announcementActive: z.string().optional(),
   catalogSplitByColor: z.string().optional(),
+  reservationMinutes: z.string().optional(),
+  transferReservationHours: z.string().optional(),
 
   mercadoPagoEnabled: z.string().optional(),
   mercadoPagoDiscount: z.string().optional(),
@@ -86,6 +88,8 @@ export async function updateSettings(
     announcementBar: d.announcementBar?.trim() ?? '',
     announcementActive: d.announcementActive === 'on',
     catalogSplitByColor: d.catalogSplitByColor === 'on',
+    reservationMinutes: Math.min(120, Math.max(5, Math.round(Number(d.reservationMinutes ?? 15)) || 15)),
+    transferReservationHours: Math.min(168, Math.max(1, Math.round(Number(d.transferReservationHours ?? 24)) || 24)),
 
     mercadoPagoEnabled,
     mercadoPagoDiscount: clampPercent(Number(d.mercadoPagoDiscount ?? 0) || 0),

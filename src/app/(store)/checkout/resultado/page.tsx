@@ -41,7 +41,9 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
   const approved = order.paymentStatus === 'APPROVED';
   // Volver de PayPal sin pagar, o con error al capturar, se muestra como no completado.
   const paypalFailed =
-    isPaypal && !approved && (params.estado === 'paypal-cancelado' || params.estado === 'paypal-error');
+    isPaypal &&
+    !approved &&
+    (params.estado === 'paypal-cancelado' || params.estado === 'paypal-error' || params.estado === 'agotado');
   const rejected = paypalFailed || order.paymentStatus === 'REJECTED' || order.paymentStatus === 'CANCELLED';
   const awaitingTransfer =
     order.paymentMethod === 'TRANSFER' && order.status === 'PENDING' && order.paymentStatus === 'PENDING';
@@ -65,7 +67,9 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
         : rejected
           ? params.estado === 'paypal-cancelado'
             ? 'Cancelaste el pago en PayPal. Tu pedido quedó guardado: escríbenos con el número y te enviamos un nuevo enlace de pago.'
-            : params.estado === 'paypal-error'
+            : params.estado === 'agotado'
+              ? 'Mientras pagabas se agotó una de las tallas de tu pedido, así que no te cobramos nada. Revisa la disponibilidad en la tienda o escríbenos con el número de pedido y te ayudamos a elegir otra.'
+              : params.estado === 'paypal-error'
               ? 'PayPal no pudo completar el cobro. Si se descontó dinero de tu cuenta, escríbenos con el número de pedido y lo revisamos.'
               : 'El medio de pago rechazó la transacción. Puedes volver a intentarlo con otra tarjeta.'
           : isPaypal

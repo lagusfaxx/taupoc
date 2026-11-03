@@ -83,10 +83,13 @@ export default async function AdminOrdersPage({
         title="Pedidos"
         description="Gestiona el estado, el despacho y el seguimiento de cada pedido."
         actions={
+          <>
+          <ButtonLink href="/admin/pedidos/nuevo" size="sm">Crear pedido</ButtonLink>
           <ButtonLink href="/api/admin/export/pedidos" variant="outline" size="sm" prefetch={false}>
             <IconDownload className="h-4 w-4" />
             Exportar CSV
           </ButtonLink>
+          </>
         }
       />
 

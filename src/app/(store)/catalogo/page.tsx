@@ -48,6 +48,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
       'Trajes de competición TAUPOC homologados por World Aquatics. Despacho a todo el país ' +
       'y retiro sin costo en Santiago.',
     path: '/catalogo',
+    intlPath: '/catalogo',
     // Las combinaciones de filtros no deben indexarse por separado.
     noIndex: Object.keys(params).length > 0,
   });

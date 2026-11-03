@@ -43,11 +43,28 @@ const config: Config = {
           bad: '#F04B4B',
           info: '#4B9BF0',
         },
+        // taupoc.lat: papel claro, texto grafito y un único acento, solo para acciones.
+        paper: {
+          DEFAULT: '#FFFFFF',
+          soft: '#F5F5F3',
+        },
+        graphite: {
+          DEFAULT: '#111214',
+          soft: '#55585E',
+          faint: '#8E9197',
+        },
+        hairline: '#E6E6E3',
+        cobalt: {
+          DEFAULT: '#1A3CFF',
+          hover: '#0F2BD6',
+        },
       },
       fontFamily: {
         display: ['Saira', 'Barlow Condensed', 'Oswald', 'Impact', 'system-ui', 'sans-serif'],
         sans: ['Barlow', 'Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        editorial: ['"Inter Tight"', 'Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+        text: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
       },
       letterSpacing: {
         tightest: '-0.045em',

@@ -152,6 +152,8 @@ export interface SizeDemandRow {
   added: number;
   /** Unidades vendidas con pago aprobado. */
   sold: number;
+  /** Ventas que provienen del checkout, para estimar conversión del carrito. */
+  onlineSold: number;
   /** Agregadas que no terminaron en compra. */
   abandoned: number;
   /**
@@ -244,7 +246,7 @@ function orden(a: string, b: string) {
  */
 export async function sizeDemand(from: Date, to: Date) {
   const range = { gte: from, lte: to };
-  const [adds, sales, interests] = await Promise.all([
+  const [adds, sales, interests, onlineSales] = await Promise.all([
     prisma.cartEvent.groupBy({ by: ['variantId', 'cartId'], where: { createdAt: range }, _sum: { quantity: true } }),
     prisma.orderItem.groupBy({
       by: ['variantId'],
@@ -255,6 +257,12 @@ export async function sizeDemand(from: Date, to: Date) {
       where: { createdAt: range, discarded: false },
       select: { variantId: true, visitorKey: true, fingerprint: true, email: true, userId: true, variant: { select: { productId: true } } },
     }),
+    // Los pedidos creados desde el panel no pasan por el carrito.
+    prisma.orderItem.groupBy({
+      by: ['variantId'],
+      where: { variantId: { not: null }, order: { ...PAID, creationKey: null, createdAt: range } },
+      _sum: { quantity: true },
+    }),
   ]);
 
   const addMap = new Map<string, number>();
@@ -262,6 +270,7 @@ export async function sizeDemand(from: Date, to: Date) {
     addMap.set(r.variantId, (addMap.get(r.variantId) ?? 0) + Math.min(r._sum.quantity ?? 0, MAX_POR_CARRITO));
   }
   const soldMap = new Map(sales.map((r) => [r.variantId as string, r._sum.quantity ?? 0]));
+  const onlineMap = new Map(onlineSales.map((r) => [r.variantId as string, r._sum.quantity ?? 0]));
   const intMap = pesarInteres(interests).porVariante;
 
   const ids = new Set([...addMap.keys(), ...soldMap.keys(), ...intMap.keys()]);
@@ -277,11 +286,12 @@ export async function sizeDemand(from: Date, to: Date) {
   const rows: VariantDemandRow[] = variants.map((v) => {
     const added = addMap.get(v.id) ?? 0;
     const sold = soldMap.get(v.id) ?? 0;
+    const onlineSold = onlineMap.get(v.id) ?? 0;
     const pedido = intMap.get(v.id);
     const interest = redondear(pedido?.weight ?? 0);
     const stock = v.active ? Math.max(0, v.stock - v.reserved) : 0;
     // Lo vendido más la demanda que no se pudo atender, menos lo que hay.
-    const demand = sold + Math.round(interest) + Math.max(0, added - sold);
+    const demand = sold + Math.round(interest) + Math.max(0, added - onlineSold);
     return {
       variantId: v.id,
       productName: v.product.name,
@@ -291,7 +301,8 @@ export async function sizeDemand(from: Date, to: Date) {
       active: v.active,
       added,
       sold,
-      abandoned: Math.max(0, added - sold),
+      onlineSold,
+      abandoned: Math.max(0, added - onlineSold),
       interest,
       interestPeople: pedido?.people.size ?? 0,
       interestConfirmed: pedido?.confirmed ?? 0,
@@ -303,10 +314,11 @@ export async function sizeDemand(from: Date, to: Date) {
   const bySize = new Map<string, SizeDemandRow>();
   for (const r of rows) {
     const acc = bySize.get(r.size) ?? {
-      size: r.size, added: 0, sold: 0, abandoned: 0, interest: 0, interestPeople: 0, interestConfirmed: 0, stock: 0,
+      size: r.size, added: 0, sold: 0, onlineSold: 0, abandoned: 0, interest: 0, interestPeople: 0, interestConfirmed: 0, stock: 0,
     };
     acc.added += r.added;
     acc.sold += r.sold;
+    acc.onlineSold += r.onlineSold;
     acc.abandoned += r.abandoned;
     acc.interest = redondear(acc.interest + r.interest);
     acc.interestPeople += r.interestPeople;

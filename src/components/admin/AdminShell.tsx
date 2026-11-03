@@ -69,6 +69,8 @@ export function AdminShell({
       title: 'Configuración',
       items: [
         { href: '/admin/envios', label: 'Envíos', icon: IconTruck },
+        { href: '/admin/internacional', label: 'Internacional', icon: IconTruck },
+        { href: '/admin/internacional/banner', label: 'Banner .lat', icon: IconSpark },
         { href: '/admin/reportes', label: 'Reportes', icon: IconChart },
         { href: '/admin/tallas', label: 'Demanda de tallas', icon: IconRuler },
         { href: '/admin/configuracion', label: 'Ajustes', icon: IconSettings },

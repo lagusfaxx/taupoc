@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { isStudioImage } from '@/lib/intl-catalog';
+import { sweepExpiredReservations } from '@/lib/reservations';
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -42,6 +44,8 @@ async function resolverFicha(
   slug: string,
   query: Record<string, string | string[] | undefined>,
 ) {
+  // Antes de leer el stock: una reserva vencida no debe mostrar la talla agotada.
+  await sweepExpiredReservations();
   const [resolved, settings] = await Promise.all([resolveProductRoute(slug), getSettings()]);
   if (!resolved) return null;
 
@@ -102,6 +106,8 @@ export async function generateMetadata({
         `${rango} con stock en Chile.`,
       path: resolved.canonicalPath,
       image: color.images[0]?.url ?? product.images[0]?.url ?? null,
+      // taupoc.lat publica la misma ficha solo si el color tiene foto real.
+      intlPath: color.images.some((i) => isStudioImage(i.url)) ? resolved.canonicalPath : undefined,
     });
   }
 

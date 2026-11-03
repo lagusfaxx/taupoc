@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { intlIndexable, storeSiteUrl } from './storefront';
 
 export const SITE_NAME = 'TAUPOC Chile';
 export const SITE_DESCRIPTION =
@@ -20,6 +21,12 @@ export function buildMetadata(params: {
   type?: 'website' | 'article';
   noIndex?: boolean;
   publishedTime?: string;
+  /**
+   * Ruta de la página equivalente en taupoc.lat. Cuando esa tienda está
+   * abierta a los buscadores (INTL_INDEXABLE), las dos se enlazan con
+   * hreflang es-CL ↔ es-419 para que Google muestre a cada país la suya.
+   */
+  intlPath?: string;
 }): Metadata {
   const url = absoluteUrl(params.path ?? '/');
   // Sin imagen propia se apunta a /api/og, que devuelve la que esté
@@ -32,7 +39,18 @@ export function buildMetadata(params: {
   return {
     title: params.title,
     description,
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      ...(params.intlPath && !params.noIndex && intlIndexable()
+        ? {
+            languages: {
+              'es-CL': url,
+              'es-419': `${storeSiteUrl('INTL')}${params.intlPath}`,
+              'x-default': `${storeSiteUrl('INTL')}${params.intlPath}`,
+            },
+          }
+        : {}),
+    },
     // noindex, follow: la página no se indexa, pero sus enlaces a las fichas
     // se siguen igual (los filtros del catálogo enlazan a todos los productos).
     robots: params.noIndex ? { index: false, follow: true } : undefined,
