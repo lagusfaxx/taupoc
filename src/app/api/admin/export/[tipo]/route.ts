@@ -30,6 +30,8 @@ export async function GET(
       return exportProducts();
     case 'inventario':
       return exportInventory();
+    case 'movimientos':
+      return exportInventoryHistory(request);
     case 'clientes':
       return exportCustomers();
     case 'cotizaciones':
@@ -39,6 +41,30 @@ export async function GET(
     default:
       return NextResponse.json({ error: 'Tipo de exportación no válido' }, { status: 404 });
   }
+}
+
+async function exportInventoryHistory(request: NextRequest) {
+  const query = request.nextUrl.searchParams.get('q')?.trim();
+  const productId = request.nextUrl.searchParams.get('producto');
+  const type = request.nextUrl.searchParams.get('tipo');
+  const labels = { RESTOCK: 'Entrada de stock', ADJUST: 'Ajuste de stock', SALE: 'Venta', CANCEL: 'Pedido cancelado', RETURN: 'Devolución' };
+  const movements = await prisma.inventoryMovement.findMany({
+    where: {
+      ...(productId ? { variant: { productId } } : {}),
+      ...(type && Object.hasOwn(labels, type) ? { type: type as keyof typeof labels } : {}),
+      ...(query ? { OR: [
+        { reason: { contains: query, mode: 'insensitive' as const } },
+        { actorEmail: { contains: query, mode: 'insensitive' as const } },
+        { variant: { OR: [{ sku: { contains: query, mode: 'insensitive' as const } }, { product: { name: { contains: query, mode: 'insensitive' as const } } }] } },
+      ] } : {}),
+    },
+    include: { variant: { include: { product: { select: { name: true } }, color: { select: { name: true } } } } },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+  });
+  return csvResponse('taupoc-historial-stock', toCsv(
+    ['Fecha', 'Producto', 'Color', 'Talla', 'SKU', 'Movimiento', 'Cantidad', 'Stock anterior', 'Stock resultante', 'Nota', 'Responsable', 'Pedido'],
+    movements.map((m) => [csvDate(m.createdAt), m.variant.product.name, m.variant.color.name, m.variant.size, m.variant.sku, labels[m.type], m.delta, m.resulting - m.delta, m.resulting, m.reason ?? '', m.actorEmail ?? '', m.orderId ?? '']),
+  ));
 }
 
 async function exportOrders() {

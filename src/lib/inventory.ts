@@ -21,6 +21,7 @@ export async function adjustStock(
     reason?: string;
     actorEmail?: string;
     orderId?: string;
+    movementId?: string;
   },
 ) {
   const variant = await db.variant.update({
@@ -29,6 +30,7 @@ export async function adjustStock(
   });
   await db.inventoryMovement.create({
     data: {
+      id: params.movementId,
       variantId: params.variantId,
       type: params.type,
       delta: params.delta,

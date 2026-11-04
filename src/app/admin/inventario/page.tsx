@@ -1,164 +1,218 @@
 import type { Metadata } from 'next';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth';
 import { getSettings } from '@/lib/settings';
 import { buildMetadata } from '@/lib/seo';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { Toolbar } from '@/components/admin/Toolbar';
 import { Pagination } from '@/components/admin/Pagination';
-import { Table, Th } from '@/components/admin/Table';
-import { StatCard } from '@/components/admin/Card';
-import { InventoryRow } from '@/components/admin/InventoryRow';
+import { ProductStock } from '@/components/admin/ProductStock';
 import { ButtonLink } from '@/components/ui/Button';
-import { IconDownload } from '@/components/ui/Icons';
+import { IconBox, IconDownload, IconPlus } from '@/components/ui/Icons';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({ title: 'Panel — Inventario', noIndex: true });
-
-const PER_PAGE = 50;
+const PER_PAGE = 12;
 
 export default async function InventoryPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requireAdmin();
   const params = await searchParams;
-  const one = (k: string) => (Array.isArray(params[k]) ? params[k]![0] : params[k]) as string | undefined;
-
-  const page = Math.max(1, Number(one('pagina') ?? 1) || 1);
-  const query = one('q')?.trim();
+  const one = (key: string) => (Array.isArray(params[key]) ? params[key][0] : params[key]) ?? '';
+  const requestedPage = Math.max(1, Math.floor(Number(one('pagina')) || 1));
+  const query = one('q').trim();
   const filter = one('filtro');
   const productId = one('producto');
-
   const settings = await getSettings();
-
-  const where: Prisma.VariantWhereInput = {
+  const low: Prisma.VariantWhereInput = {
+    stock: { gt: 0 },
+    OR: [
+      { lowStockThreshold: { gt: 0 }, stock: { lte: prisma.variant.fields.lowStockThreshold } },
+      { lowStockThreshold: 0, stock: { lte: settings.lowStockThreshold } },
+    ],
+  };
+  const where: Prisma.ProductWhereInput = {
+    ...(productId ? { id: productId } : {}),
     ...(query
       ? {
           OR: [
-            { sku: { contains: query, mode: 'insensitive' } },
-            { product: { name: { contains: query, mode: 'insensitive' } } },
-            { color: { name: { contains: query, mode: 'insensitive' } } },
+            { name: { contains: query, mode: 'insensitive' } },
+            { modelCode: { contains: query, mode: 'insensitive' } },
+            {
+              variants: {
+                some: {
+                  OR: [
+                    { sku: { contains: query, mode: 'insensitive' } },
+                    { size: { equals: query, mode: 'insensitive' } },
+                    { color: { name: { contains: query, mode: 'insensitive' } } },
+                  ],
+                },
+              },
+            },
           ],
         }
       : {}),
-    ...(productId ? { productId } : {}),
-    ...(filter === 'agotado' ? { stock: 0 } : {}),
-    ...(filter === 'bajo' ? { stock: { gt: 0, lte: settings.lowStockThreshold } } : {}),
-    ...(filter === 'inactivo' ? { active: false } : {}),
+    ...(filter === 'agotado' ? { variants: { some: { stock: { lte: 0 } } } } : {}),
+    ...(filter === 'bajo' ? { variants: { some: low } } : {}),
+    ...(filter === 'inactivo'
+      ? {
+          AND: [
+            {
+              OR: [
+                { status: { in: ['DRAFT', 'ARCHIVED'] } },
+                { variants: { some: { OR: [{ active: false }, { color: { active: false } }] } } },
+              ],
+            },
+          ],
+        }
+      : {}),
   };
 
-  const [variants, total, products, aggregates, outOfStock] = await Promise.all([
-    prisma.variant.findMany({
-      where,
-      include: {
-        product: { select: { id: true, name: true } },
-        color: { select: { name: true, hex: true } },
-      },
-      orderBy: [{ stock: 'asc' }, { product: { name: 'asc' } }, { size: 'asc' }],
-      skip: (page - 1) * PER_PAGE,
-      take: PER_PAGE,
-    }),
-    prisma.variant.count({ where }),
-    prisma.product.findMany({
-      where: { status: { in: ['ACTIVE', 'DRAFT', 'COMING_SOON'] } },
-      select: { id: true, name: true },
-      orderBy: { name: 'asc' },
-    }),
-    prisma.variant.aggregate({ where: { active: true }, _sum: { stock: true }, _count: true }),
-    prisma.variant.count({ where: { active: true, stock: 0 } }),
+  const [total, productOptions, totals, empty, lowCount] = await Promise.all([
+    prisma.product.count({ where }),
+    prisma.product.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    prisma.variant.aggregate({ where: { stock: { gt: 0 } }, _sum: { stock: true } }),
+    prisma.variant.count({ where: { stock: { lte: 0 } } }),
+    prisma.variant.count({ where: low }),
   ]);
-
-  const lowStockCount = await prisma.variant.count({
-    where: { active: true, stock: { gt: 0, lte: settings.lowStockThreshold } },
+  const page = Math.min(requestedPage, Math.max(1, Math.ceil(total / PER_PAGE)));
+  const products = await prisma.product.findMany({
+    where,
+    include: {
+      colors: {
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        select: { id: true, name: true, hex: true, active: true },
+      },
+      variants: { orderBy: [{ sortOrder: 'asc' }, { size: 'asc' }] },
+      images: {
+        orderBy: [{ isPrimary: 'desc' }, { sortOrder: 'asc' }],
+        take: 1,
+        select: { url: true },
+      },
+    },
+    orderBy: [{ name: 'asc' }, { id: 'asc' }],
+    skip: (page - 1) * PER_PAGE,
+    take: PER_PAGE,
   });
 
   return (
     <>
       <PageHeader
         title="Inventario"
-        description="Ajusta el stock de cualquier SKU sin salir de esta pantalla. Para editar un producto completo usa la matriz talla × color."
+        description="Encuentra el producto y agrega o quita unidades por talla y color."
         actions={
-          <ButtonLink href="/api/admin/export/inventario" variant="outline" size="sm" prefetch={false}>
-            <IconDownload className="h-4 w-4" />
-            Exportar CSV
-          </ButtonLink>
+          <>
+            <ButtonLink href="/admin/inventario/historial" variant="outline" size="sm">
+              Historial
+            </ButtonLink>
+            <ButtonLink
+              href="/api/admin/export/inventario"
+              variant="outline"
+              size="sm"
+              prefetch={false}
+            >
+              <IconDownload className="h-4 w-4" /> Exportar
+            </ButtonLink>
+            <ButtonLink href="/admin/productos/nuevo" size="sm">
+              <IconPlus className="h-4 w-4" /> Nuevo producto
+            </ButtonLink>
+          </>
         }
       />
-
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Unidades en stock" value={String(aggregates._sum.stock ?? 0)} tone="accent" />
-        <StatCard label="SKU activos" value={String(aggregates._count)} />
-        <StatCard label="Agotados" value={String(outOfStock)} tone={outOfStock > 0 ? 'bad' : 'ok'} />
-        <StatCard
-          label="Stock bajo"
-          value={String(lowStockCount)}
-          hint={`Umbral general: ${settings.lowStockThreshold} unidades`}
-          tone={lowStockCount > 0 ? 'warn' : 'ok'}
-        />
+      <div className="mb-7 grid grid-cols-3 gap-2 sm:gap-4">
+        {[
+          {
+            label: 'Unidades en stock',
+            value: totals._sum.stock ?? 0,
+            hint: 'Incluye stock de productos ocultos',
+            color: 'accent-text',
+          },
+          {
+            label: 'Sin stock',
+            value: empty,
+            hint: 'Combinaciones de talla y color',
+            color: 'text-signal-bad',
+          },
+          {
+            label: 'Stock bajo',
+            value: lowCount,
+            hint: 'Tallas y colores por reponer',
+            color: 'text-signal-warn',
+          },
+        ].map((stat) => (
+          <div key={stat.label} className="rounded-xl border border-line bg-ink-900 p-3 sm:p-5">
+            <p className="text-xs text-chalk-dim sm:text-sm">{stat.label}</p>
+            <p className={`mt-2 text-2xl font-semibold tabular-nums sm:text-3xl ${stat.color}`}>
+              {stat.value}
+            </p>
+            <p className="mt-2 hidden text-xs text-chalk-faint sm:block">{stat.hint}</p>
+          </div>
+        ))}
       </div>
-
       <Toolbar
-        searchPlaceholder="Buscar por SKU, producto o color…"
+        searchPlaceholder="Buscar producto, color, talla o código…"
         filters={[
           {
             name: 'filtro',
-            label: 'Todos los SKU',
+            label: 'Todo el stock',
             options: [
-              { value: 'agotado', label: 'Agotados' },
+              { value: 'agotado', label: 'Sin stock o por reponer' },
               { value: 'bajo', label: 'Stock bajo' },
-              { value: 'inactivo', label: 'Desactivados' },
+              { value: 'inactivo', label: 'Productos o tallas ocultas' },
             ],
           },
           {
             name: 'producto',
             label: 'Todos los productos',
-            options: products.map((p) => ({ value: p.id, label: p.name })),
+            options: productOptions.map((p) => ({ value: p.id, label: p.name })),
           },
         ]}
       />
-
-      <div className="min-w-0 border border-line bg-ink-900">
-        <Table minWidth={820}>
-          <thead>
-            <tr>
-              <Th>Producto / SKU</Th>
-              <Th>Color</Th>
-              <Th align="center">Talla</Th>
-              <Th align="center">Stock</Th>
-              <Th align="center">Umbral</Th>
-              <Th align="right">Ajustar</Th>
-            </tr>
-          </thead>
-          <tbody>
-            {variants.map((variant) => (
-              <InventoryRow
-                key={variant.id}
-                row={{
-                  variantId: variant.id,
-                  sku: variant.sku,
-                  productId: variant.product.id,
-                  productName: variant.product.name,
-                  colorName: variant.color.name,
-                  colorHex: variant.color.hex,
-                  size: variant.size,
-                  stock: variant.stock,
-                  threshold: variant.lowStockThreshold || settings.lowStockThreshold,
-                  active: variant.active,
-                }}
-              />
-            ))}
-            {variants.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-[13.5px] text-chalk-faint">
-                  No hay SKU que coincidan con la búsqueda.
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </Table>
+      <p className="mb-4 text-sm text-chalk-faint">
+        {total} {total === 1 ? 'producto' : 'productos'}
+        {filter ? ' con tallas que coinciden con el filtro' : ''}
+      </p>
+      <div className="space-y-5">
+        {products.map((product) => (
+          <ProductStock
+            key={product.id}
+            product={{
+              id: product.id,
+              name: product.name,
+              modelCode: product.modelCode,
+              status: product.status,
+              imageUrl: product.images[0]?.url ?? null,
+              colors: product.colors,
+              variants: product.variants.map((v) => ({
+                id: v.id,
+                colorId: v.colorId,
+                size: v.size,
+                sku: v.sku,
+                stock: v.stock,
+                reserved: v.reserved,
+                active: v.active,
+                lowStockThreshold: v.lowStockThreshold || settings.lowStockThreshold,
+              })),
+            }}
+          />
+        ))}
+        {!products.length ? (
+          <div className="rounded-2xl border border-dashed border-line-bright py-14 text-center">
+            <IconBox className="mx-auto mb-3 h-9 w-9 text-chalk-faint" />
+            <h2 className="text-base normal-case">No encontramos productos</h2>
+            <p className="mt-2 text-sm text-chalk-faint">
+              Prueba otro nombre o limpia los filtros.
+            </p>
+            <ButtonLink href="/admin/inventario" variant="ghost" size="sm" className="mt-4">
+              Limpiar filtros
+            </ButtonLink>
+          </div>
+        ) : null}
       </div>
-
       <Pagination page={page} pageCount={Math.ceil(total / PER_PAGE)} total={total} />
     </>
   );

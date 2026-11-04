@@ -3,10 +3,10 @@
 import { useActionState, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { deleteColor, saveColor, type AdminState } from '@/actions/admin/products';
+import { setColorVisibility, saveColor, type AdminState } from '@/actions/admin/products';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/Badge';
-import { IconPlus, IconTrash } from '@/components/ui/Icons';
+import { IconPlus } from '@/components/ui/Icons';
 
 export interface ColorRow {
   id: string;
@@ -206,7 +206,7 @@ function ColorFields({
 
       {!color ? (
         <p className="mt-3 text-[12px] text-chalk-faint">
-          Al crear el colorway se generan sus tallas con stock en cero.
+          Al crear el color se generan sus tallas con stock en cero.
         </p>
       ) : null}
     </form>
@@ -216,10 +216,11 @@ function ColorFields({
 export function ColorManager({ productId, colors }: { productId: string; colors: ColorRow[] }) {
   const [editing, setEditing] = useState<string | 'new' | null>(null);
   const [pending, startTransition] = useTransition();
-  const router = useRouter();
+  const [notice, setNotice] = useState<AdminState | null>(null);
 
   return (
     <div className="space-y-3">
+      {notice ? <p role="status" className={cn('text-sm', notice.ok ? 'text-signal-ok' : 'text-signal-bad')}>{notice.message}</p> : null}
       {colors.map((color) =>
         editing === color.id ? (
           <ColorFields key={color.id} productId={productId} color={color} onDone={() => setEditing(null)} />
@@ -257,17 +258,15 @@ export function ColorManager({ productId, colors }: { productId: string; colors:
               <button
                 type="button"
                 onClick={() => {
-                  if (confirm(`¿Eliminar el colorway ${color.name}? Se eliminan sus ${color.variantCount} SKU y sus imágenes.`)) {
-                    startTransition(async () => {
-                      await deleteColor(color.id);
-                      router.refresh();
-                    });
-                  }
+                  startTransition(async () => {
+                    try { setNotice(await setColorVisibility(color.id, !color.active)); }
+                    catch { setNotice({ ok: false, message: 'No se pudo cambiar la visibilidad. Reintenta.' }); }
+                  });
                 }}
-                aria-label={`Eliminar ${color.name}`}
-                className="text-chalk-faint hover:text-signal-bad"
+                aria-label={`${color.active ? 'Ocultar' : 'Mostrar'} ${color.name}`} disabled={pending}
+                className="min-h-10 text-xs text-chalk-dim hover:accent-text disabled:opacity-40"
               >
-                <IconTrash className="h-4 w-4" />
+                {color.active ? 'Ocultar' : 'Mostrar'}
               </button>
             </div>
           </div>
@@ -283,7 +282,7 @@ export function ColorManager({ productId, colors }: { productId: string; colors:
           className="flex w-full items-center justify-center gap-2 border border-dashed border-line-bright py-4 font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim transition-colors hover:border-chalk hover:text-chalk"
         >
           <IconPlus className="h-4 w-4" />
-          Agregar colorway
+          Agregar color
         </button>
       )}
     </div>
