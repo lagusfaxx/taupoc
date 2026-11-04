@@ -109,6 +109,7 @@ export default async function InventoryHistory({
         }
       />
       <Toolbar
+        quiet
         searchPlaceholder="Buscar producto, nota o responsable…"
         filters={[
           {
@@ -131,8 +132,8 @@ export default async function InventoryHistory({
           >
             <div
               className={cn(
-                'flex h-12 min-w-14 shrink-0 items-center justify-center rounded-xl px-2 text-xl font-semibold tabular-nums',
-                m.delta > 0 ? 'bg-signal-ok/10 text-signal-ok' : 'bg-signal-bad/10 text-signal-bad',
+                'flex h-12 min-w-14 shrink-0 items-center justify-center px-2 text-lg font-medium tabular-nums',
+                'text-chalk-dim',
               )}
             >
               {m.delta > 0 ? '+' : ''}

@@ -35,6 +35,8 @@ export interface StockProduct {
   variants: StockVariant[];
 }
 
+type StockUpdate = Partial<Pick<StockVariant, 'stock' | 'reserved' | 'active'>>;
+
 const STATUS: Record<string, string> = {
   ACTIVE: 'En la tienda',
   DRAFT: 'Borrador',
@@ -42,7 +44,7 @@ const STATUS: Record<string, string> = {
   ARCHIVED: 'Archivado',
 };
 const fieldClass =
-  'h-11 rounded-lg border border-line-bright bg-ink px-3 text-sm text-chalk focus:border-[var(--accent)] focus:outline-none';
+  'h-11 rounded-md border border-line bg-transparent px-3 text-sm text-chalk focus:border-[var(--accent)] focus:outline-none';
 
 export function ProductStock({
   product: incoming,
@@ -53,7 +55,7 @@ export function ProductStock({
 }) {
   const [confirmed, setConfirmed] = useState<{
     source: StockProduct;
-    stocks: Record<string, { stock: number; reserved: number }>;
+    stocks: Record<string, StockUpdate>;
   } | null>(null);
   // La respuesta confirma los saldos antes de que termine de llegar la página actualizada.
   // Así se puede iniciar otro ajuste inmediatamente sin reutilizar cantidades antiguas.
@@ -71,87 +73,107 @@ export function ProductStock({
   const missing = product.variants.reduce((sum, v) => sum + Math.max(0, -v.stock), 0);
   const editing = mode !== null && mode !== 'view';
 
+  function confirmVariants(
+    changes: ({ id: string } & StockUpdate)[],
+  ) {
+    setConfirmed((previous) => {
+      const stocks: Record<string, StockUpdate> = previous?.source === incoming ? { ...previous.stocks } : {};
+      for (const { id, ...fields } of changes) stocks[id] = { ...stocks[id], ...fields };
+      return { source: incoming, stocks };
+    });
+  }
+
   function open(next: typeof mode) {
     setNotice('');
     setMode(next);
   }
 
   return (
-    <section
-      className="overflow-hidden rounded-2xl border border-line bg-ink-900"
-      aria-label={product.name}
-    >
+    <section className="min-w-0" aria-label={product.name}>
       <div className="p-5 sm:p-6">
         <div className="flex gap-4">
-          <div className="relative flex h-20 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-ink-800 sm:h-24 sm:w-20">
+          <div className="relative flex h-14 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-ink-800">
             {product.imageUrl ? (
-              <Image src={product.imageUrl} alt="" fill sizes="80px" className="object-cover" />
+              <Image src={product.imageUrl} alt="" fill sizes="48px" className="object-cover" />
             ) : (
-              <IconBox className="h-8 w-8 text-chalk-faint" />
+              <IconBox className="h-6 w-6 text-chalk-faint" />
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="mb-1 break-words text-xs text-chalk-faint">
-              {product.modelCode} · {STATUS[product.status]}
-            </p>
-            <h2 className="break-words text-base font-semibold normal-case tracking-normal sm:text-lg">
+            <h2 className="break-words text-base font-semibold normal-case tracking-normal">
               {product.name}
             </h2>
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {product.colors.slice(0, 6).map((c) => (
-                <span
-                  key={c.id}
-                  title={c.name}
-                  className="h-3.5 w-3.5 rounded-full border border-line-bright"
-                  style={{ background: c.hex }}
-                />
-              ))}
-              <span className="ml-1 text-xs text-chalk-faint">
-                {product.colors.length} {product.colors.length === 1 ? 'color' : 'colores'} ·{' '}
-                {new Set(product.variants.map((v) => v.size)).size} tallas
-              </span>
-            </div>
+            <p className="mt-1 break-words text-xs leading-relaxed text-chalk-faint">
+              {product.modelCode} · {product.colors.length}{' '}
+              {product.colors.length === 1 ? 'color' : 'colores'} ·{' '}
+              {new Set(product.variants.map((v) => v.size)).size}{' '}
+              {new Set(product.variants.map((v) => v.size)).size === 1 ? 'talla' : 'tallas'}
+              {product.status !== 'ACTIVE' ? ` · ${STATUS[product.status]}` : ''}
+            </p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-2xl font-semibold tabular-nums text-chalk sm:text-3xl">{stock}</p>
+            <p className="text-lg font-medium tabular-nums text-chalk">{stock}</p>
             <p className="text-xs text-chalk-faint">en stock</p>
           </div>
         </div>
         {reserved > 0 || missing > 0 ? (
-          <p className="mt-3 text-xs text-signal-warn">
-            {reserved > 0 ? `${reserved} unidades reservadas para pedidos. ` : ''}
-            {missing > 0 ? `${missing} unidades pendientes de reponer por ventas sin stock.` : ''}
+          <p className="mt-3 text-xs leading-relaxed text-chalk-faint sm:ml-16">
+            {reserved > 0
+              ? `${reserved} ${reserved === 1 ? 'unidad reservada' : 'unidades reservadas'}. `
+              : ''}
+            {missing > 0
+              ? `${missing} ${missing === 1 ? 'unidad pendiente' : 'unidades pendientes'} de reponer.`
+              : ''}
           </p>
         ) : null}
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            className="rounded-lg !normal-case !tracking-normal ![clip-path:none]"
-            disabled={editing || !product.variants.length}
-            onClick={() => open('add')}
-          >
-            <IconPlus className="h-4 w-4" /> Agregar stock
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            className="rounded-lg !normal-case !tracking-normal ![clip-path:none]"
-            disabled={editing || !product.variants.length}
-            onClick={() => open('remove')}
-          >
-            <IconMinus className="h-4 w-4" /> Quitar stock
-          </Button>
-          <button
-            type="button"
-            disabled={editing || !product.variants.length}
-            onClick={() => open(mode === 'view' ? null : 'view')}
-            aria-expanded={mode !== null}
-            className="ml-auto inline-flex min-h-11 items-center gap-1 px-2 text-sm text-chalk-dim hover:text-chalk disabled:opacity-40"
-          >
-            {mode === 'view' ? 'Cerrar tallas' : 'Ver tallas'}{' '}
-            <IconChevron className={cn('h-3 w-3 transition-transform', mode && 'rotate-90')} />
-          </button>
-        </div>
+        {!editing ? (
+          <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 sm:ml-16">
+            <button
+              type="button"
+              disabled={!product.variants.length}
+              onClick={() => open('add')}
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-chalk hover:accent-text disabled:opacity-40"
+            >
+              <IconPlus className="h-3.5 w-3.5" /> Agregar stock
+            </button>
+            <button
+              type="button"
+              disabled={!product.variants.length}
+              onClick={() => open('remove')}
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm text-chalk-dim hover:text-chalk disabled:opacity-40"
+            >
+              <IconMinus className="h-3.5 w-3.5" /> Quitar stock
+            </button>
+            <button
+              type="button"
+              disabled={!product.variants.length}
+              onClick={() => open(mode === 'view' ? null : 'view')}
+              aria-expanded={mode === 'view'}
+              className="inline-flex min-h-11 items-center gap-1 text-sm text-chalk-dim hover:text-chalk disabled:opacity-40"
+            >
+              {mode === 'view' ? 'Cerrar tallas' : 'Ver tallas'}
+              <IconChevron
+                className={cn('h-3 w-3 transition-transform', mode === 'view' && 'rotate-90')}
+              />
+            </button>
+            {mode === null ? (
+              <div className="flex flex-wrap items-center gap-x-5 text-xs sm:ml-auto">
+                <Link
+                  href={`/admin/inventario/historial?producto=${product.id}`}
+                  className="inline-flex min-h-9 items-center text-chalk-faint hover:text-chalk"
+                >
+                  Ver historial de movimientos
+                </Link>
+                <Link
+                  href={`/admin/productos/${product.id}`}
+                  className="inline-flex min-h-9 items-center text-chalk-faint hover:text-chalk"
+                >
+                  Editar producto
+                </Link>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         {!product.variants.length ? (
           <p className="mt-3 text-sm text-chalk-faint">
             Agrega un color y sus tallas desde{' '}
@@ -162,17 +184,18 @@ export function ProductStock({
           </p>
         ) : null}
         {notice ? (
-          <p
-            role="status"
-            className="mt-4 flex items-start gap-2 rounded-lg bg-signal-ok/10 p-3 text-sm text-signal-ok"
-          >
-            <IconCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          <p role="status" className="mt-3 flex items-start gap-2 text-sm text-chalk-dim sm:ml-16">
+            <IconCheck className="mt-0.5 h-4 w-4 shrink-0 text-signal-ok" />
             {notice}
           </p>
         ) : null}
       </div>
       {mode === 'view' ? (
-        <StockOverview product={product} onCount={() => open('count')} />
+        <StockOverview
+          product={product}
+          onCount={() => open('count')}
+          onVisibilitySaved={(id, active) => confirmVariants([{ id, active }])}
+        />
       ) : editing ? (
         <StockEditor
           key={mode}
@@ -180,31 +203,28 @@ export function ProductStock({
           mode={mode}
           onClose={() => setMode('view')}
           onSaved={(message, stocks) => {
-            setConfirmed((previous) => ({
-              source: incoming,
-              stocks: {
-                ...(previous?.source === incoming ? previous.stocks : {}),
-                ...Object.fromEntries(
-                  stocks.map((v) => [v.id, { stock: v.stock, reserved: v.reserved }]),
-                ),
-              },
-            }));
+            confirmVariants(stocks);
             setNotice(message);
             setMode('view');
           }}
         />
       ) : null}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-5 py-3 text-xs sm:px-6">
-        <Link
-          href={`/admin/inventario/historial?producto=${product.id}`}
-          className="text-chalk-dim hover:accent-text"
-        >
-          Ver historial de movimientos
-        </Link>
-        <Link href={`/admin/productos/${product.id}`} className="text-chalk-faint hover:text-chalk">
-          Editar producto
-        </Link>
-      </div>
+      {mode === 'view' ? (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 px-5 pb-4 text-xs sm:pl-[88px] sm:pr-6">
+          <Link
+            href={`/admin/inventario/historial?producto=${product.id}`}
+            className="inline-flex min-h-9 items-center text-chalk-faint hover:text-chalk"
+          >
+            Ver historial de movimientos
+          </Link>
+          <Link
+            href={`/admin/productos/${product.id}`}
+            className="inline-flex min-h-9 items-center text-chalk-faint hover:text-chalk"
+          >
+            Editar producto
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -228,7 +248,7 @@ function ColorSelector({
         className={cn(fieldClass, 'max-w-full flex-1 sm:flex-none sm:min-w-48')}
       >
         {product.colors.map((color) => (
-          <option key={color.id} value={color.id}>
+          <option key={color.id} value={color.id} className="bg-ink-900 text-chalk">
             {color.name}
             {color.active ? '' : ' (oculto)'}
           </option>
@@ -238,106 +258,126 @@ function ColorSelector({
   );
 }
 
-function StockOverview({ product, onCount }: { product: StockProduct; onCount: () => void }) {
+function StockOverview({
+  product,
+  onCount,
+  onVisibilitySaved,
+}: {
+  product: StockProduct;
+  onCount: () => void;
+  onVisibilitySaved: (id: string, active: boolean) => void;
+}) {
   const [colorId, setColorId] = useState(product.colors[0]?.id ?? '');
   const [visibility, setVisibility] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; message: string } | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const color = product.colors.find((c) => c.id === colorId);
   const variants = product.variants.filter((v) => v.colorId === colorId);
 
   return (
-    <div className="border-t border-line bg-ink/40 p-5 sm:p-6">
+    <div className="px-5 pb-3 sm:pl-[88px] sm:pr-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <ColorSelector product={product} colorId={colorId} onChange={setColorId} />
-        <span className="text-xs text-chalk-faint">Stock por talla</span>
       </div>
       {color && !color.active ? (
-        <p className="mb-4 text-sm text-signal-warn">
+        <p className="mb-4 text-sm text-chalk-dim">
           Este color está oculto. Puedes volver a mostrarlo desde Editar producto → Colores.
         </p>
       ) : null}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-        {variants.map((v) => {
-          const available = Math.max(0, v.stock - v.reserved);
-          return (
-            <div
-              key={v.id}
-              className={cn(
-                'rounded-xl border p-3',
-                v.stock <= 0 ? 'border-signal-bad/20 bg-signal-bad/5' : 'border-line bg-ink-900',
-              )}
-            >
-              <p className="text-xs text-chalk-dim">
-                Talla <strong className="text-sm text-chalk">{v.size}</strong>
-              </p>
-              <p
-                className={cn(
-                  'mt-2 text-2xl font-semibold tabular-nums',
-                  v.stock <= 0
-                    ? 'text-signal-bad'
-                    : available <= v.lowStockThreshold
-                      ? 'text-signal-warn'
-                      : 'text-chalk',
-                )}
-              >
-                {v.stock}
-              </p>
-              <p className="mt-1 text-xs text-chalk-faint">
-                {v.stock < 0
-                  ? 'Pendiente de reponer'
-                  : v.stock === 0
-                    ? 'Sin stock'
-                    : available <= v.lowStockThreshold
-                      ? 'Stock bajo'
-                      : 'En stock'}
-              </p>
-              {v.reserved > 0 ? (
-                <p className="mt-1 text-xs text-signal-warn">
-                  {v.reserved} reservadas · {available} libres
-                </p>
-              ) : null}
-              {!v.active ? (
-                <p className="mt-2 text-xs text-chalk-faint">Oculta en la tienda</p>
-              ) : null}
-              {visibility ? (
-                <button
-                  type="button"
-                  disabled={pending}
-                  className="mt-3 min-h-10 w-full rounded-lg border border-line-bright px-2 text-xs text-chalk-dim hover:text-chalk disabled:opacity-40"
-                  onClick={() =>
-                    startTransition(async () => {
-                      try {
-                        setMessage(await setVariantVisibility(v.id, !v.active));
-                      } catch {
-                        setMessage({
-                          ok: false,
-                          message: 'No se pudo cambiar la visibilidad. Reintenta.',
-                        });
-                      }
-                    })
-                  }
-                >
-                  {v.active ? `Ocultar talla ${v.size}` : `Mostrar talla ${v.size}`}
-                </button>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
+      <table className="w-full border-collapse text-sm">
+        <caption className="sr-only">Stock por talla de {color?.name}</caption>
+        <thead>
+          <tr className="border-b border-line text-xs text-chalk-faint">
+            <th scope="col" className="py-3 text-left font-normal">
+              Talla
+            </th>
+            <th scope="col" className="px-2 py-3 text-right font-normal">
+              En stock
+            </th>
+            <th scope="col" className="py-3 text-right font-normal">
+              {visibility ? 'En la tienda' : 'Disponibles'}
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-line-soft">
+          {variants.map((v) => {
+            const available = Math.max(0, v.stock - v.reserved);
+            return (
+              <tr key={v.id}>
+                <th scope="row" className="py-3 text-left font-normal">
+                  <span className="font-medium text-chalk">{v.size}</span>
+                  {!v.active ? <span className="ml-2 text-xs text-chalk-faint">Oculta</span> : null}
+                </th>
+                <td className="px-2 py-3 text-right tabular-nums">
+                  <span className={v.stock < 0 ? 'text-signal-bad' : 'text-chalk-dim'}>
+                    {v.stock}
+                  </span>
+                  {v.reserved > 0 ? (
+                    <span className="mt-0.5 block text-[11px] text-chalk-faint">
+                      {v.reserved} {v.reserved === 1 ? 'reservada' : 'reservadas'}
+                    </span>
+                  ) : null}
+                  {v.stock < 0 ? (
+                    <span className="mt-0.5 block text-[11px] text-chalk-faint">Por reponer</span>
+                  ) : null}
+                </td>
+                <td className="py-3 text-right tabular-nums text-chalk-dim">
+                  {visibility ? (
+                    <button
+                      type="button"
+                      disabled={pending}
+                      aria-label={`${v.active ? 'Ocultar' : 'Mostrar'} talla ${v.size}`}
+                      className="min-h-10 text-xs text-chalk-dim hover:accent-text disabled:opacity-40"
+                      onClick={async () => {
+                        if (pending) return;
+                        setPending(true);
+                        try {
+                          const result = await setVariantVisibility(v.id, !v.active);
+                          setMessage(result);
+                          if (result.ok) onVisibilitySaved(v.id, !v.active);
+                        } catch {
+                          setMessage({
+                            ok: false,
+                            message: 'No se pudo cambiar la visibilidad. Reintenta.',
+                          });
+                        } finally {
+                          setPending(false);
+                        }
+                      }}
+                    >
+                      {v.active ? 'Ocultar' : 'Mostrar'}
+                    </button>
+                  ) : available === 0 ? (
+                    <span className="text-xs text-chalk-faint">Sin stock</span>
+                  ) : (
+                    <span>
+                      {available}
+                      {available <= v.lowStockThreshold ? (
+                        <span className="mt-0.5 block text-[11px] text-chalk-faint">
+                          Stock bajo
+                        </span>
+                      ) : null}
+                    </span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
       {message ? (
         <p
           role="status"
-          className={cn('mt-3 text-sm', message.ok ? 'text-signal-ok' : 'text-signal-bad')}
+          className={cn('mt-3 text-sm', message.ok ? 'text-chalk-dim' : 'text-signal-bad')}
         >
           {message.message}
         </p>
       ) : null}
-      <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line pt-4 text-xs">
+      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
         <button
           type="button"
           onClick={onCount}
-          className="min-h-9 text-chalk-dim hover:accent-text"
+          className="min-h-10 text-chalk-dim hover:accent-text"
         >
           Corregir conteo
         </button>
@@ -345,7 +385,7 @@ function StockOverview({ product, onCount }: { product: StockProduct; onCount: (
           type="button"
           onClick={() => setVisibility(!visibility)}
           aria-expanded={visibility}
-          className="min-h-9 text-chalk-dim hover:accent-text"
+          className="min-h-10 text-chalk-dim hover:accent-text"
         >
           {visibility ? 'Cerrar visibilidad' : 'Mostrar u ocultar tallas'}
         </button>
@@ -407,7 +447,7 @@ function StockEditor({
   return (
     <form
       aria-label={`${STOCK_MODE_LABEL[mode]} de ${snapshot.name}`}
-      className="border-t border-line bg-ink/40 p-5 sm:p-6"
+      className="px-5 pb-6 sm:pl-[88px] sm:pr-6"
       onSubmit={(event) => {
         event.preventDefault();
         if (pending || invalid || !changed.length) return;
@@ -437,10 +477,8 @@ function StockEditor({
       }}
     >
       <fieldset disabled={pending}>
-        <legend className="mb-1 text-base font-semibold text-chalk">
-          {STOCK_MODE_LABEL[mode]}
-        </legend>
-        <p className="mb-5 text-sm text-chalk-dim">
+        <legend className="mb-1 text-sm font-semibold text-chalk">{STOCK_MODE_LABEL[mode]}</legend>
+        <p className="mb-5 max-w-2xl text-sm leading-relaxed text-chalk-faint">
           {mode === 'add'
             ? 'Escribe cuántas unidades llegaron de cada talla.'
             : mode === 'remove'
@@ -449,77 +487,108 @@ function StockEditor({
           Puedes cambiar de color antes de guardar.
         </p>
         <ColorSelector product={snapshot} colorId={colorId} onChange={setColorId} />
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {snapshot.variants
-            .filter((v) => v.colorId === colorId)
-            .map((v) => {
-              const value = quantities[v.id] ?? '';
-              const delta = value.trim() ? stockDelta(mode, Number(value), v.stock) : 0;
-              const next = v.stock + delta;
-              const invalidCell =
-                value.trim() &&
-                (!Number.isInteger(Number(value)) ||
-                  Number(value) < 0 ||
-                  Number(value) > MAX_STOCK_CHANGE ||
-                  (delta < 0 && next < Math.max(0, v.reserved)));
-              return (
-                <div
-                  key={v.id}
-                  className={cn(
-                    'rounded-xl border bg-ink-900 p-3',
-                    invalidCell ? 'border-signal-bad' : delta ? 'accent-border' : 'border-line',
-                  )}
-                >
-                  <label
-                    htmlFor={`amount-${v.id}`}
-                    className="mb-2 block text-sm font-medium text-chalk"
-                  >
-                    Talla {v.size}
-                  </label>
-                  <p className="mb-3 text-xs text-chalk-faint">
-                    Actual: <span className="text-chalk-dim">{v.stock}</span>
-                    {v.reserved > 0 ? ` · ${v.reserved} reservadas` : ''}
-                  </p>
-                  <input
-                    id={`amount-${v.id}`}
-                    aria-label={`${mode === 'add' ? 'Agregar' : mode === 'remove' ? 'Quitar' : 'Conteo'} talla ${v.size}`}
-                    type="number"
-                    min={0}
-                    max={mode === 'remove' ? Math.max(0, v.stock - v.reserved) : MAX_STOCK_CHANGE}
-                    step={1}
-                    inputMode="numeric"
-                    value={value}
-                    placeholder="0"
-                    onChange={(e) => update(v.id, e.target.value)}
-                    className={cn(fieldClass, 'w-full text-center text-lg')}
-                    aria-invalid={Boolean(invalidCell)}
-                  />
-                  <p
-                    className={cn(
-                      'mt-3 text-xs',
-                      invalidCell ? 'text-signal-bad' : delta ? 'accent-text' : 'text-chalk-faint',
-                    )}
-                  >
-                    {invalidCell ? 'Revisa la cantidad' : `Quedarán: ${next}`}
-                  </p>
-                  {!v.active ? <p className="mt-1 text-xs text-chalk-faint">Talla oculta</p> : null}
-                </div>
-              );
-            })}
-        </div>
+        <table className="mt-4 w-full table-fixed border-collapse text-sm">
+          <caption className="sr-only">{STOCK_MODE_LABEL[mode]} por talla</caption>
+          <thead>
+            <tr className="border-b border-line text-[11px] text-chalk-faint sm:text-xs">
+              <th scope="col" className="w-1/4 py-3 text-left font-normal">
+                Talla
+              </th>
+              <th scope="col" className="w-1/4 px-1 py-3 text-right font-normal">
+                Actual
+              </th>
+              <th scope="col" className="w-1/4 px-1 py-3 text-center font-normal">
+                {mode === 'add' ? 'Agregar' : mode === 'remove' ? 'Quitar' : 'Conteo'}
+              </th>
+              <th scope="col" className="w-1/4 py-3 text-right font-normal">
+                Quedarán
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line-soft">
+            {snapshot.variants
+              .filter((v) => v.colorId === colorId)
+              .map((v) => {
+                const value = quantities[v.id] ?? '';
+                const delta = value.trim() ? stockDelta(mode, Number(value), v.stock) : 0;
+                const next = v.stock + delta;
+                const invalidCell =
+                  value.trim() &&
+                  (!Number.isInteger(Number(value)) ||
+                    Number(value) < 0 ||
+                    Number(value) > MAX_STOCK_CHANGE ||
+                    (delta < 0 && next < Math.max(0, v.reserved)));
+                return (
+                  <tr key={v.id}>
+                    <th scope="row" className="py-3 text-left font-normal">
+                      <label htmlFor={`amount-${v.id}`} className="font-medium text-chalk">
+                        {v.size}
+                      </label>
+                      {!v.active ? (
+                        <span className="mt-0.5 block text-[11px] text-chalk-faint">Oculta</span>
+                      ) : null}
+                    </th>
+                    <td className="px-1 py-3 text-right tabular-nums text-chalk-faint">
+                      {v.stock}
+                      {v.reserved > 0 ? (
+                        <span className="mt-0.5 block text-[10px] sm:text-[11px]">
+                          {v.reserved} {v.reserved === 1 ? 'reservada' : 'reservadas'}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-2 py-2 text-center">
+                      <input
+                        id={`amount-${v.id}`}
+                        aria-label={`${mode === 'add' ? 'Agregar' : mode === 'remove' ? 'Quitar' : 'Conteo'} talla ${v.size}`}
+                        type="number"
+                        min={0}
+                        max={
+                          mode === 'remove' ? Math.max(0, v.stock - v.reserved) : MAX_STOCK_CHANGE
+                        }
+                        step={1}
+                        inputMode="numeric"
+                        value={value}
+                        placeholder="0"
+                        onChange={(e) => update(v.id, e.target.value)}
+                        className={cn(
+                          fieldClass,
+                          'w-full max-w-24 px-1 text-center tabular-nums',
+                          invalidCell && 'border-signal-bad',
+                        )}
+                        aria-invalid={Boolean(invalidCell)}
+                      />
+                    </td>
+                    <td
+                      className={cn(
+                        'py-3 text-right tabular-nums',
+                        invalidCell
+                          ? 'text-signal-bad'
+                          : delta
+                            ? 'font-semibold text-chalk'
+                            : 'text-chalk-faint',
+                      )}
+                    >
+                      {invalidCell ? <span className="text-[11px]">Revisa la cantidad</span> : next}
+                    </td>
+                  </tr>
+                );
+              })}
+          </tbody>
+        </table>
         {changed.length ? (
-          <div className="mt-5 rounded-xl border border-line bg-ink-800 p-4">
+          <div className="mt-5 border-t border-line pt-4">
             <p className="text-sm font-medium text-chalk">
-              Revisa el cambio · {Number.isFinite(units) ? units : '—'} unidades · {changed.length}{' '}
-              tallas y colores
+              Revisa el cambio · {Number.isFinite(units) ? units : '—'}{' '}
+              {units === 1 ? 'unidad' : 'unidades'} · {changed.length}{' '}
+              {changed.length === 1 ? 'talla y color' : 'tallas y colores'}
             </p>
-            <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto text-sm text-chalk-dim">
+            <ul className="mt-3 max-h-48 space-y-1.5 overflow-y-auto text-xs text-chalk-faint">
               {changed.map((v) => (
                 <li key={v.id} className="flex justify-between gap-3">
                   <span>
                     {snapshot.colors.find((c) => c.id === v.colorId)?.name} · Talla {v.size}
                   </span>
-                  <span className="shrink-0 font-medium tabular-nums text-chalk">
+                  <span className="shrink-0 tabular-nums text-chalk-dim">
                     {v.stock} → {v.stock + stockDelta(mode, Number(quantities[v.id]), v.stock)}
                   </span>
                 </li>

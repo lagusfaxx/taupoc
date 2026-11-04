@@ -106,112 +106,122 @@ export default async function InventoryPage({
         description="Encuentra el producto y agrega o quita unidades por talla y color."
         actions={
           <>
-            <ButtonLink href="/admin/inventario/historial" variant="outline" size="sm">
+            <ButtonLink
+              href="/admin/inventario/historial"
+              variant="ghost"
+              size="sm"
+              className="!normal-case !tracking-normal"
+            >
               Historial
             </ButtonLink>
             <ButtonLink
               href="/api/admin/export/inventario"
-              variant="outline"
+              variant="ghost"
               size="sm"
               prefetch={false}
+              className="!normal-case !tracking-normal"
             >
               <IconDownload className="h-4 w-4" /> Exportar
             </ButtonLink>
-            <ButtonLink href="/admin/productos/nuevo" size="sm">
+            <ButtonLink
+              href="/admin/productos/nuevo"
+              size="sm"
+              variant="ghost"
+              className="!normal-case !tracking-normal"
+            >
               <IconPlus className="h-4 w-4" /> Nuevo producto
             </ButtonLink>
           </>
         }
       />
-      <div className="mb-7 grid grid-cols-3 gap-2 sm:gap-4">
-        {[
-          {
-            label: 'Unidades en stock',
-            value: totals._sum.stock ?? 0,
-            hint: 'Incluye stock de productos ocultos',
-            color: 'accent-text',
-          },
-          {
-            label: 'Sin stock',
-            value: empty,
-            hint: 'Combinaciones de talla y color',
-            color: 'text-signal-bad',
-          },
-          {
-            label: 'Stock bajo',
-            value: lowCount,
-            hint: 'Tallas y colores por reponer',
-            color: 'text-signal-warn',
-          },
-        ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-line bg-ink-900 p-3 sm:p-5">
-            <p className="text-xs text-chalk-dim sm:text-sm">{stat.label}</p>
-            <p className={`mt-2 text-2xl font-semibold tabular-nums sm:text-3xl ${stat.color}`}>
-              {stat.value}
-            </p>
-            <p className="mt-2 hidden text-xs text-chalk-faint sm:block">{stat.hint}</p>
-          </div>
-        ))}
-      </div>
-      <Toolbar
-        searchPlaceholder="Buscar producto, color, talla o código…"
-        filters={[
-          {
-            name: 'filtro',
-            label: 'Todo el stock',
-            options: [
-              { value: 'agotado', label: 'Sin stock o por reponer' },
-              { value: 'bajo', label: 'Stock bajo' },
-              { value: 'inactivo', label: 'Productos o tallas ocultas' },
-            ],
-          },
-          {
-            name: 'producto',
-            label: 'Todos los productos',
-            options: productOptions.map((p) => ({ value: p.id, label: p.name })),
-          },
-        ]}
-      />
-      <p className="mb-4 text-sm text-chalk-faint">
-        {total} {total === 1 ? 'producto' : 'productos'}
-        {filter ? ' con tallas que coinciden con el filtro' : ''}
-      </p>
-      <div className="space-y-5">
-        {products.map((product) => (
-          <ProductStock
-            key={product.id}
-            product={{
-              id: product.id,
-              name: product.name,
-              modelCode: product.modelCode,
-              status: product.status,
-              imageUrl: product.images[0]?.url ?? null,
-              colors: product.colors,
-              variants: product.variants.map((v) => ({
-                id: v.id,
-                colorId: v.colorId,
-                size: v.size,
-                sku: v.sku,
-                stock: v.stock,
-                reserved: v.reserved,
-                active: v.active,
-                lowStockThreshold: v.lowStockThreshold || settings.lowStockThreshold,
-              })),
-            }}
+      <div className="overflow-hidden rounded-xl border border-line bg-ink-900">
+        <div className="px-5 pt-5 sm:px-6">
+          <dl className="mb-5 flex flex-wrap gap-x-7 gap-y-3 text-sm">
+            {[
+              {
+                label: 'unidades en stock',
+                value: totals._sum.stock ?? 0,
+                hint: 'Incluye stock de productos ocultos',
+              },
+              {
+                label: 'sin stock',
+                value: empty,
+                hint: 'Combinaciones de talla y color sin stock o por reponer',
+              },
+              {
+                label: 'con stock bajo',
+                value: lowCount,
+                hint: 'Combinaciones de talla y color con stock bajo',
+              },
+            ].map((stat) => (
+              <div key={stat.label} title={stat.hint} className="flex items-baseline gap-2">
+                <dt className="order-2 text-chalk-faint">{stat.label}</dt>
+                <dd className="text-base font-medium tabular-nums text-chalk-dim">{stat.value}</dd>
+              </div>
+            ))}
+          </dl>
+          <Toolbar
+            quiet
+            searchPlaceholder="Buscar producto, color, talla o código…"
+            filters={[
+              {
+                name: 'filtro',
+                label: 'Todo el stock',
+                options: [
+                  { value: 'agotado', label: 'Sin stock o por reponer' },
+                  { value: 'bajo', label: 'Stock bajo' },
+                  { value: 'inactivo', label: 'Productos o tallas ocultas' },
+                ],
+              },
+              {
+                name: 'producto',
+                label: 'Todos los productos',
+                options: productOptions.map((p) => ({ value: p.id, label: p.name })),
+              },
+            ]}
           />
-        ))}
-        {!products.length ? (
-          <div className="rounded-2xl border border-dashed border-line-bright py-14 text-center">
-            <IconBox className="mx-auto mb-3 h-9 w-9 text-chalk-faint" />
-            <h2 className="text-base normal-case">No encontramos productos</h2>
-            <p className="mt-2 text-sm text-chalk-faint">
-              Prueba otro nombre o limpia los filtros.
-            </p>
-            <ButtonLink href="/admin/inventario" variant="ghost" size="sm" className="mt-4">
-              Limpiar filtros
-            </ButtonLink>
-          </div>
-        ) : null}
+          <p className="mb-4 text-xs text-chalk-faint">
+            {total} {total === 1 ? 'producto' : 'productos'}
+            {filter ? ' con tallas que coinciden con el filtro' : ''}
+          </p>
+        </div>
+        <div className="divide-y divide-line border-t border-line">
+          {products.map((product) => (
+            <ProductStock
+              key={product.id}
+              product={{
+                id: product.id,
+                name: product.name,
+                modelCode: product.modelCode,
+                status: product.status,
+                imageUrl: product.images[0]?.url ?? null,
+                colors: product.colors,
+                variants: product.variants.map((v) => ({
+                  id: v.id,
+                  colorId: v.colorId,
+                  size: v.size,
+                  sku: v.sku,
+                  stock: v.stock,
+                  reserved: v.reserved,
+                  active: v.active,
+                  lowStockThreshold: v.lowStockThreshold || settings.lowStockThreshold,
+                })),
+              }}
+            />
+          ))}
+          {!products.length ? (
+            <div className="py-14 text-center">
+              <IconBox className="mx-auto mb-3 h-9 w-9 text-chalk-faint" />
+              <h2 className="text-base normal-case">No encontramos productos</h2>
+              <p className="mt-2 text-sm text-chalk-faint">
+                Prueba otro nombre o limpia los filtros.
+              </p>
+              <ButtonLink href="/admin/inventario" variant="ghost" size="sm" className="mt-4">
+                Limpiar filtros
+              </ButtonLink>
+            </div>
+          ) : null}
+        </div>
       </div>
       <Pagination page={page} pageCount={Math.ceil(total / PER_PAGE)} total={total} />
     </>

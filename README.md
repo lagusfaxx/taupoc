@@ -272,7 +272,7 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
   de una o varias láminas —fotos y videos mezclados, pasando solos—, franjas de
   productos elegidos a mano, tarjetas de acceso, bloques de texto. Cada bloque se sube, se baja, se duplica, se oculta o se
   borra. Las fotos y los videos se suben arrastrándolos o pegando una dirección.
-- **Inventario** — tarjetas por producto, búsqueda y filtros; agregar o quitar unidades
+- **Inventario** — lista de productos con búsqueda y filtros; agregar o quitar unidades
   de varias tallas y colores en un envío, historial y exportación a Excel.
 - **Clientes** — historial de compras, talla habitual, gestión de permisos.
 - **Envíos** — zonas por región, tarifas por courier, precio fijo o por peso o

@@ -20,7 +20,7 @@ const product = await db.product.create({
   data: {
     name: 'Traje de competición TS703',
     slug: tag,
-    modelCode: tag,
+    modelCode: 'TS703',
     basePrice: 65000,
     status: 'ACTIVE',
     colors: {
@@ -52,6 +52,31 @@ for (const color of product.colors) {
     );
   }
 }
+// Varios productos permiten revisar la jerarquía de la lista, además del formulario.
+const previewProducts = [];
+for (const [index, name] of ['Traje de competición TS705', 'Gorro de silicona'].entries()) {
+  const preview = await db.product.create({
+    data: {
+      name,
+      slug: `${tag}-preview-${index}`,
+      modelCode: index === 0 ? 'TS705' : 'AC101',
+      basePrice: 15000,
+      status: 'ACTIVE',
+      colors: { create: { name: 'Negro', slug: 'negro', hex: '#191D24' } },
+    },
+    include: { colors: true },
+  });
+  previewProducts.push(preview.id);
+  await db.variant.create({
+    data: {
+      productId: preview.id,
+      colorId: preview.colors[0].id,
+      size: index === 0 ? '28' : 'Única',
+      sku: `${tag}-preview-${index}`,
+      stock: index === 0 ? 18 : 24,
+    },
+  });
+}
 const oldMovement = await db.inventoryMovement.create({
   data: {
     variantId: variants[0].id,
@@ -66,7 +91,11 @@ const interest = await db.sizeInterest.create({
   data: { variantId: variants[0].id, visitorKey: tag },
 });
 const staffUser = await db.user.create({
-  data: { email: `${tag}@example.invalid`, name: 'Equipo de bodega', role: 'STAFF' },
+  data: {
+    email: `bodega-${tag.slice(-6)}@example.invalid`,
+    name: 'Equipo de bodega',
+    role: 'STAFF',
+  },
 });
 const customerUser = await db.user.create({
   data: { email: `${tag}-customer@example.invalid`, name: 'Cliente', role: 'CUSTOMER' },
@@ -108,9 +137,10 @@ try {
   currentPage = page;
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('dialog', (dialog) => dialog.accept());
-  await page.goto(inventoryURL);
+  await page.goto(`${base}/admin/inventario`);
   await page.getByRole('heading', { name: 'Inventario', exact: true }).waitFor();
-  await page.screenshot({ path: '/tmp/taupoc-stock-desktop.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/taupoc-stock-refined-desktop.png', fullPage: true });
+  await page.goto(inventoryURL);
   await page.getByRole('button', { name: 'Agregar stock', exact: true }).click();
   await page.getByLabel('Agregar talla 22', { exact: true }).fill('2');
   await page.getByLabel('Agregar talla 24', { exact: true }).fill('4');
@@ -122,7 +152,7 @@ try {
       .getByText('Revisa el cambio · 9 unidades · 3 tallas y colores', { exact: true })
       .isVisible(),
   );
-  await page.screenshot({ path: '/tmp/taupoc-stock-entry.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/taupoc-stock-refined-entry.png', fullPage: true });
   await page.getByRole('button', { name: 'Guardar entrada', exact: true }).click();
   await page.getByRole('status').filter({ hasText: '9 unidades actualizadas' }).waitFor();
   assert.equal((await db.variant.findUniqueOrThrow({ where: { id: variants[0].id } })).stock, 7);
@@ -181,7 +211,7 @@ try {
   await page.goto(inventoryURL);
   await page.getByRole('button', { name: 'Agregar stock', exact: true }).click();
   await page.getByLabel('Agregar talla 28', { exact: true }).fill('2');
-  await page.screenshot({ path: '/tmp/taupoc-stock-mobile.png', fullPage: true });
+  await page.screenshot({ path: '/tmp/taupoc-stock-refined-mobile.png', fullPage: true });
   assert.ok(
     await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
     'Mobile inventory must not scroll horizontally',
@@ -219,13 +249,16 @@ try {
 
   await page.getByRole('button', { name: 'Mostrar Azul', exact: true }).click();
   await page.getByRole('button', { name: 'Ocultar Azul', exact: true }).waitFor();
-  assert.equal((await db.productColor.findUniqueOrThrow({ where: { id: product.colors[0].id } })).active, true);
+  assert.equal(
+    (await db.productColor.findUniqueOrThrow({ where: { id: product.colors[0].id } })).active,
+    true,
+  );
 
   const beforeArchive = await db.inventoryMovement.findMany({
     where: { variant: { productId: product.id } },
     orderBy: { id: 'asc' },
   });
-  await page.goto(`${base}/admin/productos?q=${encodeURIComponent(tag)}`);
+  await page.goto(`${base}/admin/productos?q=${encodeURIComponent(product.modelCode)}`);
   await page
     .getByRole('button', { name: `Más acciones para ${product.name}`, exact: true })
     .click();
@@ -257,12 +290,12 @@ try {
   if (currentPage) {
     console.error('Visible alerts:', await currentPage.getByRole('alert').allTextContents());
     console.error('Visible status:', await currentPage.getByRole('status').allTextContents());
-    await currentPage.screenshot({ path: '/tmp/taupoc-stock-failure.png', fullPage: true });
+    await currentPage.screenshot({ path: '/tmp/taupoc-stock-refined-failure.png', fullPage: true });
   }
   throw error;
 } finally {
   await browser.close();
-  await db.product.delete({ where: { id: product.id } });
+  await db.product.deleteMany({ where: { id: { in: [product.id, ...previewProducts] } } });
   await db.user.deleteMany({ where: { id: { in: [staffUser.id, customerUser.id] } } });
   await db.$disconnect();
 }
