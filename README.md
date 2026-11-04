@@ -264,15 +264,16 @@ y reglas por peso o por monto sin tocar código ni volver a desplegar.
 - **Pedidos** — filtros, detalle, cambio de estado con sincronía de inventario,
   carga de seguimiento con aviso automático al cliente, notas internas,
   reembolsos y packing slip imprimible.
-- **Productos** — alta, edición, duplicado y archivado; **matriz visual de stock
-  talla × color** editable como planilla, con relleno por fila y por columna;
+- **Productos** — alta, edición, duplicado y archivado; **stock por talla y color**
+  con entradas, salidas y conteos, vista previa y registro de cada movimiento;
   carga de imágenes con drag & drop y asignación por color; tabla de tallas y
   ficha técnica editables.
 - **Inicio** — bloques que arman la portada en el orden que se quiera: banners
   de una o varias láminas —fotos y videos mezclados, pasando solos—, franjas de
   productos elegidos a mano, tarjetas de acceso, bloques de texto. Cada bloque se sube, se baja, se duplica, se oculta o se
   borra. Las fotos y los videos se suben arrastrándolos o pegando una dirección.
-- **Inventario** — ajuste rápido de cualquier SKU, filtros por agotado y stock bajo.
+- **Inventario** — lista de productos con búsqueda y filtros; agregar o quitar unidades
+  de varias tallas y colores en un envío, historial y exportación a Excel.
 - **Clientes** — historial de compras, talla habitual, gestión de permisos.
 - **Envíos** — zonas por región, tarifas por courier, precio fijo o por peso o
   monto, envío gratis por umbral, retiro en tienda y entrega en torneo.
@@ -476,3 +477,40 @@ reintentos, estados, correos simulados, ventas por talla y confirmación de
 transferencias con cupones. Para el navegador: `node --import tsx
 tests/browser-admin-orders.mts`, con `DATABASE_URL` local y `TEST_BASE_URL`
 apuntando al servidor de prueba, sin credenciales externas de pagos ni correo.
+
+### Inventario por producto
+
+**Inventario → Agregar stock / Quitar stock** permite registrar cantidades de varias
+tallas y colores de un producto en un solo envío. Se muestra el stock actual y el
+resultado antes de guardar. **Ver tallas → Corregir conteo** permite registrar un
+recuento absoluto; los campos vacíos se conservan. La misma interfaz está en la
+pestaña **Stock** de cada producto.
+
+Los cambios se guardan junto con sus movimientos, responsable y nota, en una sola
+transacción. Los reintentos de un mismo envío no duplican unidades. Si otra venta,
+reserva o ajuste cambió el saldo, se solicita revisar las cantidades actuales;
+las salidas y los conteos no pueden consumir unidades reservadas. Las entradas
+permiten reponer parcialmente un saldo negativo existente.
+
+**Ver historial** muestra también los movimientos anteriores y permite exportar
+los resultados filtrados a CSV compatible con Excel. Ocultar tallas o colores y
+archivar productos conserva sus registros, stock, imágenes e historial. Para
+recuperarlos, usa **Mostrar u ocultar tallas**, **Colores → Mostrar** o **Productos → Activar**, respectivamente.
+
+Este rediseño utiliza las tablas y los identificadores existentes: no requiere una
+migración nueva, un reinicio de datos ni volver a cargar el inventario.
+
+Pruebas contra una base local exclusiva para pruebas, con las migraciones al día:
+
+```bash
+DATABASE_URL='postgresql://taupoc@127.0.0.1:5432/taupoc_test_stock?schema=public' \
+  node --conditions=react-server --import tsx --test tests/stock-management.test.ts
+
+# Con la aplicación apuntando a esa misma base y Chromium instalado:
+DATABASE_URL='postgresql://taupoc@127.0.0.1:5432/taupoc_test_stock?schema=public' \
+  node --import tsx tests/browser-stock.mts
+```
+
+La prueba de navegador verifica entradas, salidas, conteos, vista móvil, permisos,
+historial, exportación y conservación de datos al ocultar o archivar. Crea y retira
+únicamente sus propios registros de prueba.

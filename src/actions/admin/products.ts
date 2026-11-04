@@ -6,7 +6,6 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth';
 import { slugify } from '@/lib/utils';
-import { setStock } from '@/lib/inventory';
 import { deleteImage } from '@/lib/uploads';
 import { importMediaFromUrl, storeMediaImage } from '@/lib/media';
 import { parseCLP } from '@/lib/money';
@@ -30,6 +29,7 @@ function errorsOf(error: z.ZodError): Record<string, string> {
 
 function revalidateCatalog(slug?: string) {
   revalidatePath('/admin/productos');
+  revalidatePath('/admin/inventario');
   revalidatePath('/catalogo');
   revalidatePath('/');
   if (slug) revalidatePath(`/producto/${slug}`);
@@ -237,25 +237,13 @@ export async function setProductStatus(id: string, status: 'DRAFT' | 'ACTIVE' | 
   revalidateCatalog(product.slug);
 }
 
-export async function deleteProduct(id: string) {
+export async function archiveProduct(id: string) {
   await requireAdmin();
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: { images: true, _count: { select: { orderItems: true } } },
-  });
-  if (!product) return;
-
-  // Un producto con ventas no se borra: se archiva, para no romper el historial.
-  if (product._count.orderItems > 0) {
-    await prisma.product.update({ where: { id }, data: { status: 'ARCHIVED' } });
-    revalidateCatalog(product.slug);
-    redirect('/admin/productos?archivado=1');
-  }
-
-  await Promise.all(product.images.map((image) => deleteImage(image.url)));
-  await prisma.product.delete({ where: { id } });
+  // Retirar un producto del catálogo siempre conserva colores, imágenes, stock y movimientos.
+  const product = await prisma.product.update({ where: { id }, data: { status: 'ARCHIVED' } });
   revalidateCatalog(product.slug);
-  redirect('/admin/productos?eliminado=1');
+  revalidatePath('/admin/inventario');
+  redirect('/admin/productos?archivado=1');
 }
 
 // ── Colores ───────────────────────────────────────────────────
@@ -340,80 +328,27 @@ export async function saveColor(_prev: AdminState | null, formData: FormData): P
   return { ok: true, message: 'Color guardado.' };
 }
 
-export async function deleteColor(id: string) {
+export async function setColorVisibility(id: string, active: boolean): Promise<AdminState> {
   await requireAdmin();
-  const color = await prisma.productColor.findUnique({
-    where: { id },
-    include: { images: true, product: { select: { slug: true } } },
+  if (typeof id !== 'string' || typeof active !== 'boolean') return { ok: false, message: 'Color no válido.' };
+  const color = await prisma.productColor.update({
+    where: { id }, data: { active },
+    include: { product: { select: { slug: true } } },
   });
-  if (!color) return;
-  await Promise.all(color.images.map((image) => deleteImage(image.url)));
-  await prisma.productColor.delete({ where: { id } });
   revalidateCatalog(color.product.slug);
-}
-
-// ── Variantes (matriz talla × color) ───────────────────────────
-
-/**
- * Guarda la matriz completa de stock. Recibe pares `stock:<variantId>` y
- * `active:<variantId>` desde la planilla, y solo escribe lo que cambió.
- */
-export async function saveVariantMatrix(
-  _prev: AdminState | null,
-  formData: FormData,
-): Promise<AdminState> {
-  const admin = await requireAdmin();
-  const productId = String(formData.get('productId') ?? '');
-  if (!productId) return { ok: false, message: 'Producto no encontrado.' };
-
-  const variants = await prisma.variant.findMany({ where: { productId } });
-  const byId = new Map(variants.map((v) => [v.id, v]));
-
-  let changed = 0;
-  const activeFlags = new Set(
-    [...formData.keys()].filter((k) => k.startsWith('active:')).map((k) => k.slice(7)),
-  );
-
-  for (const [key, value] of formData.entries()) {
-    if (!key.startsWith('stock:')) continue;
-    const id = key.slice(6);
-    const variant = byId.get(id);
-    if (!variant) continue;
-
-    const stock = Math.max(0, Number(value) || 0);
-    const active = activeFlags.has(id);
-
-    if (variant.stock !== stock) {
-      await setStock({
-        variantId: id,
-        stock,
-        actorEmail: admin.email,
-        reason: 'Edición en la matriz de variantes',
-      });
-      changed++;
-    }
-    if (variant.active !== active) {
-      await prisma.variant.update({ where: { id }, data: { active } });
-      changed++;
-    }
-  }
-
-  const product = await prisma.product.findUnique({ where: { id: productId } });
-  revalidateCatalog(product?.slug);
+  revalidatePath(`/admin/productos/${color.productId}`);
   revalidatePath('/admin/inventario');
-
-  return {
-    ok: true,
-    message: changed === 0 ? 'No había cambios que guardar.' : `${changed} cambios guardados.`,
-  };
+  return { ok: true, message: active ? 'Color visible en la tienda.' : 'Color oculto. Se conservan su stock, imágenes e historial.' };
 }
+
+// ── Tallas ───────────────────────────────────────────────────
 
 /** Agrega una talla nueva a todos los colores del producto. */
 export async function addSize(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
   await requireAdmin();
   const productId = String(formData.get('productId') ?? '');
   const size = String(formData.get('size') ?? '').trim();
-  if (!productId || !size) return { ok: false, message: 'Ingresa la talla.' };
+  if (!productId || !size || size.length > 20) return { ok: false, message: 'Ingresa una talla de hasta 20 caracteres.' };
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -421,27 +356,28 @@ export async function addSize(_prev: AdminState | null, formData: FormData): Pro
   });
   if (!product) return { ok: false, message: 'Producto no encontrado.' };
 
-  await prisma.variant.createMany({
-    data: product.colors.map((color) => ({
-      productId,
-      colorId: color.id,
-      size,
-      sku: `${product.modelCode}-${color.slug.toUpperCase().slice(0, 3)}-${size}`,
-      stock: 0,
-      sortOrder: Number(size) || 0,
-    })),
-    skipDuplicates: true,
+  if (!product.colors.length) return { ok: false, message: 'Agrega un color antes de crear tallas.' };
+  const added = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${productId}))`;
+    let count = 0;
+    for (const color of product.colors) {
+      const exists = await tx.variant.findUnique({ where: { productId_colorId_size: { productId, colorId: color.id, size } } });
+      if (exists) continue;
+      const baseSku = `${product.modelCode}-${color.code ?? color.slug.toUpperCase().slice(0, 3)}-${size}`;
+      const duplicateSku = await tx.variant.findUnique({ where: { sku: baseSku } });
+      await tx.variant.create({ data: {
+        productId, colorId: color.id, size,
+        sku: duplicateSku ? `${baseSku}-${color.id}` : baseSku,
+        stock: 0, sortOrder: Number(size) || 0,
+      } });
+      count++;
+    }
+    return count;
   });
-
   revalidateCatalog(product.slug);
-  return { ok: true, message: `Talla ${size} agregada a ${product.colors.length} colores.` };
-}
-
-export async function removeSize(productId: string, size: string) {
-  await requireAdmin();
-  await prisma.variant.deleteMany({ where: { productId, size } });
-  const product = await prisma.product.findUnique({ where: { id: productId } });
-  revalidateCatalog(product?.slug);
+  revalidatePath(`/admin/productos/${productId}`);
+  revalidatePath('/admin/inventario');
+  return { ok: true, message: added ? `Talla ${size} agregada a ${added} colores, con stock en cero.` : `La talla ${size} ya existe. Puedes mostrarla desde Stock → Mostrar u ocultar tallas.` };
 }
 
 // ── Imágenes ──────────────────────────────────────────────────

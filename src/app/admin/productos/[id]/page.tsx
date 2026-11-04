@@ -8,7 +8,9 @@ import { formatCLP } from '@/lib/money';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { Card } from '@/components/admin/Card';
 import { ProductForm } from '@/components/admin/ProductForm';
-import { VariantMatrix } from '@/components/admin/VariantMatrix';
+import { ProductStock } from '@/components/admin/ProductStock';
+import { AddSizeForm } from '@/components/admin/AddSizeForm';
+import { getSettings } from '@/lib/settings';
 import { ColorManager } from '@/components/admin/ColorManager';
 import { ImageManager } from '@/components/admin/ImageManager';
 import { SpecsEditor, SizeChartEditor } from '@/components/admin/SpecsEditor';
@@ -53,9 +55,7 @@ export default async function EditProductPage({
 
   if (!product) notFound();
 
-  const sizes = [...new Set(product.variants.map((v) => v.size))].sort(
-    (a, b) => (Number(a) || 0) - (Number(b) || 0),
-  );
+  const settings = await getSettings();
 
   const colors = product.colors.map((color) => ({
     id: color.id,
@@ -124,7 +124,7 @@ export default async function EditProductPage({
             content: (
               <Card
                 title="Colores del producto"
-                description="Cada colorway genera su propio set de tallas y su propia galería de imágenes."
+                description="Agrega colores o cambia su visibilidad. Las tallas y el stock se conservan al ocultarlos."
               >
                 <ColorManager productId={product.id} colors={colors} />
               </Card>
@@ -132,30 +132,21 @@ export default async function EditProductPage({
           },
           {
             id: 'stock',
-            label: `Stock (${product.variants.length} SKU)`,
+            label: 'Stock',
             content: (
-              <Card title="Matriz de stock talla × color" padded>
-                {colors.length === 0 ? (
-                  <p className="text-[13.5px] text-chalk-faint">
-                    Primero agrega al menos un color en la pestaña Colores.
-                  </p>
-                ) : (
-                  <VariantMatrix
-                    productId={product.id}
-                    colors={colors.map((c) => ({ id: c.id, name: c.name, code: c.code, stripCode: c.stripCode, hex: c.hex }))}
-                    sizes={sizes}
-                    variants={product.variants.map((v) => ({
-                      id: v.id,
-                      size: v.size,
-                      colorId: v.colorId,
-                      sku: v.sku,
-                      stock: v.stock,
-                      active: v.active,
-                      lowStockThreshold: v.lowStockThreshold,
-                    }))}
-                  />
-                )}
-              </Card>
+              <div className="space-y-5">
+                <ProductStock defaultOpen product={{
+                  id: product.id, name: product.name, modelCode: product.modelCode, status: product.status,
+                  imageUrl: product.images[0]?.url ?? null,
+                  colors: product.colors.map((c) => ({ id: c.id, name: c.name, hex: c.hex, active: c.active })),
+                  variants: product.variants.map((v) => ({
+                    id: v.id, colorId: v.colorId, size: v.size, sku: v.sku, stock: v.stock,
+                    reserved: v.reserved, active: v.active,
+                    lowStockThreshold: v.lowStockThreshold || settings.lowStockThreshold,
+                  })),
+                }} />
+                {colors.length > 0 ? <AddSizeForm productId={product.id} /> : null}
+              </div>
             ),
           },
           {
@@ -235,8 +226,8 @@ export default async function EditProductPage({
 
       {product._count.orderItems > 0 ? (
         <p className="mt-6 text-[12px] text-chalk-faint">
-          Este producto tiene {product._count.orderItems} líneas de pedido asociadas. Al eliminarlo se
-          archivará en lugar de borrarse, para no romper el historial de ventas. Precio actual:{' '}
+          Este producto tiene {product._count.orderItems} líneas de pedido asociadas. Al archivarlo se
+          conservan el stock y el historial de ventas. Precio actual:{' '}
           {formatCLP(product.basePrice)}.
         </p>
       ) : null}

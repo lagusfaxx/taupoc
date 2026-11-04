@@ -12,9 +12,11 @@ import { IconSearch } from '@/components/ui/Icons';
 export function Toolbar({
   searchPlaceholder = 'Buscar…',
   filters = [],
+  quiet = false,
 }: {
   searchPlaceholder?: string;
   filters?: { name: string; label: string; options: { value: string; label: string }[] }[];
+  quiet?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -49,21 +51,33 @@ export function Toolbar({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={searchPlaceholder}
           aria-label={searchPlaceholder}
-          className="h-10 w-full border border-line bg-ink-900 pl-9 pr-3 text-[13.5px] text-chalk placeholder:text-chalk-faint/70 focus:border-[var(--accent)] focus:outline-none"
+          className={cn(
+            'h-10 w-full border pl-9 pr-3 text-[13.5px] text-chalk placeholder:text-chalk-faint/70 focus:border-[var(--accent)] focus:outline-none',
+            quiet ? 'rounded-md border-line bg-transparent' : 'border-line bg-ink-900',
+          )}
         />
       </form>
 
       {filters.map((filter) => (
-        <label key={filter.name} className="relative flex shrink-0 items-center">
+        <label key={filter.name} className="relative flex max-w-full shrink-0 items-center">
           <span className="sr-only">{filter.label}</span>
           <select
             value={params.get(filter.name) ?? ''}
             onChange={(e) => setParam(filter.name, e.target.value)}
-            className="h-10 appearance-none border border-line bg-ink-900 px-3 pr-8 text-[13px] text-chalk focus:border-[var(--accent)] focus:outline-none"
+            className={cn(
+              'h-10 max-w-full appearance-none px-3 pr-8 text-[13px] focus:border-[var(--accent)] focus:outline-none',
+              quiet
+                ? 'rounded-md border border-transparent bg-transparent text-chalk-dim'
+                : 'border border-line bg-ink-900 text-chalk',
+            )}
           >
-            <option value="">{filter.label}</option>
+            <option value="" className="bg-ink-900 text-chalk">
+              {filter.label}
+            </option>
             {filter.options.map((option) => (
-              <option key={option.value} value={option.value}>{option.label}</option>
+              <option key={option.value} value={option.value} className="bg-ink-900 text-chalk">
+                {option.label}
+              </option>
             ))}
           </select>
           <svg

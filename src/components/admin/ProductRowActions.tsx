@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { deleteProduct, duplicateProduct, setProductStatus } from '@/actions/admin/products';
-import { IconCopy, IconExternal, IconTrash } from '@/components/ui/Icons';
+import { archiveProduct, duplicateProduct, setProductStatus } from '@/actions/admin/products';
+import { IconCopy, IconExternal, IconBox } from '@/components/ui/Icons';
 import { cn } from '@/lib/utils';
 
 export function ProductRowActions({
@@ -102,16 +102,16 @@ export function ProductRowActions({
               type="button"
               onClick={() => {
                 setOpen(false);
-                if (confirm(`¿Eliminar "${name}"? Si tiene ventas se archivará en vez de borrarse.`)) {
+                if (confirm(`¿Archivar "${name}"? Se ocultará de la tienda y conservará su stock e historial. Puedes volver a activarlo.`)) {
                   startTransition(async () => {
-                    await deleteProduct(id);
+                    await archiveProduct(id);
                   });
                 }
               }}
               className="flex w-full items-center gap-2 border-t border-line px-3 py-2 text-left text-[13px] text-signal-bad hover:bg-signal-bad/10"
             >
-              <IconTrash className="h-3.5 w-3.5" />
-              Eliminar
+              <IconBox className="h-3.5 w-3.5" />
+              Archivar
             </button>
           </div>
         </>
