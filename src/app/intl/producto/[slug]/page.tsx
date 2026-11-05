@@ -7,6 +7,7 @@ import { formatUsdCents } from '@/lib/fx';
 import { cn } from '@/lib/utils';
 import { AddToCart } from '@/components/intl/AddToCart';
 import { ProductGallery } from '@/components/intl/ProductGallery';
+import { ProductDeliveryEstimate } from '@/components/intl/DeliveryEstimate';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,7 +38,10 @@ export default async function IntlProductPage({ params }: { params: Params }) {
 
   const { product, color, images, priceCents, sizes, colors } = view;
   const anyAvailable = sizes.some((s) => s.available > 0);
-  const paragraphs = product.description.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const paragraphs = product.description
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
 
   return (
     <article className="mx-auto max-w-[1600px] px-4 pb-16 pt-4 sm:px-8 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_460px]">
@@ -51,8 +55,12 @@ export default async function IntlProductPage({ params }: { params: Params }) {
       <div className="mt-6 lg:mt-0">
         <div className="lg:sticky lg:top-28">
           <p className="text-[13px] text-graphite-soft">{product.line?.name ?? 'TAUPOC'}</p>
-          <h1 className="mt-1 text-[30px] leading-[0.98] lg:mt-2 lg:text-[clamp(36px,4vw,56px)]">{product.name}</h1>
-          <p className="mt-1.5 text-[16px] text-graphite-soft lg:mt-3 lg:text-[17px]">{color.name}</p>
+          <h1 className="mt-1 text-[30px] leading-[0.98] lg:mt-2 lg:text-[clamp(36px,4vw,56px)]">
+            {product.name}
+          </h1>
+          <p className="mt-1.5 text-[16px] text-graphite-soft lg:mt-3 lg:text-[17px]">
+            {color.name}
+          </p>
 
           <p className="mt-4 text-[22px] lg:mt-8 text-graphite">
             {product.status === 'COMING_SOON'
@@ -62,9 +70,12 @@ export default async function IntlProductPage({ params }: { params: Params }) {
                 : 'Precio por confirmar'}
           </p>
           <p className="mt-1 text-[13px] text-graphite-soft">
-            <span className="lg:hidden">En dólares. Impuestos de importación por cuenta del comprador.</span>
+            <span className="lg:hidden">
+              En dólares. Impuestos de importación por cuenta del comprador.
+            </span>
             <span className="hidden lg:inline">
-              Precio en dólares. Impuestos y derechos de importación del país de destino por cuenta del comprador.
+              Precio en dólares. Impuestos y derechos de importación del país de destino por cuenta
+              del comprador.
             </span>
           </p>
 
@@ -100,9 +111,15 @@ export default async function IntlProductPage({ params }: { params: Params }) {
             />
           ) : (
             <p className="mt-6 text-[15px] lg:mt-10 text-graphite-soft">
-              {product.status === 'COMING_SOON' ? 'Disponible muy pronto.' : 'Este color está agotado por ahora.'}
+              {product.status === 'COMING_SOON'
+                ? 'Disponible muy pronto.'
+                : 'Este color está agotado por ahora.'}
             </p>
           )}
+
+          {product.status === 'ACTIVE' && anyAvailable ? (
+            <ProductDeliveryEstimate productId={product.id} detailed />
+          ) : null}
 
           {paragraphs.length > 0 ? (
             <div className="mt-12 space-y-4 text-[16px] leading-relaxed text-graphite">
@@ -121,7 +138,10 @@ export default async function IntlProductPage({ params }: { params: Params }) {
                 </div>
               ) : null}
               {product.specs.map((spec) => (
-                <div key={spec.id} className="flex justify-between gap-6 border-t border-hairline py-3.5">
+                <div
+                  key={spec.id}
+                  className="flex justify-between gap-6 border-t border-hairline py-3.5"
+                >
                   <dt className="text-graphite-soft">{spec.label}</dt>
                   <dd className="text-right text-graphite">{spec.value}</dd>
                 </div>

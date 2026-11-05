@@ -198,7 +198,7 @@ function toCLP(amount: number, currency: string): number | null {
  * Cotiza el despacho internacional con todas las paqueterías disponibles.
  * Envía cotiza una paquetería por llamada, así que van en paralelo.
  */
-export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): Promise<EnviaQuoteResult> {
+export async function enviaQuotes(dest: EnviaDestination, weightGrams: number, options?: { timeoutMs?: number }): Promise<EnviaQuoteResult> {
   if (!enviaConfigured()) return { quotes: [], error: 'Los envíos internacionales no están configurados.' };
   const from = origin();
   if (!from.street || !from.postalCode || !from.phone) {
@@ -242,6 +242,7 @@ export async function enviaQuotes(dest: EnviaDestination, weightGrams: number): 
       try {
         const res = await fetch(`${SHIP_API}/ship/rate/`, {
           method: 'POST',
+          ...(options?.timeoutMs ? { signal: AbortSignal.timeout(options.timeoutMs) } : {}),
           headers: headers(),
           cache: 'no-store',
           body: JSON.stringify({

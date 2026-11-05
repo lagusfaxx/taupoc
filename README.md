@@ -515,3 +515,45 @@ visualización móvil, rechazo de cupones vencidos o agotados por cliente,
 confirmación de cambios de total, rechazo del envío gratis en `.lat`, el importe enviado a PayPal
 y que repetir el retorno no duplique usos ni movimientos de stock. Las capturas
 y el registro del servidor quedan en el directorio temporal indicado al terminar.
+
+### Plazos de envío por localidad en taupoc.lat
+
+Al entrar a cualquier página de `.lat`, el navegador solicita permiso de ubicación
+una vez por sesión. Mapbox Geocoding v6 identifica país, localidad, provincia y
+código postal. El visitante puede cambiar la localidad desde la franja bajo el
+menú, buscarla con Mapbox o completar los campos manualmente. Si rechaza el permiso,
+el sitio sigue funcionando y permite elegir una localidad. Sin código postal no
+se inventa uno: se pide completarlo antes de consultar el plazo.
+
+Los productos disponibles muestran el plazo real informado por Envía para esa
+localidad y su peso. Se elige la tarifa más económica que informe un plazo en días,
+se identifica el servicio en la ficha y se aclara que el tránsito cuenta desde el
+despacho y puede variar por aduana. Un producto agotado o próximo a llegar no promete
+una fecha. Sin cotización o sin plazo del courier se muestra «plazo por confirmar».
+
+Reutiliza `NEXT_PUBLIC_MAPBOX_TOKEN` (variable de compilación), `ENVIA_API_KEY`,
+`ENVIA_MODE`, las paqueterías y la bodega ya configuradas. El token público de Mapbox
+debe permitir `https://taupoc.lat`. Se necesita HTTPS para la geolocalización, salvo
+localhost. Sin token de Mapbox queda disponible la selección manual.
+
+La localidad permanece en `sessionStorage`; no se guardan coordenadas ni dirección
+particular en la base de datos. La dirección del checkout la confirma el comprador.
+Las consultas se agrupan por peso facturable y se reutilizan durante 10 minutos,
+con límite de solicitudes. Solo se consulta la tarifa: no se crean guías ni pedidos.
+El pie internacional muestra Instagram y correo desde los mismos ajustes de `.cl`.
+No requiere migraciones.
+
+Pruebas con `DATABASE_URL` de una base local separada `taupoc_test…`:
+
+```bash
+node --conditions=react-server --import tsx --test tests/delivery-location.test.ts tests/product-delivery.test.ts
+NEXT_PUBLIC_MAPBOX_TOKEN=pk.test-only-local npm run build
+node --import tsx tests/browser-intl-delivery.mts
+```
+
+El token de la última compilación es **solo para pruebas locales**: Mapbox y Envía
+se simulan y se bloquean las conexiones externas del navegador. El despliegue debe
+compilar con el token público real configurado. La prueba usa el puerto 3119,
+comprueba entradas por las distintas páginas, Panamá, cambios de ciudad, permiso
+rechazado, código postal faltante, errores de proveedores, caché, móvil y enlaces
+de contacto compartidos; deja capturas en el directorio temporal indicado al terminar.
