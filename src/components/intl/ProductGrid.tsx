@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { IntlCard } from '@/lib/intl-catalog';
 import { formatUsdCents } from '@/lib/fx';
+import { ProductDeliveryEstimate } from './DeliveryEstimate';
 
 /**
  * Grilla de taupoc.lat: la foto lo más grande posible y, debajo, solo texto.
@@ -39,6 +40,7 @@ export function ProductGrid({ cards, priority = 0 }: { cards: IntlCard[]; priori
               </p>
             </div>
           </Link>
+          {card.available ? <ProductDeliveryEstimate productId={card.productId} /> : null}
         </li>
       ))}
     </ul>

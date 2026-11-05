@@ -7,6 +7,7 @@ import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from '@/lib/seo';
 import { getStore } from '@/lib/storefront-server';
 import { intlIndexable, storeSiteUrl } from '@/lib/storefront';
 import './globals.css';
+import { DeliveryProvider } from '@/components/intl/DeliveryProvider';
 
 /*
  * Un solo layout raíz para las dos tiendas: cambia el idioma, el tema, las
@@ -151,7 +152,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           Saltar al contenido
         </a>
 
-        {children}
+        {intl ? <DeliveryProvider>{children}</DeliveryProvider> : children}
 
         {/* Analítica de Google configurable desde el panel: sin ID no se carga. */}
         {settings.gtmId ? (

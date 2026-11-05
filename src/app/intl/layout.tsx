@@ -3,6 +3,7 @@ import { getCartCount } from '@/lib/cart';
 import { getSettings } from '@/lib/settings';
 import { WhatsAppButton } from '@/components/shared/WhatsAppButton';
 import { IntlCartDrawer } from '@/components/intl/CartDrawer';
+import { DeliveryLocationControl } from '@/components/intl/DeliveryLocation';
 import './intl.css';
 
 /**
@@ -17,16 +18,27 @@ export default async function IntlLayout({ children }: { children: React.ReactNo
         cartCount={cartCount}
         logo={
           settings.intlLogoUrl
-            ? { src: settings.intlLogoUrl, height: settings.logoHeight, darken: false, hasName: settings.intlLogoHasName }
+            ? {
+                src: settings.intlLogoUrl,
+                height: settings.logoHeight,
+                darken: false,
+                hasName: settings.intlLogoHasName,
+              }
             : settings.logoUrl
-              ? { src: settings.logoUrl, height: settings.logoHeight, darken: true, hasName: settings.logoHasName }
+              ? {
+                  src: settings.logoUrl,
+                  height: settings.logoHeight,
+                  darken: true,
+                  hasName: settings.logoHasName,
+                }
               : null
         }
       />
+      <DeliveryLocationControl />
       <main id="contenido" className="flex-1">
         {children}
       </main>
-      <IntlFooter />
+      <IntlFooter instagram={settings.instagram} contactEmail={settings.contactEmail} />
       <WhatsAppButton phone={settings.whatsapp} message="Hola, les escribo desde taupoc.lat." />
       <IntlCartDrawer />
     </div>

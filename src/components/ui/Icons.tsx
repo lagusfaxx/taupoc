@@ -178,6 +178,20 @@ export const IconInstagram = (p: P) => (
   </svg>
 );
 
+export const IconMail = (p: P) => (
+  <svg {...base(p)}>
+    <rect x="3" y="5" width="18" height="14" rx="1" />
+    <path d="m3 6 9 7 9-7" />
+  </svg>
+);
+
+export const IconLocation = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z" />
+    <circle cx="12" cy="10" r="2.5" />
+  </svg>
+);
+
 export const IconArrow = (p: P) => (
   <svg {...base(p)}>
     <path d="M4 12h15M13 6l6 6-6 6" />

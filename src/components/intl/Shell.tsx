@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { mediaSrcSet } from '@/lib/media-url';
 import { IntlCartLink } from './CartLink';
+import { IconInstagram, IconMail } from '@/components/ui/Icons';
 
 /*
  * Marco de taupoc.lat: la marca a la izquierda, tres palabras de navegación
@@ -24,7 +25,11 @@ export interface IntlLogo {
 }
 
 function Brand({ logo }: { logo?: IntlLogo | null }) {
-  const name = <span className="font-editorial text-[19px] font-semibold tracking-[0.18em] text-graphite">TAUPOC</span>;
+  const name = (
+    <span className="font-editorial text-[19px] font-semibold tracking-[0.18em] text-graphite">
+      TAUPOC
+    </span>
+  );
   if (!logo?.src) return name;
   return (
     <span className="inline-flex items-center gap-2.5">
@@ -42,7 +47,13 @@ function Brand({ logo }: { logo?: IntlLogo | null }) {
   );
 }
 
-export function IntlHeader({ cartCount = 0, logo }: { cartCount?: number; logo?: IntlLogo | null }) {
+export function IntlHeader({
+  cartCount = 0,
+  logo,
+}: {
+  cartCount?: number;
+  logo?: IntlLogo | null;
+}) {
   return (
     // Fijo arriba, como en taupoc.cl: el carrito queda siempre a la vista.
     <header className="sticky top-0 z-50 bg-paper/95 backdrop-blur supports-[backdrop-filter]:bg-paper/85">
@@ -69,11 +80,40 @@ export function IntlHeader({ cartCount = 0, logo }: { cartCount?: number; logo?:
   );
 }
 
-export function IntlFooter() {
+export function IntlFooter({
+  instagram,
+  contactEmail,
+}: {
+  instagram: string;
+  contactEmail: string;
+}) {
   return (
     <footer className="mt-32 bg-paper">
       <div className="mx-auto max-w-[1600px] px-4 py-12 text-[13px] text-graphite-soft sm:px-8">
-        <p>TAUPOC · Trajes de competencia homologados World Aquatics · Envíos a toda Latinoamérica</p>
+        <p>
+          TAUPOC · Trajes de competencia homologados World Aquatics · Envíos a toda Latinoamérica
+        </p>
+        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 text-[14px]">
+          {instagram ? (
+            <a
+              href={`https://instagram.com/${instagram.replace('@', '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-2 underline-offset-4 hover:text-graphite hover:underline"
+              aria-label="Instagram"
+            >
+              <IconInstagram className="h-5 w-5" /> Instagram
+            </a>
+          ) : null}
+          {contactEmail ? (
+            <a
+              href={`mailto:${contactEmail}`}
+              className="inline-flex min-h-11 items-center gap-2 break-all underline-offset-4 hover:text-graphite hover:underline"
+            >
+              <IconMail className="h-5 w-5 shrink-0" /> {contactEmail}
+            </a>
+          ) : null}
+        </div>
       </div>
     </footer>
   );

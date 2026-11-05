@@ -37,6 +37,7 @@ function studioImages<T extends ImageLike>(images: T[]): T[] {
 
 export interface IntlCard {
   key: string;
+  productId: string;
   href: string;
   productName: string;
   colorName: string;
@@ -74,6 +75,7 @@ export async function getIntlCards(filters: { gender?: Gender } = {}): Promise<I
       return [
         {
           key: `${p.id}:${c.id}`,
+          productId: p.id,
           href: p.colors.length > 1 ? colorPagePath(p.slug, c.slug) : `/producto/${p.slug}`,
           productName: p.name,
           colorName: c.name,
