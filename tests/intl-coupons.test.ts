@@ -118,22 +118,33 @@ test('shared coupons in CLP and USD against PostgreSQL', async (t) => {
         assert.equal((await evaluateCoupon(code, lines, 'other@example.invalid', usd)).ok, true);
       },
     );
-    await t.test('free shipping retains a delivery quote but charges zero shipping', async () => {
-      await reset({ type: 'FREE_SHIPPING', value: 0 });
-      const result = await evaluateCoupon(code, lines, null, usd);
-      assert.equal(result.freeShipping, true);
-      assert.deepEqual(
-        intlTotal(
+    await t.test(
+      'free shipping is exclusive to CL, including previously saved INTL codes',
+      async () => {
+        await reset({ type: 'FREE_SHIPPING', value: 0 });
+        const domestic = await evaluateCoupon(code, lines);
+        assert.equal(domestic.ok, true);
+        assert.equal(domestic.freeShipping, true);
+        const result = await evaluateCoupon(code, lines, null, usd, 'INTL');
+        assert.equal(result.ok, false);
+        assert.equal(result.freeShipping, false);
+        assert.equal(result.discount, 0);
+        assert.match(result.reason!, /solo es válido en taupoc\.cl/);
+        const { pricing } = await evaluateIntlCart(
           {
-            subtotalCents: 29800,
-            discountCents: result.discount,
-            freeShipping: result.freeShipping,
-          },
-          3040,
-        ),
-        { shippingCents: 0, totalCents: 29800 },
-      );
-    });
+            requestedCouponCode: code,
+            couponCode: code,
+            couponFreeShipping: true,
+            lines: [{ productId: product.id, unitPrice: 139990, quantity: 2 }],
+          } as CartSummary,
+          fx,
+        );
+        assert.equal(pricing.couponCode, null);
+        assert.equal(pricing.freeShipping, false);
+        assert.match(pricing.couponError!, /solo es válido en taupoc\.cl/);
+        assert.deepEqual(intlTotal(pricing, 3040), { shippingCents: 3040, totalCents: 32840 });
+      },
+    );
     await t.test(
       'INTL re-evaluates the stored code even if CLP evaluation rejected it',
       async () => {

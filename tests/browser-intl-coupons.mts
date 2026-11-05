@@ -251,24 +251,69 @@ try {
   await limited.page.getByRole('button', { name: 'Pagar US$ 220 con PayPal', exact: true }).click();
   await limited.page.getByRole('alert').filter({ hasText: 'máximo de veces' }).first().waitFor();
   assert.equal(await db.order.count({ where: { email: `${tag}@example.invalid` } }), 1);
-  // Free shipping still selects a real service, with zero charged shipping.
+  // Free-shipping coupons cannot be applied to INTL carts.
+  const rejected = await customer();
+  await rejected.page.goto(`${base}/carrito`);
+  await rejected.page.getByLabel('Código de descuento').fill(coupons[2].code);
+  await rejected.page.getByRole('button', { name: 'Aplicar', exact: true }).click();
+  await rejected.page
+    .getByRole('alert')
+    .filter({ hasText: 'solo es válido en taupoc.cl' })
+    .waitFor();
+  assert.equal(
+    (await db.cart.findUniqueOrThrow({ where: { id: rejected.cart.id } })).couponCode,
+    null,
+  );
+  // A code saved before this rule must also be rejected at checkout, on the server.
   const free = await customer(coupons[2].code);
   await free.page.goto(`${base}/checkout`);
+  await free.page.getByRole('alert').filter({ hasText: 'solo es válido en taupoc.cl' }).waitFor();
   await contact(free.page, `${tag}-free@example.invalid`);
-  await total(free.page, 'Envío', 'Gratis');
-  await total(free.page, 'Total', 'US$ 200');
-  await free.page.getByRole('button', { name: 'Pagar US$ 200 con PayPal', exact: true }).click();
+  await total(free.page, 'Envío', 'US$ 30');
+  await total(free.page, 'Total', 'US$ 230');
+  assert.equal(
+    await free.page
+      .getByRole('button', { name: 'Pagar US$ 230 con PayPal', exact: true })
+      .isDisabled(),
+    true,
+  );
+  const submitted = free.page.waitForResponse(
+    (r) => r.request().method() === 'POST' && new URL(r.url()).pathname === '/checkout',
+  );
+  await free.page.locator('form').evaluate((form: HTMLFormElement) => form.requestSubmit());
+  assert.equal((await submitted).ok(), true);
+  await free.page
+    .getByRole('alert')
+    .filter({ hasText: 'solo es válido en taupoc.cl' })
+    .nth(1)
+    .waitFor();
+  assert.equal(await db.order.count({ where: { email: `${tag}-free@example.invalid` } }), 0);
+  await free.page.getByRole('button', { name: 'Quitar cupón' }).click();
+  await total(free.page, 'Total', 'US$ 230');
+  await free.page.getByRole('button', { name: 'Pagar US$ 230 con PayPal', exact: true }).click();
   await free.page.waitForURL('https://www.sandbox.paypal.com/**');
-  const freeOrder = await db.order.findFirstOrThrow({
+  const paidShippingOrder = await db.order.findFirstOrThrow({
     where: { email: `${tag}-free@example.invalid` },
   });
-  assert.equal(freeOrder.shippingTotal, 0);
-  assert.equal(freeOrder.chargedCents, 20000);
-  assert.equal(freeOrder.shippingRateId, 'envia:dhl:express');
-  assert.equal(freeOrder.couponId, coupons[2].id);
+  assert.equal(paidShippingOrder.shippingTotal, 30000);
+  assert.equal(paidShippingOrder.chargedCents, 23000);
+  assert.equal(paidShippingOrder.couponId, null);
+  assert.equal((await db.coupon.findUniqueOrThrow({ where: { id: coupons[2].id } })).usedCount, 0);
+  const paidShippingPaypal = JSON.parse(
+    readFileSync(join(records, `${paidShippingOrder.paypalOrderId}.json`), 'utf8'),
+  );
+  assert.deepEqual(paidShippingPaypal.purchase_units[0].amount, {
+    currency_code: 'USD',
+    value: '230.00',
+  });
+  // The same coupon remains available to Chilean buyers.
+  const domesticFree = await customer(coupons[2].code, true);
+  await domesticFree.page.goto(`${domesticFree.url}/carrito`);
+  await domesticFree.page.getByRole('button', { name: 'Quitar cupón' }).waitFor();
+  assert.ok((await domesticFree.page.locator('body').innerText()).includes(coupons[2].code));
   assert.deepEqual(errors, []);
   console.log(
-    `PASS: cart, mobile, checkout, CLP regression, stale totals, expiry, guest limits, free shipping, PayPal amount and idempotent use. Artifacts: ${records}`,
+    `PASS: cart, mobile, checkout, CLP regression, stale totals, expiry, guest limits, CL-only free shipping, PayPal amount and idempotent use. Artifacts: ${records}`,
   );
 } catch (error) {
   for (const [i, page] of browser

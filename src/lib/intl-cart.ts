@@ -16,6 +16,7 @@ export async function evaluateIntlCart(cart: CartSummary, fx: FxConfig, email?: 
     })),
     email,
     { currency: 'USD', clpPerUsd: fx.clpPerUsd },
+    'INTL',
   );
   const pricing: IntlCartPricing = {
     lines: lines.map((line) => ({

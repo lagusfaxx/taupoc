@@ -1,6 +1,7 @@
 import 'server-only';
 import type { Coupon } from '@prisma/client';
 import { prisma } from './db';
+import type { Storefront } from './storefront';
 
 export interface PriceableLine {
   productId: string | null;
@@ -32,6 +33,7 @@ export async function evaluateCoupon(
   lines: PriceableLine[],
   userEmail?: string | null,
   currency: CouponCurrency = { currency: 'CLP' },
+  storefront: Storefront = 'CL',
 ): Promise<CouponEvaluation> {
   if (!code) return NO_DISCOUNT;
   if (
@@ -51,6 +53,9 @@ export async function evaluateCoupon(
 
   if (!coupon || !coupon.active) {
     return { ...NO_DISCOUNT, reason: 'El cupón no existe o está inactivo.' };
+  }
+  if (storefront === 'INTL' && coupon.type === 'FREE_SHIPPING') {
+    return { ...NO_DISCOUNT, reason: 'Este cupón de envío gratis solo es válido en taupoc.cl.' };
   }
   const now = new Date();
   if (coupon.startsAt && coupon.startsAt > now) {

@@ -67,8 +67,9 @@ function CouponForm({
       {coupon ? <input type="hidden" name="id" value={coupon.id} /> : null}
 
       <p className="mb-4 text-[13px] text-chalk-muted">
-        Válido en taupoc.cl y taupoc.lat, con usos compartidos. Los montos en pesos se convierten a
-        dólares en .lat. El envío gratis también cubre despachos internacionales.
+        Los descuentos de porcentaje y monto fijo funcionan en taupoc.cl y taupoc.lat, con usos
+        compartidos. Los montos en pesos se convierten a dólares en .lat. Los cupones de envío gratis
+        son exclusivos de taupoc.cl.
       </p>
 
       {state ? (

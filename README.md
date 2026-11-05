@@ -479,7 +479,7 @@ apuntando al servidor de prueba, sin credenciales externas de pagos ni correo.
 
 ### Cupones en taupoc.lat
 
-El carrito y el checkout de `.lat` aceptan los mismos códigos que `.cl`, sin
+El carrito y el checkout de `.lat` aceptan los códigos de porcentaje y monto fijo de `.cl`, sin
 duplicar cupones ni migrar datos. Vigencia, productos permitidos y usos son
 compartidos; el límite por cliente se verifica con el correo de la compra,
 también para invitados. Se contabiliza el uso al confirmar el pago.
@@ -489,8 +489,9 @@ también para invitados. Se contabiliza el uso al confirmar el pago.
   al centavo más cercano y limitado al subtotal elegible. No lleva margen,
   ajuste de IVA ni redondeo comercial de productos.
 - Compra mínima: se convierte de CLP a USD, redondeada hacia arriba al centavo.
-- Envío gratis: cubre también el despacho internacional; se sigue eligiendo una
-  tarifa real de Envía. Los impuestos de importación quedan a cargo del comprador.
+- Envío gratis: exclusivo de `.cl`. En `.lat` se rechaza con un aviso, también si
+  el código ya estaba guardado en el carrito. El envío internacional se cobra según
+  la tarifa de Envía; los impuestos de importación quedan a cargo del comprador.
 
 El servidor reevalúa el cupón y el envío antes de crear el pedido. Si el total
 cambió, devuelve el resumen actualizado y exige una nueva confirmación; un
@@ -511,6 +512,6 @@ La prueba de navegador inicia su propio Next en el puerto 3118, usa Chromium
 en `/usr/bin/chromium` y simula Envía, PayPal y correo sin solicitudes externas.
 Comprueba aplicación, eliminación, persistencia y cantidades en el carrito,
 visualización móvil, rechazo de cupones vencidos o agotados por cliente,
-confirmación de cambios de total, envío gratis, el importe enviado a PayPal
+confirmación de cambios de total, rechazo del envío gratis en `.lat`, el importe enviado a PayPal
 y que repetir el retorno no duplique usos ni movimientos de stock. Las capturas
 y el registro del servidor quedan en el directorio temporal indicado al terminar.
