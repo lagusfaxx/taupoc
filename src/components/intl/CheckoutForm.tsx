@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 import {
   intlShippingOptions,
   intlStates,
@@ -10,17 +10,10 @@ import {
   type IntlShippingOption,
 } from '@/actions/checkout-intl';
 import { formatUsdCents } from '@/lib/fx';
-import { taxIdRule } from '@/lib/intl-checkout';
+import { intlTotal, taxIdRule, type IntlCartPricing } from '@/lib/intl-checkout';
+import { CouponEntry } from './CouponEntry';
 import { cn } from '@/lib/utils';
 import { AddressSearch, type PickedAddress } from './AddressSearch';
-
-interface Line {
-  itemId: string;
-  name: string;
-  detail: string;
-  quantity: number;
-  lineCents: number;
-}
 
 const FIELD =
   'h-12 w-full border border-hairline bg-paper px-3.5 text-[16px] text-graphite placeholder:text-graphite-faint focus:border-graphite focus:outline-none';
@@ -53,15 +46,24 @@ function Field({
 }
 
 export function IntlCheckoutForm({
-  lines,
-  subtotalCents,
+  pricing: initialPricing,
   countries,
 }: {
-  lines: Line[];
-  subtotalCents: number;
+  pricing: IntlCartPricing;
   countries: { code: string; name: string }[];
 }) {
-  const [addr, setAddr] = useState({ country: '', state: '', city: '', postalCode: '', street: '', streetNumber: '' });
+  const [pricing, setPricing] = useState(initialPricing);
+  const [couponPending, setCouponPending] = useState(false);
+  const [email, setEmail] = useState('');
+  useEffect(() => setPricing(initialPricing), [initialPricing]);
+  const [addr, setAddr] = useState({
+    country: '',
+    state: '',
+    city: '',
+    postalCode: '',
+    street: '',
+    streetNumber: '',
+  });
   const [states, setStates] = useState<{ code: string; name: string }[]>([]);
   const [options, setOptions] = useState<IntlShippingOption[]>([]);
   const [quoting, setQuoting] = useState(false);
@@ -71,13 +73,18 @@ export function IntlCheckoutForm({
   const [pending, start] = useTransition();
   const errors = state?.fieldErrors ?? {};
   const tax = taxIdRule(addr.country);
-  const set = (k: keyof typeof addr) => (e: { target: { value: string } }) => setAddr((a) => ({ ...a, [k]: e.target.value }));
+  const set = (k: keyof typeof addr) => (e: { target: { value: string } }) =>
+    setAddr((a) => ({ ...a, [k]: e.target.value }));
   const [extra, setExtra] = useState('');
 
   // Lo elegido en el buscador completa los campos. El estado se busca por
   // nombre en la lista de Envía, que es el código que pide para cotizar.
   const applyPicked = (p: PickedAddress) => {
-    const norm = (v: string) => v.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const norm = (v: string) =>
+      v
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
     const state = states.find((st) => norm(st.name) === norm(p.stateName))?.code;
     setAddr((a) => ({
       ...a,
@@ -93,7 +100,10 @@ export function IntlCheckoutForm({
   useEffect(() => {
     setStates([]);
     setAddr((a) => ({ ...a, state: '' }));
-    if (addr.country) intlStates(addr.country).then(setStates).catch(() => setStates([]));
+    if (addr.country)
+      intlStates(addr.country)
+        .then(setStates)
+        .catch(() => setStates([]));
   }, [addr.country]);
 
   // El código postal completa estado y ciudad cuando Envía lo conoce.
@@ -124,9 +134,15 @@ export function IntlCheckoutForm({
         .then((r) => {
           setOptions(r.options);
           setRateId(r.options[0]?.rateId ?? '');
-          setQuoteError(r.options.length === 0 ? (r.error ?? 'No hay envíos disponibles para esta dirección.') : null);
+          setQuoteError(
+            r.options.length === 0
+              ? (r.error ?? 'No hay envíos disponibles para esta dirección.')
+              : null,
+          );
         })
-        .catch(() => setQuoteError('No pudimos cotizar el envío. Revisa la dirección e inténtalo de nuevo.'))
+        .catch(() =>
+          setQuoteError('No pudimos cotizar el envío. Revisa la dirección e inténtalo de nuevo.'),
+        )
         .finally(() => setQuoting(false));
     }, 700);
     return () => clearTimeout(t);
@@ -134,14 +150,17 @@ export function IntlCheckoutForm({
   }, [key, ready]);
 
   const shipping = options.find((o) => o.rateId === rateId) ?? null;
-  const total = useMemo(() => subtotalCents + (shipping?.cents ?? 0), [subtotalCents, shipping]);
+  const { totalCents: total, shippingCents: freight } = intlTotal(pricing, shipping?.cents ?? 0);
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (pending || couponPending) return;
     const fd = new FormData(e.currentTarget);
     start(async () => {
       const r = await placeIntlOrder(null, fd);
       setState(r);
+      if (r.pricing) setPricing(r.pricing);
+      if (r.shippingOptions) setOptions(r.shippingOptions);
       // Carga completa hacia PayPal: no depende del router de la tienda.
       if (r.ok && r.redirectTo) window.location.assign(r.redirectTo);
     });
@@ -149,11 +168,22 @@ export function IntlCheckoutForm({
 
   return (
     <form onSubmit={submit} className="mt-12 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-16">
+      <input type="hidden" name="expectedTotalCents" value={total} />
+      <input type="hidden" name="expectedCouponCode" value={pricing.couponCode ?? ''} />
       <div className="space-y-12">
         <fieldset className="space-y-4">
-          <legend className="mb-5 font-editorial text-[24px] font-semibold tracking-tight">Contacto</legend>
+          <legend className="mb-5 font-editorial text-[24px] font-semibold tracking-tight">
+            Contacto
+          </legend>
           <Field label="Correo" error={errors.email}>
-            <input name="email" type="email" autoComplete="email" className={FIELD} />
+            <input
+              name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              autoComplete="email"
+              className={FIELD}
+            />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Nombre" error={errors.firstName}>
@@ -164,12 +194,20 @@ export function IntlCheckoutForm({
             </Field>
           </div>
           <Field label="Teléfono" hint="con código de país" error={errors.phone}>
-            <input name="phone" type="tel" autoComplete="tel" placeholder="+52 55 1234 5678" className={FIELD} />
+            <input
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="+52 55 1234 5678"
+              className={FIELD}
+            />
           </Field>
         </fieldset>
 
         <fieldset className="space-y-4">
-          <legend className="mb-5 font-editorial text-[24px] font-semibold tracking-tight">Dirección de envío</legend>
+          <legend className="mb-5 font-editorial text-[24px] font-semibold tracking-tight">
+            Dirección de envío
+          </legend>
           <Field label="País" error={errors.country}>
             <select name="country" value={addr.country} onChange={set('country')} className={FIELD}>
               <option value="">Elige tu país</option>
@@ -190,13 +228,29 @@ export function IntlCheckoutForm({
           />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Código postal" error={errors.postalCode}>
-              <input name="postalCode" value={addr.postalCode} onChange={set('postalCode')} autoComplete="postal-code" className={FIELD} />
+              <input
+                name="postalCode"
+                value={addr.postalCode}
+                onChange={set('postalCode')}
+                autoComplete="postal-code"
+                className={FIELD}
+              />
             </Field>
             <Field label="Ciudad" error={errors.city}>
-              <input name="city" value={addr.city} onChange={set('city')} autoComplete="address-level2" className={FIELD} />
+              <input
+                name="city"
+                value={addr.city}
+                onChange={set('city')}
+                autoComplete="address-level2"
+                className={FIELD}
+              />
             </Field>
           </div>
-          <Field label="Estado / provincia" hint={states.length ? undefined : 'opcional'} error={errors.state}>
+          <Field
+            label="Estado / provincia"
+            hint={states.length ? undefined : 'opcional'}
+            error={errors.state}
+          >
             {states.length ? (
               <select name="state" value={addr.state} onChange={set('state')} className={FIELD}>
                 <option value="">Elige</option>
@@ -207,15 +261,32 @@ export function IntlCheckoutForm({
                 ))}
               </select>
             ) : (
-              <input name="state" value={addr.state} onChange={set('state')} autoComplete="address-level1" className={FIELD} />
+              <input
+                name="state"
+                value={addr.state}
+                onChange={set('state')}
+                autoComplete="address-level1"
+                className={FIELD}
+              />
             )}
           </Field>
           <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_140px]">
             <Field label="Calle" error={errors.street}>
-              <input name="street" value={addr.street} onChange={set('street')} autoComplete="address-line1" className={FIELD} />
+              <input
+                name="street"
+                value={addr.street}
+                onChange={set('street')}
+                autoComplete="address-line1"
+                className={FIELD}
+              />
             </Field>
             <Field label="Número" error={errors.streetNumber}>
-              <input name="streetNumber" value={addr.streetNumber} onChange={set('streetNumber')} className={FIELD} />
+              <input
+                name="streetNumber"
+                value={addr.streetNumber}
+                onChange={set('streetNumber')}
+                className={FIELD}
+              />
             </Field>
           </div>
           <Field label="Depto., casa o referencia" hint="opcional">
@@ -228,17 +299,25 @@ export function IntlCheckoutForm({
             />
           </Field>
           {addr.country ? (
-            <Field label={tax.label} hint={tax.required ? 'lo pide la aduana' : 'opcional'} error={errors.taxId}>
+            <Field
+              label={tax.label}
+              hint={tax.required ? 'lo pide la aduana' : 'opcional'}
+              error={errors.taxId}
+            >
               <input name="taxId" className={FIELD} />
             </Field>
           ) : null}
         </fieldset>
 
         <fieldset>
-          <legend className="mb-5 font-editorial text-[24px] font-semibold tracking-tight">Envío</legend>
+          <legend className="mb-5 font-editorial text-[24px] font-semibold tracking-tight">
+            Envío
+          </legend>
           <input type="hidden" name="shippingRateId" value={rateId} />
           {!ready ? (
-            <p className="text-[15px] text-graphite-soft">Completa país, código postal y ciudad para ver las opciones.</p>
+            <p className="text-[15px] text-graphite-soft">
+              Completa país, código postal y ciudad para ver las opciones.
+            </p>
           ) : quoting ? (
             <p className="text-[15px] text-graphite-soft">Cotizando con las paqueterías…</p>
           ) : quoteError ? (
@@ -259,9 +338,11 @@ export function IntlCheckoutForm({
                     />
                     <span className="flex-1">
                       {o.carrier} · {o.label}
-                      {o.estimate ? <span className="block text-[14px] text-graphite-soft">{o.estimate}</span> : null}
+                      {o.estimate ? (
+                        <span className="block text-[14px] text-graphite-soft">{o.estimate}</span>
+                      ) : null}
                     </span>
-                    <span>{formatUsdCents(o.cents)}</span>
+                    <span>{pricing.freeShipping ? 'Gratis' : formatUsdCents(o.cents)}</span>
                   </label>
                 </li>
               ))}
@@ -283,7 +364,7 @@ export function IntlCheckoutForm({
         <div className="lg:sticky lg:top-28">
           <h2 className="font-editorial text-[24px] font-semibold tracking-tight">Tu pedido</h2>
           <ul className="mt-5 space-y-3 text-[15px]">
-            {lines.map((l) => (
+            {pricing.lines.map((l) => (
               <li key={l.itemId} className="flex justify-between gap-4">
                 <span>
                   {l.name}
@@ -295,14 +376,34 @@ export function IntlCheckoutForm({
               </li>
             ))}
           </ul>
-          <dl className="mt-6 space-y-2 border-t border-hairline pt-5 text-[15px]">
+          <div className="mt-6">
+            <CouponEntry
+              pricing={pricing}
+              email={email}
+              disabled={pending}
+              onChange={(updated) => {
+                setPricing(updated);
+                setState(null);
+              }}
+              onPending={setCouponPending}
+            />
+          </div>
+          <dl className="mt-0 space-y-2 border-t border-hairline pt-5 text-[15px]">
             <div className="flex justify-between">
               <dt>Subtotal</dt>
-              <dd>{formatUsdCents(subtotalCents)}</dd>
+              <dd>{formatUsdCents(pricing.subtotalCents)}</dd>
             </div>
+            {pricing.discountCents > 0 ? (
+              <div className="flex justify-between">
+                <dt>Descuento</dt>
+                <dd>−{formatUsdCents(pricing.discountCents)}</dd>
+              </div>
+            ) : null}
             <div className="flex justify-between">
               <dt>Envío</dt>
-              <dd>{shipping ? formatUsdCents(shipping.cents) : '—'}</dd>
+              <dd>
+                {shipping ? (pricing.freeShipping ? 'Gratis' : formatUsdCents(freight)) : '—'}
+              </dd>
             </div>
             <div className="flex justify-between border-t border-hairline pt-3 text-[18px] font-medium">
               <dt>Total</dt>
@@ -312,8 +413,8 @@ export function IntlCheckoutForm({
 
           <div className="mt-6 bg-paper-soft p-4 text-[14px] leading-relaxed text-graphite">
             <p>
-              Los impuestos y derechos de importación de tu país no están incluidos. Si corresponden, los cobra la
-              aduana o la paquetería al entregar.
+              Los impuestos y derechos de importación de tu país no están incluidos. Si
+              corresponden, los cobra la aduana o la paquetería al entregar.
             </p>
             <label className="mt-3 flex items-start gap-3">
               <input type="checkbox" name="duties" className="mt-1 h-4 w-4 accent-[#1a3cff]" />
@@ -334,14 +435,14 @@ export function IntlCheckoutForm({
 
           <button
             type="submit"
-            disabled={pending || !shipping}
+            disabled={pending || couponPending || !shipping || Boolean(pricing.couponError)}
             className="mt-6 h-14 w-full bg-cobalt text-[16px] font-medium text-white transition-colors hover:bg-cobalt-hover disabled:cursor-not-allowed disabled:bg-paper-soft disabled:text-graphite-faint"
           >
             {pending ? 'Conectando con PayPal…' : `Pagar ${formatUsdCents(total)} con PayPal`}
           </button>
           <p className="mt-3 text-[13px] text-graphite-soft">
-            Pagas con tu cuenta PayPal o con tarjeta de crédito o débito. Despachamos desde Santiago con número de
-            seguimiento.
+            Pagas con tu cuenta PayPal o con tarjeta de crédito o débito. Despachamos desde Santiago
+            con número de seguimiento.
           </p>
         </div>
       </aside>

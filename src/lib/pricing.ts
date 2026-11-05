@@ -1,12 +1,16 @@
 import 'server-only';
 import type { Coupon } from '@prisma/client';
 import { prisma } from './db';
+import type { Storefront } from './storefront';
 
 export interface PriceableLine {
   productId: string | null;
   unitPrice: number;
   quantity: number;
 }
+
+/** Las líneas y el descuento usan la unidad menor de esta moneda. Los cupones se guardan en CLP. */
+export type CouponCurrency = { currency: 'CLP' } | { currency: 'USD'; clpPerUsd: number };
 
 export interface CouponEvaluation {
   ok: boolean;
@@ -28,8 +32,19 @@ export async function evaluateCoupon(
   code: string | null | undefined,
   lines: PriceableLine[],
   userEmail?: string | null,
+  currency: CouponCurrency = { currency: 'CLP' },
+  storefront: Storefront = 'CL',
 ): Promise<CouponEvaluation> {
   if (!code) return NO_DISCOUNT;
+  if (
+    currency.currency === 'USD' &&
+    (!Number.isFinite(currency.clpPerUsd) || currency.clpPerUsd <= 0)
+  ) {
+    return { ...NO_DISCOUNT, reason: 'El tipo de cambio no está disponible.' };
+  }
+  // El valor nominal del cupón no lleva IVA, margen ni redondeo comercial de productos.
+  const convert = (clp: number) =>
+    currency.currency === 'USD' ? (clp / currency.clpPerUsd) * 100 : clp;
 
   const coupon = await prisma.coupon.findUnique({
     where: { code: code.trim().toUpperCase() },
@@ -38,6 +53,9 @@ export async function evaluateCoupon(
 
   if (!coupon || !coupon.active) {
     return { ...NO_DISCOUNT, reason: 'El cupón no existe o está inactivo.' };
+  }
+  if (storefront === 'INTL' && coupon.type === 'FREE_SHIPPING') {
+    return { ...NO_DISCOUNT, reason: 'Este cupón de envío gratis solo es válido en taupoc.cl.' };
   }
   const now = new Date();
   if (coupon.startsAt && coupon.startsAt > now) {
@@ -51,7 +69,7 @@ export async function evaluateCoupon(
   }
 
   const subtotal = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
-  if (coupon.minSubtotal && subtotal < coupon.minSubtotal) {
+  if (coupon.minSubtotal && subtotal < Math.ceil(convert(coupon.minSubtotal))) {
     return {
       ...NO_DISCOUNT,
       reason: `El cupón requiere una compra mínima.`,
@@ -61,7 +79,11 @@ export async function evaluateCoupon(
 
   if (coupon.perUserLimit != null && userEmail) {
     const used = await prisma.order.count({
-      where: { couponId: coupon.id, email: userEmail, paymentStatus: 'APPROVED' },
+      where: {
+        couponId: coupon.id,
+        email: { equals: userEmail.trim(), mode: 'insensitive' },
+        paymentStatus: 'APPROVED',
+      },
     });
     if (used >= coupon.perUserLimit) {
       return { ...NO_DISCOUNT, reason: 'Ya usaste este cupón el máximo de veces permitido.' };
@@ -88,5 +110,10 @@ export async function evaluateCoupon(
     const pct = Math.min(100, Math.max(0, coupon.value));
     return { ok: true, coupon, discount: Math.round((base * pct) / 100), freeShipping: false };
   }
-  return { ok: true, coupon, discount: Math.min(base, Math.max(0, coupon.value)), freeShipping: false };
+  return {
+    ok: true,
+    coupon,
+    discount: Math.min(base, Math.max(0, Math.round(convert(coupon.value)))),
+    freeShipping: false,
+  };
 }

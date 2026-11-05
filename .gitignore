@@ -20,3 +20,4 @@ coverage
 !eslint.config.mjs
 !next.config.mjs
 !postcss.config.mjs
+!tests/helpers/*.mjs

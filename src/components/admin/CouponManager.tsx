@@ -66,6 +66,12 @@ function CouponForm({
     <form action={action} className="border border-line bg-ink-800 p-5">
       {coupon ? <input type="hidden" name="id" value={coupon.id} /> : null}
 
+      <p className="mb-4 text-[13px] text-chalk-muted">
+        Los descuentos de porcentaje y monto fijo funcionan en taupoc.cl y taupoc.lat, con usos
+        compartidos. Los montos en pesos se convierten a dólares en .lat. Los cupones de envío gratis
+        son exclusivos de taupoc.cl.
+      </p>
+
       {state ? (
         <p
           role="status"
@@ -110,6 +116,7 @@ function CouponForm({
         <Input
           label="Compra mínima"
           hint="opcional"
+          help="En pesos chilenos; en .lat se evalúa su equivalente en dólares."
           name="minSubtotal"
           defaultValue={coupon?.minSubtotal ? formatNumber(coupon.minSubtotal) : ''}
           placeholder="100.000"
