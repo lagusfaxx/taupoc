@@ -4,14 +4,26 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import { getCart, clearCart } from '@/lib/cart';
 import { getCurrentFx } from '@/lib/fx-server';
-import { formatUsdCents } from '@/lib/fx';
-import { intlLine, shippingCents, taxIdRule } from '@/lib/intl-checkout';
-import { enviaQuotes, enviaStates, enviaZip, type EnviaState, type EnviaZipMatch } from '@/lib/envia';
+import { formatUsdCents, type FxConfig } from '@/lib/fx';
+import { intlTotal, shippingCents, taxIdRule, type IntlCartPricing } from '@/lib/intl-checkout';
+import { evaluateIntlCart } from '@/lib/intl-cart';
+import {
+  enviaQuotes,
+  enviaStates,
+  enviaZip,
+  type EnviaState,
+  type EnviaZipMatch,
+} from '@/lib/envia';
 import { nextOrderNumber, logOrderEvent } from '@/lib/orders';
 import { createPaypalOrder, paypalConfigured } from '@/lib/paypal';
 import { storeSiteUrl } from '@/lib/storefront';
 import { getSettings } from '@/lib/settings';
-import { OutOfStockError, reservationDeadline, reserveOrderStock, sweepExpiredReservations } from '@/lib/reservations';
+import {
+  OutOfStockError,
+  reservationDeadline,
+  reserveOrderStock,
+  sweepExpiredReservations,
+} from '@/lib/reservations';
 
 /*
  * Checkout de taupoc.lat. Vive aparte del de taupoc.cl (actions/checkout.ts)
@@ -35,11 +47,18 @@ export interface IntlCheckoutState {
   ok: boolean;
   message: string;
   fieldErrors?: Record<string, string>;
+  pricing?: IntlCartPricing;
+  shippingOptions?: IntlShippingOption[];
   /** A dónde ir después: PayPal. El navegador navega con una carga completa. */
   redirectTo?: string;
 }
 
-const CARRIER_NAMES: Record<string, string> = { fedex: 'FedEx', dhl: 'DHL', ups: 'UPS', usps: 'USPS' };
+const CARRIER_NAMES: Record<string, string> = {
+  fedex: 'FedEx',
+  dhl: 'DHL',
+  ups: 'UPS',
+  usps: 'USPS',
+};
 
 export async function intlStates(country: string): Promise<EnviaState[]> {
   return enviaStates(country);
@@ -58,11 +77,19 @@ interface Destination {
   number: string;
 }
 
-async function quote(dest: Destination, weightGrams: number, contact?: { name: string; email: string; phone: string }) {
-  const fx = await getCurrentFx();
-  if (!fx) return { options: [] as IntlShippingOption[], error: 'Tipo de cambio no configurado.' };
+async function quote(
+  dest: Destination,
+  weightGrams: number,
+  fx: FxConfig,
+  contact?: { name: string; email: string; phone: string },
+) {
   const { quotes, error } = await enviaQuotes(
-    { ...dest, name: contact?.name ?? '', email: contact?.email ?? '', phone: contact?.phone ?? '' },
+    {
+      ...dest,
+      name: contact?.name ?? '',
+      email: contact?.email ?? '',
+      phone: contact?.phone ?? '',
+    },
     weightGrams,
   );
   return {
@@ -78,11 +105,15 @@ async function quote(dest: Destination, weightGrams: number, contact?: { name: s
 }
 
 /** Opciones de envío para la dirección escrita, en dólares. */
-export async function intlShippingOptions(dest: Destination): Promise<{ options: IntlShippingOption[]; error: string | null }> {
-  const cart = await getCart();
-  if (cart.lines.length === 0 || !dest.country || dest.country === 'CL') return { options: [], error: null };
+export async function intlShippingOptions(
+  dest: Destination,
+): Promise<{ options: IntlShippingOption[]; error: string | null }> {
+  const [cart, fx] = await Promise.all([getCart(), getCurrentFx()]);
+  if (!fx) return { options: [], error: 'Tipo de cambio no configurado.' };
+  if (cart.lines.length === 0 || !dest.country || dest.country === 'CL')
+    return { options: [], error: null };
   if (!dest.city || !dest.postalCode) return { options: [], error: null };
-  return quote(dest, cart.weightGrams);
+  return quote(dest, cart.weightGrams, fx);
 }
 
 const schema = z.object({
@@ -99,11 +130,18 @@ const schema = z.object({
   addressExtra: z.string().trim().max(120).optional(),
   taxId: z.string().trim().max(40).optional(),
   shippingRateId: z.string().min(1, 'Elige cómo enviar tu pedido.'),
-  duties: z.literal('on', { errorMap: () => ({ message: 'Confirma que los impuestos de importación son por tu cuenta.' }) }),
+  duties: z.literal('on', {
+    errorMap: () => ({ message: 'Confirma que los impuestos de importación son por tu cuenta.' }),
+  }),
   customerNote: z.string().max(500).optional(),
+  expectedTotalCents: z.coerce.number().int().nonnegative(),
+  expectedCouponCode: z.string().max(100),
 });
 
-export async function placeIntlOrder(_prev: IntlCheckoutState | null, formData: FormData): Promise<IntlCheckoutState> {
+export async function placeIntlOrder(
+  _prev: IntlCheckoutState | null,
+  formData: FormData,
+): Promise<IntlCheckoutState> {
   const parsed = schema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
@@ -111,17 +149,27 @@ export async function placeIntlOrder(_prev: IntlCheckoutState | null, formData: 
     return { ok: false, message: 'Revisa los datos marcados.', fieldErrors };
   }
   const d = parsed.data;
-  if (d.country === 'CL') return { ok: false, message: 'Para envíos dentro de Chile compra en taupoc.cl.' };
+  if (d.country === 'CL')
+    return { ok: false, message: 'Para envíos dentro de Chile compra en taupoc.cl.' };
   const taxRule = taxIdRule(d.country);
   if (taxRule.required && !d.taxId) {
-    return { ok: false, message: 'Revisa los datos marcados.', fieldErrors: { taxId: `Ingresa tu ${taxRule.label}: la aduana lo pide para entregar.` } };
+    return {
+      ok: false,
+      message: 'Revisa los datos marcados.',
+      fieldErrors: { taxId: `Ingresa tu ${taxRule.label}: la aduana lo pide para entregar.` },
+    };
   }
-  if (!paypalConfigured()) return { ok: false, message: 'El pago con PayPal no está disponible en este momento.' };
+  if (!paypalConfigured())
+    return { ok: false, message: 'El pago con PayPal no está disponible en este momento.' };
 
   const [cart, fx, settings] = await Promise.all([getCart(), getCurrentFx(), getSettings()]);
   if (!fx) return { ok: false, message: 'Los precios no están disponibles en este momento.' };
   if (cart.lines.length === 0) return { ok: false, message: 'Tu carrito está vacío.' };
-  if (cart.hasIssues) return { ok: false, message: 'Hay productos sin stock suficiente. Ajusta el carrito.' };
+  if (cart.hasIssues)
+    return { ok: false, message: 'Hay productos sin stock suficiente. Ajusta el carrito.' };
+
+  const { lines, coupon, pricing } = await evaluateIntlCart(cart, fx, d.email);
+  if (pricing.couponError) return { ok: false, message: pricing.couponError, pricing };
 
   // Envío: se vuelve a cotizar y se busca la misma opción.
   const dest = {
@@ -132,20 +180,38 @@ export async function placeIntlOrder(_prev: IntlCheckoutState | null, formData: 
     street: d.street,
     number: d.streetNumber,
   };
-  const { options } = await quote(dest, cart.weightGrams, {
+  const { options } = await quote(dest, cart.weightGrams, fx, {
     name: `${d.firstName} ${d.lastName}`,
     email: d.email,
     phone: d.phone,
   });
   const shipping = options.find((o) => o.rateId === d.shippingRateId);
-  if (!shipping) return { ok: false, message: 'La opción de envío ya no está disponible. Elige otra.' };
+  if (!shipping)
+    return { ok: false, message: 'La opción de envío ya no está disponible. Elige otra.' };
 
   // Precios en dólares por línea; los montos del pedido quedan en su
   // equivalente en pesos para que reportes y panel sigan sumando en CLP.
-  const lines = cart.lines.map((l) => ({ ...l, ...intlLine(l, fx) }));
-  const subtotalCents = lines.reduce((s, l) => s + l.lineCents, 0);
-  const totalCents = subtotalCents + shipping.cents;
+  const { subtotalCents, discountCents } = pricing;
+  const { totalCents, shippingCents: freightCents } = intlTotal(pricing, shipping.cents);
+  // El navegador solo confirma lo que vio; jamás determina el monto a cobrar.
+  if (totalCents !== d.expectedTotalCents || (pricing.couponCode ?? '') !== d.expectedCouponCode) {
+    return {
+      ok: false,
+      message: 'El total cambió. Revisa el resumen actualizado y vuelve a confirmar el pago.',
+      pricing,
+      shippingOptions: options,
+    };
+  }
+  if (totalCents <= 0)
+    return {
+      ok: false,
+      message:
+        'PayPal requiere un total mayor a cero. Contáctanos para completar este pedido sin cobro.',
+    };
   const toClp = (cents: number) => Math.round((cents / 100) * fx.clpPerUsd);
+  const subtotalClp = toClp(subtotalCents);
+  const discountClp = toClp(discountCents);
+  const freightClp = toClp(freightCents);
 
   await sweepExpiredReservations();
   const reservedUntil = reservationDeadline('PAYPAL', settings);
@@ -162,10 +228,12 @@ export async function placeIntlOrder(_prev: IntlCheckoutState | null, formData: 
           status: 'PENDING',
           paymentStatus: 'PENDING',
           paymentMethod: 'PAYPAL',
-          subtotal: toClp(subtotalCents),
-          discountTotal: 0,
-          shippingTotal: toClp(shipping.cents),
-          total: toClp(totalCents),
+          subtotal: subtotalClp,
+          discountTotal: discountClp,
+          shippingTotal: freightClp,
+          total: subtotalClp - discountClp + freightClp,
+          couponId: coupon.ok ? coupon.coupon!.id : null,
+          couponCode: pricing.couponCode,
           chargedCurrency: 'USD',
           chargedCents: totalCents,
           shippingRateId: shipping.rateId,
@@ -213,7 +281,7 @@ export async function placeIntlOrder(_prev: IntlCheckoutState | null, formData: 
     orderId: order.id,
     type: 'created',
     message:
-      `Pedido de taupoc.lat por ${d.email}: ${formatUsdCents(subtotalCents)} en productos + ${formatUsdCents(shipping.cents)} ` +
+      `Pedido de taupoc.lat por ${d.email}: ${formatUsdCents(subtotalCents)} en productos − ${formatUsdCents(discountCents)} de descuento${pricing.couponCode ? ` (${pricing.couponCode})` : ''} + ${formatUsdCents(freightCents)} ` +
       `de envío (${shipping.carrier} ${shipping.label}) = ${formatUsdCents(totalCents)}. Tipo de cambio ${fx.clpPerUsd}, ` +
       `margen ${fx.marginPct} %. Documento: ${d.taxId || '—'}. Aceptó que los impuestos de importación son por su cuenta.`,
   });
@@ -231,7 +299,11 @@ export async function placeIntlOrder(_prev: IntlCheckoutState | null, formData: 
     return { ok: true, message: 'Te llevamos a PayPal…', redirectTo: paypal.approveUrl };
   } catch (error) {
     console.error('[checkout-intl:paypal]', error);
-    await logOrderEvent({ orderId: order.id, type: 'payment_error', message: 'No se pudo crear la orden de pago en PayPal.' });
+    await logOrderEvent({
+      orderId: order.id,
+      type: 'payment_error',
+      message: 'No se pudo crear la orden de pago en PayPal.',
+    });
     return {
       ok: false,
       message: `No pudimos conectar con PayPal. Tu pedido quedó guardado como ${order.number}; escríbenos y lo retomamos.`,

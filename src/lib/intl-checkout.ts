@@ -10,6 +10,27 @@ export interface IntlLineInput {
   quantity: number;
 }
 
+export interface IntlCartPricing {
+  lines: { itemId: string; name: string; detail: string; quantity: number; lineCents: number }[];
+  subtotalCents: number;
+  discountCents: number;
+  couponCode: string | null;
+  requestedCouponCode: string | null;
+  couponError: string | null;
+  freeShipping: boolean;
+}
+
+export function intlTotal(
+  pricing: Pick<IntlCartPricing, 'subtotalCents' | 'discountCents' | 'freeShipping'>,
+  freightCents = 0,
+) {
+  const shippingCents = pricing.freeShipping ? 0 : freightCents;
+  return {
+    shippingCents,
+    totalCents: Math.max(0, pricing.subtotalCents - pricing.discountCents) + shippingCents,
+  };
+}
+
 /** Precio unitario en centavos de dólar y total de la línea. */
 export function intlLine(line: IntlLineInput, fx: FxConfig) {
   const unitCents = clpToIntlCents(line.unitPrice, fx);

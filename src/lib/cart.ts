@@ -39,6 +39,8 @@ export interface CartSummary {
   subtotal: number;
   discount: number;
   couponCode: string | null;
+  /** Código guardado, incluso si falla la evaluación en CLP. INTL lo reevalúa en USD. */
+  requestedCouponCode: string | null;
   couponFreeShipping: boolean;
   couponError: string | null;
   weightGrams: number;
@@ -52,6 +54,7 @@ export const EMPTY_CART: CartSummary = {
   subtotal: 0,
   discount: 0,
   couponCode: null,
+  requestedCouponCode: null,
   couponFreeShipping: false,
   couponError: null,
   weightGrams: 0,
@@ -162,8 +165,10 @@ export async function getCart(): Promise<CartSummary> {
     subtotal,
     discount: evaluation.ok ? evaluation.discount : 0,
     couponCode: evaluation.ok ? (cart.couponCode ?? null) : null,
+    requestedCouponCode: cart.couponCode,
     couponFreeShipping: evaluation.ok && evaluation.freeShipping,
-    couponError: cart.couponCode && !evaluation.ok ? (evaluation.reason ?? 'Cupón inválido.') : null,
+    couponError:
+      cart.couponCode && !evaluation.ok ? (evaluation.reason ?? 'Cupón inválido.') : null,
     weightGrams,
     hasIssues: lines.some((l) => l.overStock),
   };
