@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = buildMetadata({
   title: 'Guía de tallas de trajes de competición',
   description:
-    'Tabla de tallas TAUPOC en cm con equivalencias USA, UK, AUS y NZ, y cuántas tallas bajar para competir.',
+    'Tabla de tallas TAUPOC en cm para jammer y knee suit, con equivalencias USA, UK, AUS y NZ. Mide cintura y cadera y encuentra tu talla.',
   path: '/guia-de-tallas',
 });
 
@@ -23,9 +23,10 @@ const STEPS = [
   ['Estatura', 'Descalzo, con la espalda contra la pared.'],
 ];
 
-const ADJUST = [
-  ['Entrenamiento / principiantes', 'Tu talla', 'La de la tabla.'],
-  ['Competencia / avanzados', 'Baja 1 a 2 tallas', 'Más compresión.'],
+const FIT = [
+  ['Tus medidas caben en una fila', 'Esa es tu talla.'],
+  ['Quedas entre dos tallas', 'Escríbenos con tus medidas y te confirmamos.'],
+  ['Cintura y cadera dan tallas distintas', 'Escríbenos con ambas medidas antes de comprar.'],
 ];
 
 export default async function SizeGuidePage() {
@@ -70,8 +71,8 @@ export default async function SizeGuidePage() {
       {
         '@type': 'HowToStep',
         position: STEPS.length + 1,
-        name: 'Elegir según el uso',
-        text: 'Para entrenamiento usa tu talla; para competencia baja 1 a 2 tallas.',
+        name: 'Buscar la talla en la tabla',
+        text: 'Busca la fila donde caen tus medidas: esa es la talla que compras.',
       },
     ],
   };
@@ -87,8 +88,7 @@ export default async function SizeGuidePage() {
             Cómo elegir tu talla de competición
           </h1>
           <p className="mt-6 max-w-2xl text-pretty text-[16px] leading-relaxed text-chalk-dim">
-            Los trajes de competición van ajustados. Mide cintura y cadera, busca tu talla en la tabla y
-            ajústala según el uso.
+            Mide cintura y cadera, búscalas en la tabla y compra esa talla.
           </p>
         </div>
       </section>
@@ -115,31 +115,19 @@ export default async function SizeGuidePage() {
 
             <div>
               <h2 className="font-display text-[24px] leading-tight tracking-tightest text-chalk sm:text-[30px]">
-                2 · Elige según el uso
+                2 · Busca tu fila
               </h2>
               <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-                Recomendación oficial de TAUPOC sobre la talla de la tabla.
+                La talla de la tabla es la que compras.
               </p>
-              <div className="mt-7 table-scroll">
-                <table className="w-full min-w-[440px] border-collapse text-[14px]">
-                  <thead>
-                    <tr>
-                      <th className="border-b border-line px-3 py-2.5 text-left font-display text-[10px] uppercase tracking-widest text-chalk-faint">Uso</th>
-                      <th className="border-b border-line px-3 py-2.5 text-left font-display text-[10px] uppercase tracking-widest text-chalk-faint">Ajuste</th>
-                      <th className="border-b border-line px-3 py-2.5 text-left font-display text-[10px] uppercase tracking-widest text-chalk-faint">Nota</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ADJUST.map(([prueba, ajuste, motivo]) => (
-                      <tr key={prueba}>
-                        <td className="border-b border-line-soft px-3 py-3 text-chalk">{prueba}</td>
-                        <td className="border-b border-line-soft px-3 py-3 font-display text-[13px] font-semibold accent-text">{ajuste}</td>
-                        <td className="border-b border-line-soft px-3 py-3 text-[13px] text-chalk-faint">{motivo}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <dl className="mt-7 divide-y divide-line border-y border-line">
+                {FIT.map(([title, body]) => (
+                  <div key={title} className="py-4">
+                    <dt className="font-display text-[13px] uppercase tracking-wide text-chalk">{title}</dt>
+                    <dd className="mt-1.5 text-[14px] leading-relaxed text-chalk-faint">{body}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
           </div>
         </div>
@@ -148,10 +136,10 @@ export default async function SizeGuidePage() {
       <section className="border-b border-line bg-ink-900">
         <div className="container py-14 lg:py-18">
           <h2 className="font-display text-[24px] leading-tight tracking-tightest text-chalk sm:text-[30px]">
-            3 · Tablas de tallas
+            Tabla de tallas
           </h2>
           <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-chalk-dim">
-            Medidas del cuerpo en centímetros.
+            Medidas del cuerpo en centímetros. Escribe las tuyas y marcamos tu fila.
           </p>
           <div className="mt-8">
             <SizeGuideTables charts={charts} />
@@ -219,7 +207,7 @@ export default async function SizeGuidePage() {
               ¿Sigues con dudas de talla?
             </h2>
             <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
-              Envíanos las medidas y la prueba, y te decimos qué talla pedir.
+              Envíanos tus medidas y te decimos qué talla pedir.
             </p>
             <div className="mt-8 flex flex-wrap justify-center gap-3">
               <ButtonLink href="/contacto" size="lg">Consultar mi talla</ButtonLink>

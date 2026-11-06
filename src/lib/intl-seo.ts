@@ -24,6 +24,7 @@ function clean(text: string, fallback: string, field: string): string {
 }
 
 export function intlUrl(path = '/'): string {
+  if (/^https?:\/\//.test(path)) return path;
   return `${storeSiteUrl('INTL')}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
@@ -44,7 +45,8 @@ export function intlMetadata(params: {
   const title = clean(params.title, fallbackTitle, 'title');
   const description = clean(params.description, fallbackDescription, 'description');
   const url = intlUrl(params.path);
-  const image = params.image ? intlUrl(params.image) : undefined;
+  // Sin foto propia se usa la imagen para compartir del panel (/api/og).
+  const image = intlUrl(params.image ?? '/api/og');
   const index = intlIndexable() && !params.noIndex;
 
   return {
@@ -62,7 +64,8 @@ export function intlMetadata(params: {
           }
         : {}),
     },
-    robots: index ? undefined : { index: false, follow: !params.noIndex && intlIndexable() },
+    // Una vista filtrada no se indexa, pero sus enlaces a las fichas sí se siguen.
+    robots: index ? undefined : { index: false, follow: intlIndexable() },
     openGraph: {
       title,
       description,
@@ -70,8 +73,8 @@ export function intlMetadata(params: {
       siteName: SITE_NAME,
       locale: 'es_419',
       type: 'website',
-      ...(image ? { images: [{ url: image, alt: title }] } : {}),
+      images: [{ url: image, alt: title }],
     },
-    twitter: { card: image ? 'summary_large_image' : 'summary', title, description, ...(image ? { images: [image] } : {}) },
+    twitter: { card: 'summary_large_image', title, description, images: [image] },
   };
 }

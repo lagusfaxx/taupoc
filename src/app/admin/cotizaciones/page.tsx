@@ -24,6 +24,7 @@ export default async function AdminQuotesPage({
 
   const query = one('q')?.trim();
   const status = one('estado');
+  const kind = one('tipo');
 
   const where: Prisma.QuoteRequestWhereInput = {
     ...(query
@@ -36,6 +37,7 @@ export default async function AdminQuotesPage({
         }
       : {}),
     ...(status ? { status: status as never } : {}),
+    ...(kind === 'CLUB' || kind === 'STORE' ? { kind } : {}),
   };
 
   const [quotes, newCount, wonCount, athletes] = await Promise.all([
@@ -48,8 +50,8 @@ export default async function AdminQuotesPage({
   return (
     <>
       <PageHeader
-        title="Cotizaciones de clubes"
-        description="Solicitudes recibidas desde la sección de clubes de la tienda."
+        title="Cotizaciones"
+        description="Clubes que equipan a su plantel y tiendas que compran por mayor."
         actions={
           <ButtonLink href="/api/admin/export/cotizaciones" variant="outline" size="sm" prefetch={false}>
             <IconDownload className="h-4 w-4" />
@@ -61,12 +63,20 @@ export default async function AdminQuotesPage({
       <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <StatCard label="Sin responder" value={String(newCount)} tone={newCount > 0 ? 'warn' : 'ok'} />
         <StatCard label="Ganadas" value={String(wonCount)} tone="ok" />
-        <StatCard label="Nadadores potenciales" value={String(athletes._sum.athletes ?? 0)} tone="accent" />
+        <StatCard label="Nadadores / unidades" value={String(athletes._sum.athletes ?? 0)} tone="accent" />
       </div>
 
       <Toolbar
-        searchPlaceholder="Buscar por club, contacto o correo…"
+        searchPlaceholder="Buscar por club, tienda, contacto o correo…"
         filters={[
+          {
+            name: 'tipo',
+            label: 'Clubes y tiendas',
+            options: [
+              { value: 'CLUB', label: 'Clubes' },
+              { value: 'STORE', label: 'Tiendas mayoristas' },
+            ],
+          },
           {
             name: 'estado',
             label: 'Todos los estados',
@@ -87,6 +97,11 @@ export default async function AdminQuotesPage({
             key={quote.id}
             quote={{
               id: quote.id,
+              kind: quote.kind,
+              storefront: quote.storefront,
+              taxId: quote.taxId,
+              storeUrl: quote.storeUrl,
+              country: quote.country,
               clubName: quote.clubName,
               contactName: quote.contactName,
               email: quote.email,

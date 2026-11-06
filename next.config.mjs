@@ -12,6 +12,18 @@ const nextConfig = {
     // 20 MB cada una; el margen cubre varias en la misma tanda.
     serverActions: { bodySizeLimit: '48mb' },
   },
+  webpack(config, { isServer, dev }) {
+    // Los archivos de cada página llevaban la ruta en el nombre
+    // (chunks/app/(store)/producto/[slug]/page-….js). Cuando un proxy entrega
+    // esa dirección con los paréntesis codificados (%28store%29) junto a los
+    // corchetes, Next responde 404 y la ficha cae en "No pudimos cargar esta
+    // página". Con nombres por hash no hay paréntesis ni corchetes que codificar.
+    if (!isServer && !dev) {
+      config.output.filename = 'static/chunks/[contenthash].js';
+      config.output.chunkFilename = 'static/chunks/[contenthash].js';
+    }
+    return config;
+  },
   async headers() {
     return [
       {

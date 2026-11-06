@@ -179,14 +179,9 @@ export function ProductForm({
                     name="fitNotes"
                     rows={3}
                     defaultValue={product.fitNotes}
-                    help="Se muestra en la tabla de tallas. Explica el uso 1-2 tallas por debajo."
+                    help="Se muestra en la ficha, en «Cómo debe calzar»."
                     className="sm:col-span-2"
                   />
-                  <Select label="Tallas a bajar por compresión" name="fitOffset" defaultValue={product.fitOffset || '1'}>
-                    <option value="0">Sin ajuste</option>
-                    <option value="1">1 talla</option>
-                    <option value="2">2 tallas</option>
-                  </Select>
                 </>
               )}
             </div>

@@ -35,6 +35,7 @@ const COLUMNS = [
       { label: 'La marca', href: '/marca' },
       { label: 'Homologación World Aquatics', href: '/marca#homologacion' },
       { label: 'Clubes y equipos', href: '/clubes' },
+      { label: 'Venta por mayor', href: '/venta-por-mayor' },
       { label: 'Blog', href: '/blog' },
       { label: 'Términos y condiciones', href: '/terminos' },
     ],

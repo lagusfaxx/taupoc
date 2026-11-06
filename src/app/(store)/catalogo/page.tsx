@@ -66,12 +66,13 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     ? (sortRaw as (typeof SORT_VALUES)[number])
     : 'destacados';
 
+  const sizes = list(params.tallas);
   const [found, facets, settings, comparacion] = await Promise.all([
     getCatalog({
       gender,
       lineSlug: one(params.linea),
       categorySlug: one(params.categoria),
-      sizes: list(params.tallas),
+      sizes,
       colors: list(params.colores),
       minPrice: one(params.precio_min) ? Number(one(params.precio_min)) : undefined,
       maxPrice: one(params.precio_max) ? Number(one(params.precio_max)) : undefined,
@@ -140,7 +141,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
           ) : (
             <div className="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-3 lg:gap-x-6 xl:gap-x-8">
               {products.map((product, i) => (
-                <ProductCard key={product.id} product={product} priority={i < 3} />
+                <ProductCard key={product.id} product={product} priority={i < 3} sizes={sizes} />
               ))}
             </div>
           )}

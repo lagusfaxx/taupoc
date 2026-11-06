@@ -35,10 +35,8 @@ function mid(min: number | null, max: number | null): number | null {
 }
 
 /**
- * Buscador de talla. Toma las medidas del nadador y devuelve la talla de
- * cuerpo más cercana, y luego la talla de competencia aplicando el descuento
- * de compresión. Es el punto de mayor fricción del rubro: si acá se equivocan,
- * vuelve el producto.
+ * Busca la talla de la tabla cuyo rango queda más cerca de las medidas del
+ * nadador. La talla de la tabla es la que se compra: no se le resta nada.
  */
 function findSize(rows: SizeChartRowData[], measures: { chest?: number; waist?: number; hip?: number }) {
   const scored = rows
@@ -64,15 +62,11 @@ function findSize(rows: SizeChartRowData[], measures: { chest?: number; waist?: 
 export function SizeChart({
   rows,
   gender,
-  fitNotes,
-  fitOffset = 1,
   productName,
   onPickSize,
 }: {
   rows: SizeChartRowData[];
   gender: 'MALE' | 'FEMALE' | 'UNISEX';
-  fitNotes?: string | null;
-  fitOffset?: number;
   productName: string;
   onPickSize?: (size: string) => void;
 }) {
@@ -93,20 +87,8 @@ export function SizeChart({
       hip: hip ? Number(hip) : undefined,
     };
     if (!measures.chest && !measures.waist && !measures.hip) return null;
-
-    const bodyRow = findSize(rows, measures);
-    if (!bodyRow) return null;
-
-    const index = rows.findIndex((r) => r.size === bodyRow.size);
-    const raceIndex = Math.max(0, index - fitOffset);
-    const sprintIndex = Math.max(0, index - fitOffset - 1);
-
-    return {
-      body: bodyRow.size,
-      race: rows[raceIndex]?.size ?? bodyRow.size,
-      sprint: rows[sprintIndex]?.size ?? rows[raceIndex]?.size ?? bodyRow.size,
-    };
-  }, [chest, waist, hip, rows, showChest, fitOffset]);
+    return findSize(rows, measures)?.size ?? null;
+  }, [chest, waist, hip, rows, showChest]);
 
   return (
     <>
@@ -140,17 +122,6 @@ export function SizeChart({
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-7 sm:py-6">
-              {/* Nota de calce: la información más importante de esta ventana. */}
-              <div className="mb-6 border-l-2 accent-border bg-ink-800 px-4 py-3.5">
-                <p className="font-display text-[11px] font-semibold uppercase tracking-widest accent-text">
-                  Cómo se usa un traje de competición
-                </p>
-                <p className="mt-2 text-[14px] leading-relaxed text-chalk-dim">
-                  {fitNotes ??
-                    'Los trajes de competición se usan 1 a 2 tallas por debajo de la talla habitual: esa tensión es la que genera la compresión.'}
-                </p>
-              </div>
-
               {/* Calculadora de talla */}
               <div className="mb-7 surface p-5">
                 <h3 className="font-display text-[13px] uppercase tracking-widest text-chalk">
@@ -212,48 +183,31 @@ export function SizeChart({
                 </div>
 
                 {suggestion ? (
-                  <div className="mt-5 grid gap-px border border-line bg-line sm:grid-cols-3">
-                    {[
-                      { label: 'Talla de cuerpo', value: suggestion.body, note: 'Sin compresión' },
-                      { label: 'Fondo · 400 m+', value: suggestion.race, note: 'Compresión moderada' },
-                      { label: 'Velocidad · 50–200 m', value: suggestion.sprint, note: 'Compresión máxima' },
-                    ].map((item, i) => (
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-4 border accent-border bg-ink-800 px-4 py-4">
+                    <div>
+                      <p className="font-display text-[10px] uppercase tracking-widest text-chalk-faint">
+                        Tu talla
+                      </p>
+                      <p className="mt-1 font-display text-3xl font-bold tracking-tight accent-text">
+                        {suggestion}
+                      </p>
+                    </div>
+                    {onPickSize ? (
                       <button
-                        key={item.label}
                         type="button"
                         onClick={() => {
-                          if (i > 0 && onPickSize) {
-                            onPickSize(item.value);
-                            setOpen(false);
-                          }
+                          onPickSize(suggestion);
+                          setOpen(false);
                         }}
-                        disabled={i === 0 || !onPickSize}
-                        className={cn(
-                          'bg-ink-800 px-4 py-4 text-left transition-colors',
-                          i > 0 && onPickSize && 'hover:bg-ink-700',
-                          i === 0 && 'opacity-70',
-                        )}
+                        className="h-11 accent-bg px-5 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm"
                       >
-                        <p className="font-display text-[10px] uppercase tracking-widest text-chalk-faint">
-                          {item.label}
-                        </p>
-                        <p
-                          className={cn(
-                            'mt-1.5 font-display text-3xl font-bold tracking-tight',
-                            i === 0 ? 'text-chalk-dim' : 'accent-text',
-                          )}
-                        >
-                          {item.value}
-                        </p>
-                        <p className="mt-1 text-[12px] text-chalk-faint">
-                          {i > 0 && onPickSize ? 'Seleccionar esta talla' : item.note}
-                        </p>
+                        Elegir talla {suggestion}
                       </button>
-                    ))}
+                    ) : null}
                   </div>
                 ) : (
                   <p className="mt-4 text-[13px] text-chalk-faint">
-                    Completa al menos una medida para ver la talla sugerida.
+                    Con una medida basta. Mientras más completes, más precisa la talla.
                   </p>
                 )}
               </div>
@@ -262,8 +216,8 @@ export function SizeChart({
               <div role="tablist" aria-label="Vista de la tabla" className="mb-4 flex gap-1 border-b border-line">
                 {(
                   [
-                    ['medidas', 'Medidas del cuerpo'],
-                    ['equivalencias', 'Equivalencias internacionales'],
+                    ['medidas', 'Medidas (cm)'],
+                    ['equivalencias', 'Equivalencias'],
                   ] as [Tab, string][]
                 ).map(([value, label]) => (
                   <button
@@ -293,10 +247,10 @@ export function SizeChart({
                       </th>
                       {tab === 'medidas' ? (
                         <>
-                          {showChest ? <Th>Pecho (cm)</Th> : null}
-                          <Th>Cintura (cm)</Th>
-                          {showHip ? <Th>Cadera (cm)</Th> : null}
-                          <Th>Estatura (cm)</Th>
+                          {showChest ? <Th>Pecho</Th> : null}
+                          <Th>Cintura</Th>
+                          {showHip ? <Th>Cadera</Th> : null}
+                          <Th>Estatura</Th>
                         </>
                       ) : (
                         <>
@@ -311,8 +265,17 @@ export function SizeChart({
                   </thead>
                   <tbody>
                     {rows.map((row) => (
-                      <tr key={row.size} className="group hover:bg-ink-800">
-                        <td className="sticky left-0 z-10 border-b border-line-soft bg-ink-900 px-3 py-2.5 font-display text-[15px] font-bold text-chalk group-hover:bg-ink-800">
+                      <tr
+                        key={row.size}
+                        aria-current={row.size === suggestion ? 'true' : undefined}
+                        className={cn('group hover:bg-ink-800', row.size === suggestion && 'bg-ink-800')}
+                      >
+                        <td
+                          className={cn(
+                            'sticky left-0 z-10 border-b border-line-soft px-3 py-2.5 font-display text-[15px] font-bold group-hover:bg-ink-800',
+                            row.size === suggestion ? 'bg-ink-800 accent-text' : 'bg-ink-900 text-chalk',
+                          )}
+                        >
                           {row.size}
                         </td>
                         {tab === 'medidas' ? (
@@ -338,9 +301,8 @@ export function SizeChart({
               </div>
 
               <p className="mt-5 text-[12.5px] leading-relaxed text-chalk-faint">
-                Las medidas corresponden al cuerpo del nadador, no a la prenda. Si tus medidas caen entre
-                dos tallas, elige la menor. Ante cualquier duda escríbenos por WhatsApp con las medidas
-                y te confirmamos la talla exacta antes de despachar.
+                Medidas del cuerpo, no de la prenda. Elige la talla donde caen tus medidas. Si quedas
+                entre dos, escríbenos por WhatsApp con tus medidas y te confirmamos antes de despachar.
               </p>
             </div>
           </div>

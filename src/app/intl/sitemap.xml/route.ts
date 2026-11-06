@@ -12,7 +12,7 @@ export async function GET() {
   const lat = storeSiteUrl('INTL');
   const cl = storeSiteUrl('CL');
   const cards = await getIntlCards().catch(() => []);
-  const paths = ['/', '/catalogo', ...new Set(cards.map((c) => c.href))];
+  const paths = ['/', '/catalogo', '/venta-por-mayor', ...new Set(cards.map((c) => c.href))];
   const esc = (s: string) => s.replace(/&/g, '&amp;');
   const body = paths
     .map((p) =>

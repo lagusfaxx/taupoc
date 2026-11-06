@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import { AddToCart } from '@/components/intl/AddToCart';
 import { ProductGallery } from '@/components/intl/ProductGallery';
 import { ProductDeliveryEstimate } from '@/components/intl/DeliveryEstimate';
+import { IntlSizeTable } from '@/components/intl/SizeTable';
+import { intlUrl } from '@/lib/intl-seo';
+import { jsonLd } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,12 +41,69 @@ export default async function IntlProductPage({ params }: { params: Params }) {
 
   const { product, color, images, priceCents, sizes, colors } = view;
   const anyAvailable = sizes.some((s) => s.available > 0);
+  const kind = product.gender === 'FEMALE' ? 'Mujer' : 'Hombre';
+  const pagePath = `/producto/${slug}`;
+  const totalAvailable = sizes.reduce((s, v) => s + v.available, 0);
+  const productLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: `${product.name} ${color.name}`,
+    description: product.description.split('\n')[0],
+    sku: color.code ?? `${product.modelCode}-${color.slug}`,
+    mpn: product.modelCode,
+    color: color.name,
+    inProductGroupWithID: product.modelCode,
+    brand: { '@type': 'Brand', name: 'TAUPOC' },
+    image: images.slice(0, 8).map((i) => intlUrl(i.url)),
+    ...(product.approvalCode
+      ? {
+          additionalProperty: [
+            { '@type': 'PropertyValue', name: 'Homologación World Aquatics', value: product.approvalCode },
+          ],
+        }
+      : {}),
+    ...(priceCents != null
+      ? {
+          offers: {
+            '@type': 'Offer',
+            url: intlUrl(pagePath),
+            priceCurrency: 'USD',
+            price: (priceCents / 100).toFixed(2),
+            availability:
+              product.status === 'COMING_SOON'
+                ? 'https://schema.org/PreOrder'
+                : totalAvailable > 0
+                  ? 'https://schema.org/InStock'
+                  : 'https://schema.org/OutOfStock',
+            itemCondition: 'https://schema.org/NewCondition',
+            seller: { '@type': 'Organization', name: 'TAUPOC' },
+          },
+        }
+      : {}),
+  };
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Inicio', item: intlUrl('/') },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: kind,
+        item: intlUrl(`/catalogo?genero=${product.gender === 'FEMALE' ? 'mujer' : 'hombre'}`),
+      },
+      { '@type': 'ListItem', position: 3, name: `${product.name} ${color.name}`, item: intlUrl(pagePath) },
+    ],
+  };
   const paragraphs = product.description
     .split(/\n{2,}/)
     .map((p) => p.trim())
     .filter(Boolean);
 
   return (
+    <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(productLd)} />
+    <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(breadcrumbLd)} />
     <article className="mx-auto max-w-[1600px] px-4 pb-16 pt-4 sm:px-8 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_460px]">
       <div>
         <ProductGallery
@@ -117,6 +177,23 @@ export default async function IntlProductPage({ params }: { params: Params }) {
             </p>
           )}
 
+          {product.kind !== 'ACCESSORY' ? (
+            <IntlSizeTable
+              rows={product.sizeChart.map((r) => ({
+                size: r.size,
+                chestMinCm: r.chestMinCm,
+                chestMaxCm: r.chestMaxCm,
+                waistMinCm: r.waistMinCm,
+                waistMaxCm: r.waistMaxCm,
+                hipMinCm: r.hipMinCm,
+                hipMaxCm: r.hipMaxCm,
+                heightMinCm: r.heightMinCm,
+                heightMaxCm: r.heightMaxCm,
+                usa: r.usa,
+              }))}
+            />
+          ) : null}
+
           {product.status === 'ACTIVE' && anyAvailable ? (
             <ProductDeliveryEstimate productId={product.id} detailed />
           ) : null}
@@ -151,5 +228,6 @@ export default async function IntlProductPage({ params }: { params: Params }) {
         </div>
       </div>
     </article>
+    </>
   );
 }
