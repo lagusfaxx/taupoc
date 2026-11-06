@@ -27,6 +27,8 @@ const schema = z.object({
   announcementBar: z.string().optional(),
   announcementActive: z.string().optional(),
   catalogSplitByColor: z.string().optional(),
+  rouletteEnabled: z.string().optional(),
+  rouletteCouponDays: z.string().optional(),
   reservationMinutes: z.string().optional(),
   transferReservationHours: z.string().optional(),
 
@@ -88,6 +90,8 @@ export async function updateSettings(
     announcementBar: d.announcementBar?.trim() ?? '',
     announcementActive: d.announcementActive === 'on',
     catalogSplitByColor: d.catalogSplitByColor === 'on',
+    rouletteEnabled: d.rouletteEnabled === 'on',
+    rouletteCouponDays: Math.min(60, Math.max(1, Math.round(Number(d.rouletteCouponDays ?? 7)) || 7)),
     reservationMinutes: Math.min(120, Math.max(5, Math.round(Number(d.reservationMinutes ?? 15)) || 15)),
     transferReservationHours: Math.min(168, Math.max(1, Math.round(Number(d.transferReservationHours ?? 24)) || 24)),
 

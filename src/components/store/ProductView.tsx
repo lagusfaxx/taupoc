@@ -329,24 +329,36 @@ function SizeInterestPanel({
 export function ProductView({
   product,
   initialColorSlug,
+  initialSizes,
 }: {
   product: ProductViewData;
   /** Color con el que abre la ficha, cuando el enlace ya trae uno elegido. */
   initialColorSlug?: string | null;
+  /** Tallas filtradas en el catálogo, en orden de preferencia. */
+  initialSizes?: string[];
 }) {
   const router = useRouter();
   const track = useMetaPixel();
   const inicial =
     product.colors.find((c) => c.slug === initialColorSlug) ?? product.colors[0] ?? null;
   const [colorId, setColorId] = useState(inicial?.id ?? '');
-  const hrefDeColor = product.colorPages
-    ? (c: ViewColor) => `/producto/${product.slug}-${c.slug}`
-    : undefined;
   // Un accesorio de talla única no obliga a elegir nada: se preselecciona
   // para que el botón de compra quede activo de entrada.
   const unicaVariante =
     product.esAccesorio && inicial?.variants.length === 1 ? (inicial.variants[0] ?? null) : null;
-  const [variantId, setVariantId] = useState<string | null>(unicaVariante?.id ?? null);
+  // Si se llega desde el catálogo filtrado por talla, esa talla queda elegida.
+  const tallaFiltrada =
+    (initialSizes ?? [])
+      .map((size) => inicial?.variants.find((v) => v.size === size && v.available > 0))
+      .find(Boolean) ?? null;
+  const [variantId, setVariantId] = useState<string | null>(
+    unicaVariante?.id ?? tallaFiltrada?.id ?? null,
+  );
+  const tallaElegida = product.colors.flatMap((c) => c.variants).find((v) => v.id === variantId)?.size;
+  const hrefDeColor = product.colorPages
+    ? (c: ViewColor) =>
+        `/producto/${product.slug}-${c.slug}${tallaElegida ? `?talla=${encodeURIComponent(tallaElegida)}` : ''}`
+    : undefined;
   const [state, setState] = useState<CartActionState | null>(null);
   const [enviando, setEnviando] = useState(false);
   // Talla agotada sobre la que se preguntó "¿Te interesa esta talla?".
@@ -558,14 +570,12 @@ export function ProductView({
             <legend className="mb-3 flex w-full items-center justify-between gap-3">
               <span className="font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim">
                 {unicaVariante ? 'Presentación' : 'Talla'}
-                {variant && !unicaVariante ? <span className="text-chalk">· {variant.size}</span> : null}
+                {variant && !unicaVariante ? <span className="ml-1.5 text-chalk">· {variant.size}</span> : null}
               </span>
               {product.esAccesorio ? null : (
                 <SizeChart
                   rows={product.sizeChart}
                   gender={product.gender}
-                  fitNotes={product.fitNotes}
-                  fitOffset={product.fitOffset}
                   productName={product.name}
                   onPickSize={selectSize}
                 />
@@ -667,7 +677,7 @@ export function ProductView({
                 <span className="text-chalk-faint">
                   {product.esAccesorio
                     ? 'Selecciona una opción.'
-                    : 'Selecciona tu talla. Recuerda: los trajes de carrera se usan 1 a 2 tallas por debajo.'}
+                    : 'Selecciona tu talla.'}
                 </span>
               )}
             </p>

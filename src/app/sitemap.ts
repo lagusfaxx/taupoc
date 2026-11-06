@@ -14,6 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: absoluteUrl('/guia-de-tallas'), changeFrequency: 'monthly', priority: 0.8 },
     { url: absoluteUrl('/marca'), changeFrequency: 'monthly', priority: 0.7 },
     { url: absoluteUrl('/clubes'), changeFrequency: 'monthly', priority: 0.7 },
+    { url: absoluteUrl('/venta-por-mayor'), changeFrequency: 'monthly', priority: 0.6 },
     { url: absoluteUrl('/blog'), changeFrequency: 'weekly', priority: 0.7 },
     { url: absoluteUrl('/envios'), changeFrequency: 'monthly', priority: 0.5 },
     { url: absoluteUrl('/devoluciones'), changeFrequency: 'monthly', priority: 0.5 },

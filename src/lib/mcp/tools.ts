@@ -635,7 +635,7 @@ const editarProducto = tool({
     paisOrigen: z.string().nullable().optional(),
     cuidados: z.string().nullable().optional(),
     notasCalce: z.string().nullable().optional(),
-    ajusteTalla: z.number().int().optional().describe('Cuántas tallas por debajo se recomienda (fitOffset).'),
+    ajusteTalla: z.number().int().optional().describe('Campo heredado (fitOffset). La tienda ya no lo usa: la talla de la tabla es la que se compra.'),
     homologacionCodigo: z.string().nullable().optional(),
     homologacionAnio: z.number().int().nullable().optional(),
     homologacionUrl: z.string().nullable().optional(),

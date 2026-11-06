@@ -94,6 +94,12 @@ export function IntlFooter({
           TAUPOC · Trajes de competencia homologados World Aquatics · Envíos a toda Latinoamérica
         </p>
         <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 text-[14px]">
+          <Link
+            href="/venta-por-mayor"
+            className="inline-flex min-h-11 items-center underline-offset-4 hover:text-graphite hover:underline"
+          >
+            Venta por mayor
+          </Link>
           {instagram ? (
             <a
               href={`https://instagram.com/${instagram.replace('@', '')}`}

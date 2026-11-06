@@ -13,6 +13,11 @@ import { IconTrash } from '@/components/ui/Icons';
 
 export interface QuoteData {
   id: string;
+  kind: 'CLUB' | 'STORE';
+  storefront: string;
+  taxId: string | null;
+  storeUrl: string | null;
+  country: string | null;
   clubName: string;
   contactName: string;
   email: string;
@@ -67,11 +72,29 @@ export function QuoteCard({ quote }: { quote: QuoteData }) {
         <div className="min-w-[180px] flex-1">
           <p className="flex items-center gap-2 text-[15px] text-chalk">
             {quote.clubName}
+            <Badge tone={quote.kind === 'STORE' ? 'info' : 'muted'}>
+              {quote.kind === 'STORE' ? 'Tienda mayorista' : 'Club'}
+              {quote.storefront === 'INTL' ? ' · .lat' : ''}
+            </Badge>
             <Badge tone={STATUS_TONE[quote.status]}>{STATUS_LABEL[quote.status]}</Badge>
           </p>
           <p className="mt-0.5 text-[12.5px] text-chalk-faint">
             {quote.contactName}
-            {quote.interest ? ` · ${quote.interest}` : ''} · {formatDateTime(quote.createdAt)}
+            {quote.interest ? ` · ${quote.interest}` : ''}
+            {quote.taxId ? ` · ${quote.taxId}` : ''} · {formatDateTime(quote.createdAt)}
+            {quote.storeUrl ? (
+              <>
+                {' · '}
+                <a
+                  href={/^https?:\/\//.test(quote.storeUrl) ? quote.storeUrl : `https://${quote.storeUrl.replace(/^@/, 'instagram.com/')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-chalk"
+                >
+                  {quote.storeUrl}
+                </a>
+              </>
+            ) : null}
           </p>
         </div>
 
@@ -88,9 +111,11 @@ export function QuoteCard({ quote }: { quote: QuoteData }) {
         <div className="min-w-[110px]">
           <p className="font-display text-[9.5px] uppercase tracking-mega text-chalk-faint">Volumen</p>
           <p className="mt-1 text-[14px] text-chalk">
-            {quote.athletes ? `${quote.athletes} nadadores` : '—'}
+            {quote.athletes
+              ? `${quote.athletes} ${quote.kind === 'STORE' ? 'unidades' : 'nadadores'}`
+              : '—'}
           </p>
-          <p className="text-[11.5px] text-chalk-faint">{regionName(quote.region)}</p>
+          <p className="text-[11.5px] text-chalk-faint">{quote.country ?? regionName(quote.region)}</p>
         </div>
 
         <div className="flex items-center gap-3">

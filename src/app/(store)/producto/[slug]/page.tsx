@@ -135,6 +135,9 @@ export default async function ProductPage({
   if (!resolved) notFound();
 
   const { product, color, settings, dividirPorColor, preseleccion } = resolved;
+  // `?talla=` viene del filtro del catálogo: la ficha abre con esa talla elegida.
+  const tallaParam = Array.isArray(query.talla) ? query.talla[0] : query.talla;
+  const tallasPedidas = (tallaParam ?? '').split(',').map((t) => t.trim()).filter(Boolean);
   const rating = resumenDeNotas(product.reviews);
   const esAccesorio = product.kind === 'ACCESSORY';
 
@@ -328,7 +331,11 @@ export default async function ProductPage({
       </nav>
 
       <div className="container py-8 lg:py-14">
-        <ProductView product={viewData} initialColorSlug={color?.slug ?? preseleccion?.slug ?? null} />
+        <ProductView
+          product={viewData}
+          initialColorSlug={color?.slug ?? preseleccion?.slug ?? null}
+          initialSizes={tallasPedidas}
+        />
       </div>
 
       {/* Descripción y ficha técnica */}

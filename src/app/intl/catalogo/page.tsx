@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { Gender } from '@prisma/client';
 import { getIntlCards } from '@/lib/intl-catalog';
-import { intlMetadata } from '@/lib/intl-seo';
+import { intlMetadata, intlUrl } from '@/lib/intl-seo';
+import { jsonLd } from '@/lib/seo';
 import { cn } from '@/lib/utils';
 import { ProductGrid } from '@/components/intl/ProductGrid';
 
@@ -38,8 +39,22 @@ export default async function IntlCatalog({ searchParams }: { searchParams: Sear
   const filter = filterFor((await searchParams).genero);
   const cards = await getIntlCards(filter.gender ? { gender: filter.gender } : {});
 
+  const itemList = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: filter.title,
+    numberOfItems: cards.length,
+    itemListElement: cards.slice(0, 30).map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: intlUrl(c.href),
+      name: `${c.productName} ${c.colorName}`,
+    })),
+  };
+
   return (
     <section className="mx-auto max-w-[1600px] px-4 pb-16 pt-10 sm:px-8 sm:pt-16">
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(itemList)} />
       <h1 className="text-[clamp(40px,6vw,96px)] leading-[0.95]">{filter.title}</h1>
       <nav aria-label="Filtrar" className="mb-12 mt-8 flex gap-6 text-[15px]">
         {FILTERS.map((f) => (

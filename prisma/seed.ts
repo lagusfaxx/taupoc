@@ -59,14 +59,12 @@ interface ProductSeed {
 }
 
 const FIT_MEN =
-  'Los jammers de competición se usan comprimidos. Si estás entre dos tallas, elige la menor. ' +
-  'Para carreras de velocidad la mayoría de los nadadores baja 1 a 2 tallas respecto de su ropa habitual; ' +
-  'para pruebas de fondo, baja solo 1.';
+  'Elige la talla que indica la tabla según tu cintura. El jammer queda ajustado y cuesta subirlo por ' +
+  'los muslos: es normal en un traje de compresión.';
 
 const FIT_WOMEN =
-  'El knee suit debe entrar con esfuerzo: esa tensión es la que genera la compresión. ' +
-  'Baja 1 a 2 tallas respecto de tu talla habitual de entrenamiento. ' +
-  'Ponte el traje con las manos abiertas, nunca tirando con las uñas.';
+  'Elige la talla que indica la tabla según tu pecho, cintura y cadera. El knee suit queda ajustado: ' +
+  'póntelo con las manos abiertas, nunca tirando con las uñas.';
 
 const PRODUCTS: ProductSeed[] = [
   {
@@ -276,7 +274,7 @@ async function seedProducts() {
         'Enjuagar con agua fría inmediatamente después de cada uso. Secar a la sombra, extendido. ' +
         'No usar lavadora, secadora, cloro ni suavizante. No planchar ni retorcer.',
       fitNotes: p.fitNotes,
-      fitOffset: 1,
+      fitOffset: 0,
       featured: p.featured,
       seoTitle: `${p.name} ${p.modelCode} — Homologado World Aquatics ${p.approvalCode}`,
       seoDescription:
@@ -480,12 +478,12 @@ async function seedPosts() {
       slug: 'como-elegir-la-talla-de-tu-traje-de-competicion',
       title: 'Cómo elegir la talla de tu traje de competición',
       excerpt:
-        'La talla es el error más caro del rubro. Esta es la forma correcta de medirse y por qué un traje de carrera se usa una o dos tallas más abajo.',
+        'Cómo medirse para elegir la talla de un traje de competición, cómo ponérselo sin romperlo y cuánto dura.',
       tags: ['Guías', 'Tallas'],
       accent: '#00E0B8',
       body: `## El traje de competición no se elige como un traje de entrenamiento
 
-Un traje de carrera funciona por compresión. Si entra cómodo, no está haciendo su trabajo. Esa es la razón por la que un nadador que usa talla 32 en entrenamiento compite en 28 o 30.
+Un traje de carrera funciona por compresión, así que queda más ajustado que uno de entrenamiento. Por eso la talla se elige con medidas, no con la talla de ropa.
 
 ## Cómo medirse bien
 
@@ -496,20 +494,13 @@ Necesitas una huincha de costurera y alguien que te ayude. Mídete **sin ropa gr
 - **Pecho** (para knee suits): bajo las axilas, sobre la parte más ancha.
 - **Estatura:** descalzo, contra la pared.
 
-Con esos tres números entras a la tabla de tallas de la ficha de cada producto y obtienes tu **talla de cuerpo**.
+Con esos tres números entras a la tabla de tallas de la ficha de cada producto y obtienes tu **talla**.
 
-## Y ahora baja una o dos tallas
+## Busca tu fila en la tabla
 
-Sobre la talla de cuerpo aplicas el ajuste de competencia:
+La talla de la tabla es la que compras. Si tus medidas quedan entre dos tallas, escríbenos antes de comprar y te confirmamos.
 
-| Prueba | Ajuste |
-| --- | --- |
-| 50 y 100 metros | Baja 2 tallas |
-| 200 y 400 metros | Baja 1 a 2 tallas |
-| 800, 1500 y aguas abiertas | Baja 1 talla |
-| Primer traje de carrera (juvenil) | Baja 1 talla |
-
-Si es el primer traje de competencia del nadador, baja solo una. La diferencia entre un traje que comprime y uno que asfixia es real, y en un nadador de 12 o 13 años conviene no exagerar.
+El traje va a quedar ajustado y ponérselo toma unos minutos: es normal en un traje de compresión.
 
 ## Cómo ponerse el traje
 

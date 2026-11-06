@@ -690,28 +690,39 @@ export async function sendLowStockAlert(
 }
 
 export async function sendQuoteRequestAlert(
-  q: { clubName: string; contactName: string; email: string; phone: string; athletes?: number | null; message: string },
+  q: {
+    kind?: 'CLUB' | 'STORE';
+    clubName: string;
+    contactName: string;
+    email: string;
+    phone: string;
+    athletes?: number | null;
+    message: string;
+  },
   opts?: EnvioOpts,
 ) {
   const to = opts?.to ?? process.env.ADMIN_ALERT_EMAIL;
   if (!to) return;
   const b = await brand();
+  const store = q.kind === 'STORE';
+  const tipo = store ? 'Cotización mayorista' : 'Cotización de club';
+  const unidad = store ? 'Unidades' : 'Nadadores';
   const html = layout({
-    title: 'Nueva cotización de club',
-    preheader: `${q.clubName} · ${q.athletes ?? '—'} nadadores`,
+    title: store ? 'Nueva cotización mayorista' : 'Nueva cotización de club',
+    preheader: `${q.clubName} · ${q.athletes ?? '—'} ${unidad.toLowerCase()}`,
     brand: b,
     body:
-      heading('Cotización de club', ACCENT, esc(q.clubName)) +
+      heading(tipo, ACCENT, esc(q.clubName)) +
       panel(
         'Contacto',
         `${esc(q.contactName)}<br>
          <a href="mailto:${esc(q.email)}" style="color:${ACCENT};text-decoration:none;">${esc(q.email)}</a> · ${esc(q.phone)}<br>
-         <span style="color:${CHALK_FAINT};">Nadadores: ${esc(q.athletes ?? '—')}</span>`,
+         <span style="color:${CHALK_FAINT};">${unidad}: ${esc(q.athletes ?? '—')}</span>`,
       ) +
-      `<div style="margin:20px 0 0;padding:16px 18px;border-left:2px solid ${ACCENT};background:${INK_800};color:${CHALK_DIM};font-size:14px;line-height:1.65;">${esc(q.message)}</div>` +
+      `<div style="margin:20px 0 0;padding:16px 18px;border-left:2px solid ${ACCENT};background:${INK_800};color:${CHALK_DIM};font-size:14px;line-height:1.65;white-space:pre-wrap;">${esc(q.message)}</div>` +
       button(`${b.siteUrl}/admin/cotizaciones`, 'Ver cotizaciones'),
   });
-  await sendMail({ to, subject: `[TAUPOC] Cotización de club · ${q.clubName}`, html });
+  await sendMail({ to, subject: `[TAUPOC] ${tipo} · ${q.clubName}`, html });
 }
 
 export async function sendPasswordReset(email: string, resetUrl: string) {

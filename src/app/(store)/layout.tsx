@@ -3,6 +3,8 @@ import { Footer } from '@/components/store/Footer';
 import { MetaPixel } from '@/components/store/MetaPixel';
 import { getSettings } from '@/lib/settings';
 import { WhatsAppButton } from '@/components/shared/WhatsAppButton';
+import { RouletteWheel } from '@/components/shared/RouletteWheel';
+import { rouletteSegments } from '@/lib/roulette';
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSettings();
@@ -16,6 +18,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         <Footer />
       </div>
       <WhatsAppButton phone={settings.whatsapp} message="Hola, les escribo desde taupoc.cl." />
+      {settings.rouletteEnabled ? <RouletteWheel segments={rouletteSegments('CL')} theme="dark" /> : null}
     </MetaPixel>
   );
 }

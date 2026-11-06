@@ -227,9 +227,9 @@ model Product {
   finish        String?
   countryOrigin String?
   careNotes     String?
-  /// Notas de calce. Los trajes de competencia se usan 1-2 tallas por debajo.
+  /// Notas de calce que se muestran en la ficha.
   fitNotes      String?
-  fitOffset     Int     @default(1)
+  fitOffset     Int     @default(0)
 
   featured  Boolean @default(false)
   sortOrder Int     @default(0)
@@ -859,9 +859,24 @@ enum QuoteStatus {
   LOST
 }
 
+/// CLUB: equipo que compra para su plantel. STORE: tienda que compra para revender.
+enum QuoteKind {
+  CLUB
+  STORE
+}
+
 model QuoteRequest {
   id          String      @id @default(cuid())
+  kind        QuoteKind   @default(CLUB)
+  /// Tienda desde la que llegó: CL (taupoc.cl) o INTL (taupoc.lat).
+  storefront  String      @default("CL")
+  /// Nombre del club o de la tienda.
   clubName    String
+  /// RUT o identificador tributario de la tienda.
+  taxId       String?
+  /// Web o Instagram de la tienda.
+  storeUrl    String?
+  country     String?
   contactName String
   email       String
   phone       String
@@ -874,6 +889,20 @@ model QuoteRequest {
   createdAt   DateTime    @default(now())
 
   @@index([status])
+  @@index([kind])
+  @@index([createdAt])
+}
+
+/// Un giro de la ruleta de descuento por correo. Uno por correo, para siempre.
+model RouletteSpin {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  /// Etiqueta del premio que salió, tal como se mostró.
+  prize      String
+  couponCode String
+  storefront String   @default("CL")
+  createdAt  DateTime @default(now())
+
   @@index([createdAt])
 }
 

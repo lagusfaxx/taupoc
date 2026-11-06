@@ -40,7 +40,16 @@ export interface ProductCardData {
   colorSlug?: string | null;
 }
 
-export function ProductCard({ product, priority }: { product: ProductCardData; priority?: boolean }) {
+export function ProductCard({
+  product,
+  priority,
+  sizes,
+}: {
+  product: ProductCardData;
+  priority?: boolean;
+  /** Tallas filtradas en el catálogo: la ficha abre con la primera disponible ya elegida. */
+  sizes?: string[];
+}) {
   const fixed = product.colorSlug
     ? (product.colors.find((c) => c.slug === product.colorSlug) ?? null)
     : null;
@@ -55,11 +64,11 @@ export function ProductCard({ product, priority }: { product: ProductCardData; p
   // Tarjeta fijada a un color: va derecho a la ficha de ese color. Tarjeta de
   // modelo con varios colores: lleva el elegido en la muestra, y la ficha
   // decide si lo preselecciona o redirige a su propia página.
-  const href = fixed
-    ? `/producto/${product.slug}-${fixed.slug}`
-    : active && product.colors.length > 1
-      ? `/producto/${product.slug}?color=${active.slug}`
-      : `/producto/${product.slug}`;
+  const query = new URLSearchParams();
+  if (!fixed && active && product.colors.length > 1) query.set('color', active.slug);
+  if (sizes?.length) query.set('talla', sizes.join(','));
+  const qs = query.toString();
+  const href = `/producto/${product.slug}${fixed ? `-${fixed.slug}` : ''}${qs ? `?${qs}` : ''}`;
   const image = active?.imageUrl ?? product.fallbackImage;
   // Con la tarjeta fijada a un color manda el stock de ese color, no el del modelo.
   const unavailable = product.comingSoon || (fixed ? fixed.stock === 0 : product.totalStock === 0);

@@ -97,9 +97,8 @@ export const LANDINGS = {
       {
         title: 'Cómo elegir la talla de un fast skin',
         paragraphs: [
-          'Un fast skin se usa una o dos tallas por debajo de la talla de cuerpo: si entra cómodo, no comprime. ' +
-            'En 50 y 100 metros se baja dos tallas; en 800, 1500 y aguas abiertas, una. En un primer traje de ' +
-            'carrera conviene bajar solo una.',
+          'Mide cintura y cadera y búscalas en la guía de tallas: la talla de la tabla es la que compras. ' +
+            'Un fast skin queda ajustado y cuesta ponérselo; eso es normal.',
         ],
       },
     ],
@@ -163,8 +162,7 @@ export const LANDINGS = {
           'Los trajes de carrera —también llamados fast skin, traje técnico o traje de compresión— están ' +
             'hechos con tejido de baja absorción de agua y costuras termoselladas. Comprimen la musculatura ' +
             'y ordenan la posición del cuerpo en el agua, lo que reduce el arrastre en cada brazada.',
-          'Por eso se usan apretados: una talla o dos por debajo de la talla de cuerpo, según la prueba. ' +
-            'Si entra cómodo, no está haciendo su trabajo.',
+          'Por eso quedan ajustados aunque elijas tu talla de la tabla, y ponérselos toma unos minutos.',
         ],
       },
       {
@@ -208,8 +206,8 @@ export const LANDINGS = {
       {
         q: '¿Qué talla de traje de competencia compro?',
         a:
-          'Mide cintura, cadera y estatura, busca tu talla de cuerpo en la guía de tallas y baja una o dos ' +
-          'tallas según la distancia que nadas. Si quedas entre dos tallas, elige la menor.',
+          'Mide cintura, cadera y estatura y busca la fila que te corresponde en la guía de tallas: esa es tu ' +
+          'talla. Si quedas entre dos, escríbenos y te confirmamos.',
       },
       {
         q: '¿Puedo usar un traje de competencia para entrenar?',
@@ -250,9 +248,9 @@ export const LANDINGS = {
       {
         title: 'Cómo elegir un knee suit',
         paragraphs: [
-          'Lo primero es la talla, no el color. Un knee suit se usa una o dos tallas por debajo de la talla de ' +
-            'cuerpo: debe costar ponérselo. Con la talla correcta el traje no forma pliegues en la espalda ni ' +
-            'deja entrar agua por las piernas al tirarse.',
+          'Lo primero es la talla, no el color. Busca tus medidas en la guía de tallas y compra esa talla. Con ' +
+            'la talla correcta el traje no forma pliegues en la espalda ni deja entrar agua por las piernas al ' +
+            'tirarse.',
           'Después mira el corte de la espalda y los tirantes. Un traje de espalda abierta da más movilidad de ' +
             'hombros; uno de espalda cerrada comprime más el torso.',
         ],
@@ -334,9 +332,8 @@ export const LANDINGS = {
       {
         title: 'La talla correcta',
         paragraphs: [
-          'Un jammer de carrera se usa entre una y dos tallas por debajo de la talla de cuerpo. En pruebas de ' +
-            '50 y 100 metros se baja dos tallas; en 800, 1500 y aguas abiertas basta con una. Si al ponértelo ' +
-            'no cuesta subirlo por los muslos, es grande.',
+          'Mide tu cintura y busca la fila que te corresponde en la guía de tallas: esa es tu talla. El jammer ' +
+            'queda ajustado y cuesta subirlo por los muslos; es lo esperable en un traje de compresión.',
         ],
       },
       {
@@ -489,7 +486,7 @@ export const LANDINGS = {
         bullets: [
           'Tirar del borde de la pierna o de los tirantes.',
           'Ponérselo apurado, de pie y sin apoyo.',
-          'Usar una talla demasiado chica: baja una o dos tallas, no más.',
+          'Comprar una talla más chica que la de la tabla.',
           'Lavarlo con agua caliente o secarlo al sol.',
         ],
       },
@@ -504,8 +501,8 @@ export const LANDINGS = {
       {
         q: '¿Es normal que cueste tanto ponérselo?',
         a:
-          'Sí. Un traje de compresión se usa una o dos tallas por debajo de la talla de cuerpo. Si entra fácil, ' +
-          'probablemente es grande.',
+          'Sí. Un traje de compresión queda ajustado aunque sea tu talla. Tómate el tiempo y sube el tejido de a ' +
+          'poco con las palmas abiertas.',
       },
       {
         q: '¿Cómo se cuida después de la carrera?',

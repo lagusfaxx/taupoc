@@ -103,7 +103,7 @@ export async function saveProduct(_prev: AdminState | null, formData: FormData):
     countryOrigin: d.countryOrigin?.trim() || null,
     careNotes: d.careNotes?.trim() || null,
     fitNotes: d.fitNotes?.trim() || null,
-    fitOffset: d.fitOffset ? Number(d.fitOffset) || 1 : 1,
+    fitOffset: d.fitOffset ? Number(d.fitOffset) || 0 : 0,
     featured: d.featured === 'on',
     sortOrder: d.sortOrder ? Number(d.sortOrder) || 0 : 0,
     seoTitle: d.seoTitle?.trim() || null,
