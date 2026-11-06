@@ -9,9 +9,6 @@ type Theme = 'dark' | 'light';
 
 const STORAGE_DONE = 'taupoc:ruleta:giro';
 const STORAGE_SEEN = 'taupoc:ruleta:visto';
-/** Si se cerró sin girar, no vuelve a abrirse sola hasta pasado este plazo. */
-const SNOOZE_MS = 3 * 86_400_000;
-const AUTO_OPEN_MS = 20_000;
 const HIDDEN_ON = ['/checkout', '/carrito', '/cuenta', '/devoluciones'];
 
 function read(key: string): string | null {
@@ -101,9 +98,21 @@ function Wheel({ segments, rotation, theme }: { segments: { id: string; label: s
 export function RouletteWheel({
   segments,
   theme = 'dark',
+  title,
+  buttonLabel,
+  autoOpenSeconds,
+  exitIntent,
+  snoozeDays,
 }: {
   segments: { id: string; label: string }[];
   theme?: Theme;
+  title: string;
+  buttonLabel: string;
+  /** 0: solo se abre con el botón. */
+  autoOpenSeconds: number;
+  exitIntent: boolean;
+  /** Si se cerró sin girar, no vuelve a abrirse sola hasta pasados estos días. */
+  snoozeDays: number;
 }) {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
@@ -126,23 +135,23 @@ export function RouletteWheel({
   const autoOpen = useCallback(() => {
     if (autoOpened.current || done || hidden) return;
     const seen = Number(read(STORAGE_SEEN) ?? 0);
-    if (seen && Date.now() - seen < SNOOZE_MS) return;
+    if (seen && Date.now() - seen < snoozeDays * 86_400_000) return;
     autoOpened.current = true;
     setOpen(true);
-  }, [done, hidden]);
+  }, [done, hidden, snoozeDays]);
 
   useEffect(() => {
     if (!ready || done || hidden) return;
-    const timer = window.setTimeout(autoOpen, AUTO_OPEN_MS);
+    const timer = autoOpenSeconds > 0 ? window.setTimeout(autoOpen, autoOpenSeconds * 1000) : null;
     const onLeave = (e: MouseEvent) => {
       if (e.clientY <= 0) autoOpen();
     };
-    document.addEventListener('mouseout', onLeave);
+    if (exitIntent) document.addEventListener('mouseout', onLeave);
     return () => {
-      window.clearTimeout(timer);
+      if (timer) window.clearTimeout(timer);
       document.removeEventListener('mouseout', onLeave);
     };
-  }, [ready, done, hidden, autoOpen]);
+  }, [ready, done, hidden, autoOpen, autoOpenSeconds, exitIntent]);
 
   useEffect(() => {
     if (!open) return;
@@ -202,7 +211,7 @@ export function RouletteWheel({
             <circle cx="12" cy="12" r="9" />
             <path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6 5.6 18.4" />
           </svg>
-          Gira y gana
+          {buttonLabel}
         </button>
       ) : null}
 
@@ -228,7 +237,7 @@ export function RouletteWheel({
               Ruleta TAUPOC
             </p>
             <h2 className={cn('mt-1.5 text-[26px] leading-tight', dark && 'font-display tracking-tight')}>
-              {result ? `Ganaste ${result.label}` : 'Gira y gana un descuento'}
+              {result ? `Ganaste ${result.label}` : title}
             </h2>
 
             <div className="mt-5">

@@ -3,7 +3,8 @@ import { getCartCount } from '@/lib/cart';
 import { getSettings } from '@/lib/settings';
 import { WhatsAppButton } from '@/components/shared/WhatsAppButton';
 import { RouletteWheel } from '@/components/shared/RouletteWheel';
-import { rouletteSegments } from '@/lib/roulette';
+import { rouletteSegments, rouletteVisible } from '@/lib/roulette';
+import { getRoulette } from '@/lib/roulette-store';
 import { IntlCartDrawer } from '@/components/intl/CartDrawer';
 import { DeliveryLocationControl } from '@/components/intl/DeliveryLocation';
 import { jsonLd } from '@/lib/seo';
@@ -15,7 +16,7 @@ import './intl.css';
  * bajo /intl; desde taupoc.cl este segmento no existe.
  */
 export default async function IntlLayout({ children }: { children: React.ReactNode }) {
-  const [cartCount, settings] = await Promise.all([getCartCount(), getSettings()]);
+  const [cartCount, settings, roulette] = await Promise.all([getCartCount(), getSettings(), getRoulette()]);
   const orgLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -81,7 +82,17 @@ export default async function IntlLayout({ children }: { children: React.ReactNo
       <IntlFooter instagram={settings.instagram} contactEmail={settings.contactEmail} />
       <WhatsAppButton phone={settings.whatsapp} message="Hola, les escribo desde taupoc.lat." />
       <IntlCartDrawer />
-      {settings.rouletteEnabled ? <RouletteWheel segments={rouletteSegments('INTL')} theme="light" /> : null}
+      {rouletteVisible(roulette, 'INTL') ? (
+        <RouletteWheel
+          segments={rouletteSegments(roulette, 'INTL')}
+          theme="light"
+          title={roulette.title}
+          buttonLabel={roulette.buttonLabel}
+          autoOpenSeconds={roulette.autoOpenSeconds}
+          exitIntent={roulette.exitIntent}
+          snoozeDays={roulette.snoozeDays}
+        />
+      ) : null}
     </div>
   );
 }

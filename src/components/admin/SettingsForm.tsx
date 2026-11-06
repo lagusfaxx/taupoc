@@ -152,20 +152,6 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                       label="Publicar una ficha por color"
                       help="Cada color tiene su propia página, su propia tarjeta en el catálogo y su lugar en el sitemap. La dirección del modelo lleva al primer color. El inventario no se divide: se sigue administrando desde el mismo producto."
                     />
-                    <Checkbox
-                      name="rouletteEnabled"
-                      defaultChecked={settings.rouletteEnabled}
-                      label="Ruleta de descuento"
-                      help="El visitante deja su correo, gira y recibe un cupón de un solo uso. Un giro por correo. Los cupones quedan en Cupones con el prefijo GIRO-."
-                    />
-                    <Input
-                      label="Vigencia del cupón de la ruleta (días)"
-                      name="rouletteCouponDays"
-                      type="number"
-                      min={1}
-                      max={60}
-                      defaultValue={String(settings.rouletteCouponDays)}
-                    />
                   </div>
                 </Card>
               </div>

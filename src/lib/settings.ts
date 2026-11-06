@@ -47,10 +47,6 @@ export interface SiteSettings {
    * colores, así que el inventario y los pedidos no se parten.
    */
   catalogSplitByColor: boolean;
-  /** Muestra la ruleta de descuento a cambio del correo, en las dos tiendas. */
-  rouletteEnabled: boolean;
-  /** Días de vigencia del cupón que entrega la ruleta. */
-  rouletteCouponDays: number;
   /**
    * Minutos que se aparta el stock de un pedido mientras el cliente paga con
    * Mercado Pago o PayPal. Si no paga en ese plazo, las tallas se liberan.
@@ -105,8 +101,6 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   announcementBar: 'Despacho a todo Chile · Envío gratis sobre {envio_gratis}',
   announcementActive: true,
   catalogSplitByColor: true,
-  rouletteEnabled: true,
-  rouletteCouponDays: 7,
   reservationMinutes: 15,
   transferReservationHours: 24,
 

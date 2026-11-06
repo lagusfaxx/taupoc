@@ -5,10 +5,11 @@ import { z } from 'zod';
 import { headers } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { rateLimit } from '@/lib/rate-limit';
-import { getSettings } from '@/lib/settings';
 import { getStore } from '@/lib/storefront-server';
 import { storeSiteUrl } from '@/lib/storefront';
-import { pickPrize, roulettePrizes } from '@/lib/roulette';
+import { activePrizes, pickPrize, rouletteVisible } from '@/lib/roulette';
+import { getRoulette } from '@/lib/roulette-store';
+import { formatCLP } from '@/lib/money';
 import { sendMail } from '@/lib/mail';
 
 export interface SpinResult {
@@ -37,8 +38,9 @@ function formatDate(d: Date): string {
 }
 
 export async function spinRoulette(formData: FormData): Promise<SpinResult> {
-  const settings = await getSettings();
-  if (!settings.rouletteEnabled) return { ok: false, message: 'La ruleta no está disponible.' };
+  const config = await getRoulette();
+  const store = await getStore();
+  if (!rouletteVisible(config, store)) return { ok: false, message: 'La ruleta no está disponible.' };
 
   const parsed = schema.safeParse({ email: formData.get('email') });
   if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message };
@@ -49,8 +51,7 @@ export async function spinRoulette(formData: FormData): Promise<SpinResult> {
     return { ok: false, message: 'Demasiados intentos. Prueba en unos minutos.' };
   }
 
-  const store = await getStore();
-  const prizes = roulettePrizes(store);
+  const prizes = activePrizes(config, store);
   const email = parsed.data.email;
 
   const previous = await prisma.rouletteSpin.findUnique({ where: { email } });
@@ -71,8 +72,10 @@ export async function spinRoulette(formData: FormData): Promise<SpinResult> {
     };
   }
 
-  const prize = pickPrize(store);
-  const endsAt = new Date(Date.now() + settings.rouletteCouponDays * 86_400_000);
+  const prize = pickPrize(prizes);
+  if (!prize) return { ok: false, message: 'La ruleta no está disponible.' };
+  const endsAt = new Date(Date.now() + config.couponDays * 86_400_000);
+  const minSubtotal = config.minSubtotal > 0 ? config.minSubtotal : null;
 
   let code = newCode();
   try {
@@ -85,6 +88,7 @@ export async function spinRoulette(formData: FormData): Promise<SpinResult> {
           type: prize.type,
           value: prize.value,
           maxUses: 1,
+          minSubtotal,
           perUserLimit: 1,
           endsAt,
         },
@@ -105,13 +109,18 @@ export async function spinRoulette(formData: FormData): Promise<SpinResult> {
 
   const site = storeSiteUrl(store);
   const until = formatDate(endsAt);
+  const minText = minSubtotal
+    ? store === 'INTL'
+      ? ' Aplica sobre una compra mínima.'
+      : ` Compra mínima ${formatCLP(minSubtotal)}.`
+    : '';
   const accent = store === 'INTL' ? '#1A3CFF' : '#00B894';
   await sendMail({
     to: email,
     subject: `Tu cupón TAUPOC: ${prize.label}`,
     text:
       `Ganaste ${prize.label}.\n\nTu código: ${code}\n` +
-      `Úsalo en el carrito antes del ${until}. Un solo uso.\n\n${site}/catalogo`,
+      `Úsalo en el carrito antes del ${until}. Un solo uso.${minText}\n\n${site}/catalogo`,
     html: `<!doctype html><html><body style="margin:0;background:#f4f4f2;font-family:Arial,Helvetica,sans-serif;color:#111214;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="100%" style="max-width:480px;background:#ffffff;" cellpadding="0" cellspacing="0">
@@ -120,7 +129,7 @@ export async function spinRoulette(formData: FormData): Promise<SpinResult> {
 <tr><td style="padding:24px 32px;">
 <div style="border:2px dashed ${accent};padding:18px;text-align:center;font-size:26px;font-weight:bold;letter-spacing:3px;">${code}</div>
 </td></tr>
-<tr><td style="padding:0 32px 24px;font-size:15px;line-height:1.6;color:#55585E;">Escríbelo en el carrito antes del ${until}. Es de un solo uso.</td></tr>
+<tr><td style="padding:0 32px 24px;font-size:15px;line-height:1.6;color:#55585E;">Escríbelo en el carrito antes del ${until}. Es de un solo uso.${minText}</td></tr>
 <tr><td style="padding:0 32px 32px;"><a href="${site}/catalogo" style="display:inline-block;background:#111214;color:#ffffff;text-decoration:none;padding:14px 24px;font-size:14px;font-weight:bold;">Ver trajes</a></td></tr>
 </table></td></tr></table></body></html>`,
   }).catch(() => {});
