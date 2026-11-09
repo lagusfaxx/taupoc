@@ -77,6 +77,18 @@ export interface SiteSettings {
   notifyOrderEmail: boolean;
   notifyAdminNewOrder: boolean;
   notifyLowStock: boolean;
+  /**
+   * Correo automático que pide calificar los productos. Sale una sola vez por
+   * pedido, `reviewRequestDelayDays` días después de la entrega (o del
+   * despacho, si nadie marcó el pedido como entregado).
+   */
+  reviewRequestEnabled: boolean;
+  reviewRequestDelayDays: number;
+  /**
+   * Publica de inmediato las opiniones que llegan por ese correo. Apagado,
+   * quedan ocultas hasta que alguien las revise en la ficha del producto.
+   */
+  reviewAutoPublish: boolean;
 }
 
 export const DEFAULT_SETTINGS: SiteSettings = {
@@ -117,6 +129,9 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   notifyOrderEmail: true,
   notifyAdminNewOrder: true,
   notifyLowStock: true,
+  reviewRequestEnabled: false,
+  reviewRequestDelayDays: 7,
+  reviewAutoPublish: false,
 };
 
 const SETTINGS_KEY = 'site';

@@ -282,6 +282,11 @@ model Review {
   verified Boolean      @default(false)
   status   ReviewStatus @default(PUBLISHED)
 
+  /// Pedido desde el que el cliente calificó, cuando llegó por el correo
+  /// automático de calificación. Una opinión por producto y pedido.
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
   /// Fecha que se muestra y que viaja en el marcado de Google. Se separa de
   /// `createdAt` para que una reseña antigua cargada hoy no aparezca de hoy.
   publishedAt DateTime @default(now())
@@ -289,6 +294,7 @@ model Review {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([orderId, productId])
   @@index([productId, status])
   @@index([publishedAt])
 }
@@ -719,6 +725,11 @@ model Order {
   storefront       String    @default("CL")
   buyerTaxId       String?
   dutiesAcceptedAt DateTime?
+  /// Token del enlace público para calificar los productos (/calificar/<token>).
+  reviewToken       String?   @unique
+  /// Cuándo salió el correo que pide calificar. Evita mandarlo dos veces.
+  reviewRequestedAt DateTime?
+  reviews           Review[]
 
   @@index([status])
   @@index([paymentStatus])
@@ -728,6 +739,7 @@ model Order {
   @@index([mpPaymentId])
   @@index([paypalOrderId])
   @@index([stockReserved, reservedUntil])
+  @@index([reviewRequestedAt])
 }
 
 model OrderItem {

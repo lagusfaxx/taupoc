@@ -13,6 +13,7 @@ import {
 } from '@/lib/orders';
 import { RETURN_STATUS_LABEL, returnStatusTone } from '@/lib/order-labels';
 import { returnPayUrl } from '@/lib/order-returns';
+import { reviewUrl } from '@/lib/review-requests';
 import { PAYMENT_METHOD_LABEL } from '@/lib/payment-methods';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { Card } from '@/components/admin/Card';
@@ -20,7 +21,7 @@ import { Table, Td, Th, Tr } from '@/components/admin/Table';
 import { Badge } from '@/components/ui/Badge';
 import {
   OrderNoteForm, OrderStatusForm, RefundForm, TrackingForm, OrderItemsForm, TransferForm,
-  ReturnForm, DeleteOrderForm,
+  ReturnForm, DeleteOrderForm, ReviewRequestForm,
   type AvailableVariant,
 } from '@/components/admin/OrderPanel';
 import { IconPrint } from '@/components/ui/Icons';
@@ -39,6 +40,7 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
       items: true,
       events: { orderBy: { createdAt: 'desc' } },
       orderReturn: true,
+      _count: { select: { reviews: true } },
       user: { select: { id: true, email: true, name: true, clubName: true } },
     },
   });
@@ -315,6 +317,13 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
                       carrier={order.shippingCarrier}
                       trackingNumber={order.trackingNumber}
                       isShipped={order.status === 'SHIPPED' || order.status === 'DELIVERED'}
+                    />
+                    <ReviewRequestForm
+                      orderId={order.id}
+                      canSend={order.status === 'SHIPPED' || order.status === 'DELIVERED'}
+                      sentAt={order.reviewRequestedAt ? formatDateTime(order.reviewRequestedAt) : null}
+                      reviewUrl={order.reviewToken ? reviewUrl(order.reviewToken) : null}
+                      reviewsCount={order._count.reviews}
                     />
                   </div>
                 ),

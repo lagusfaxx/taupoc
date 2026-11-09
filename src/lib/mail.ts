@@ -564,6 +564,67 @@ export async function sendReturnFeeRequest(params: {
   return await sendMail({ to: params.email, subject: `Envío de tu devolución · Pedido ${params.number}`, html });
 }
 
+// ── Pedir calificación ────────────────────────────────────────
+
+export interface ReviewRequestMailData {
+  number: string;
+  email: string;
+  firstName?: string | null;
+  /** Enlace público para calificar: /calificar/<token>. */
+  reviewUrl: string;
+  /** Un producto por fila, sin repetir aunque se hayan comprado dos tallas. */
+  products: { productId: string; name: string; detail?: string | null }[];
+}
+
+/**
+ * Fila de cinco estrellas: cada una es un enlace que abre el formulario con
+ * esa nota ya marcada. Un clic basta para dejar la nota; el texto es opcional.
+ */
+function starLinks(url: string, productId: string): string {
+  const estrellas = [1, 2, 3, 4, 5]
+    .map(
+      (n) => `<td style="padding:0 3px 0 0;"><a href="${esc(`${url}?p=${encodeURIComponent(productId)}&n=${n}`)}"
+        title="${n} de 5" style="display:inline-block;font-size:26px;line-height:1;color:${ACCENT};text-decoration:none;">&#9733;</a></td>`,
+    )
+    .join('');
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr>${estrellas}</tr></table>`;
+}
+
+/** Pide al cliente que califique lo que compró, unos días después de recibirlo. */
+export async function sendReviewRequest(data: ReviewRequestMailData, opts?: EnvioOpts) {
+  const b = await brand();
+  const filas = data.products
+    .map(
+      (p) => `<tr><td style="padding:16px 0;border-bottom:1px solid ${LINE_SOFT};">
+        <div style="color:${CHALK};font-weight:600;font-size:14.5px;">${esc(p.name)}</div>
+        ${p.detail ? `<div style="color:${CHALK_FAINT};font-size:12.5px;margin-top:3px;">${esc(p.detail)}</div>` : ''}
+        ${starLinks(data.reviewUrl, p.productId)}
+      </td></tr>`,
+    )
+    .join('');
+
+  const html = layout({
+    title: `¿Qué te pareció tu compra? · Pedido ${data.number}`,
+    preheader: 'Califica tu traje en un clic: tu opinión ayuda a otros nadadores a elegir.',
+    brand: b,
+    body:
+      heading('Tu opinión', ACCENT, '¿Qué tal te quedó?') +
+      `<p style="margin:0;">${data.firstName ? `Hola ${esc(data.firstName)}, ` : ''}ya llevas unos días con tu pedido <span style="color:${CHALK};">${esc(data.number)}</span>. ¿Nos cuentas cómo te fue? Toca las estrellas: toma menos de un minuto y ayuda a otros nadadores a elegir modelo y talla.</p>` +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 0;">
+        <tr><td style="padding-bottom:10px;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:${CHALK_FAINT};border-bottom:1px solid ${LINE};">Califica tus productos</td></tr>
+        ${filas}
+      </table>` +
+      button(data.reviewUrl, 'Dejar mi opinión') +
+      `<p style="margin:22px 0 0;font-size:13.5px;color:${CHALK_FAINT};">¿Algo no salió bien? Responde este correo y lo vemos contigo antes que nada.</p>`,
+  });
+  return await sendMail({
+    to: opts?.to ?? data.email,
+    subject: `¿Qué te pareció tu compra? · Pedido ${data.number}`,
+    html,
+    ...(b.contactEmail ? { replyTo: b.contactEmail } : {}),
+  });
+}
+
 /** Aviso interno: el cliente pagó el envío de su devolución. */
 export async function sendAdminReturnFeePaid(params: { number: string; email: string; amount: number; orderId: string }) {
   const s = await getSettings();
@@ -837,6 +898,21 @@ export async function sendTestMail(
           phone: '+56 9 1234 5678',
           athletes: 18,
           message: 'Necesitamos trajes para el equipo juvenil antes del nacional.',
+        },
+        opts,
+      );
+      break;
+    case 'review':
+      await sendReviewRequest(
+        {
+          number: order.number,
+          email: to,
+          firstName: order.firstName,
+          reviewUrl: `${(await brand()).siteUrl}/calificar/prueba`,
+          products: [
+            { productId: 'muestra-1', name: 'Knee Suit Vortex Pro', detail: 'Negro / Aqua · Talla 26' },
+            { productId: 'muestra-2', name: 'Gorra Silicona Race', detail: 'Aqua' },
+          ],
         },
         opts,
       );

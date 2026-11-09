@@ -43,7 +43,7 @@ export default async function EditProductPage({
         images: { orderBy: { sortOrder: 'asc' } },
         specs: { orderBy: { sortOrder: 'asc' } },
         sizeChart: { orderBy: { sortOrder: 'asc' } },
-        reviews: { orderBy: [{ publishedAt: 'desc' }] },
+        reviews: { orderBy: [{ publishedAt: 'desc' }], include: { order: { select: { number: true } } } },
         _count: { select: { orderItems: true } },
       },
     }),
@@ -213,6 +213,7 @@ export default async function EditProductPage({
                     verified: r.verified,
                     status: r.status,
                     publishedAt: r.publishedAt.toISOString().slice(0, 10),
+                    orderNumber: r.order?.number ?? null,
                   }))}
                 />
               </Card>

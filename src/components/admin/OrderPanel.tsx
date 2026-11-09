@@ -4,7 +4,7 @@ import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import {
   decideTransfer, refundOrder, saveOrderNote, saveTracking, updateOrderStatus, updateOrderItem,
-  deleteOrderAction, saveReturnAction, deleteReturnAction, returnFeeAction,
+  deleteOrderAction, saveReturnAction, deleteReturnAction, returnFeeAction, sendReviewRequestAction,
 } from '@/actions/admin/orders';
 import type { AdminState } from '@/actions/admin/products';
 import {
@@ -200,6 +200,60 @@ export function OrderNoteForm({ orderId, note }: { orderId: string; note: string
         />
         <Submit label="Guardar nota" variant="outline" />
       </form>
+    </Card>
+  );
+}
+
+/** Correo que pide calificar los productos: automático o a mano desde acá. */
+export function ReviewRequestForm({
+  orderId,
+  canSend,
+  sentAt,
+  reviewUrl,
+  reviewsCount,
+}: {
+  orderId: string;
+  canSend: boolean;
+  sentAt: string | null;
+  reviewUrl: string | null;
+  reviewsCount: number;
+}) {
+  const [state, action] = useActionState<AdminState | null, FormData>(sendReviewRequestAction, null);
+
+  return (
+    <Card
+      title="Pedir calificación"
+      description="Correo con un enlace para que el cliente califique lo que compró. Se activa en Configuración → Correos."
+    >
+      <Status state={state} />
+      <dl className="mb-4 space-y-1.5 text-[13px]">
+        <div className="flex gap-2">
+          <dt className="text-chalk-faint">Enviado:</dt>
+          <dd className="text-chalk-dim">{sentAt ?? 'Todavía no'}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="text-chalk-faint">Opiniones recibidas:</dt>
+          <dd className="text-chalk-dim">{reviewsCount}</dd>
+        </div>
+        {reviewUrl ? (
+          <div className="flex min-w-0 gap-2">
+            <dt className="shrink-0 text-chalk-faint">Enlace:</dt>
+            <dd className="min-w-0 truncate">
+              <a href={reviewUrl} target="_blank" rel="noreferrer" className="accent-text underline underline-offset-4">
+                {reviewUrl}
+              </a>
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      {canSend ? (
+        <form action={action}>
+          <input type="hidden" name="orderId" value={orderId} />
+          <Submit label={sentAt ? 'Reenviar correo' : 'Enviar ahora'} variant="outline" />
+        </form>
+      ) : (
+        <p className="text-[13px] text-chalk-faint">Disponible cuando el pedido está despachado o entregado.</p>
+      )}
     </Card>
   );
 }

@@ -43,6 +43,9 @@ const schema = z.object({
   notifyOrderEmail: z.string().optional(),
   notifyAdminNewOrder: z.string().optional(),
   notifyLowStock: z.string().optional(),
+  reviewRequestEnabled: z.string().optional(),
+  reviewRequestDelayDays: z.string().optional(),
+  reviewAutoPublish: z.string().optional(),
 
 });
 
@@ -104,6 +107,9 @@ export async function updateSettings(
     notifyOrderEmail: d.notifyOrderEmail === 'on',
     notifyAdminNewOrder: d.notifyAdminNewOrder === 'on',
     notifyLowStock: d.notifyLowStock === 'on',
+    reviewRequestEnabled: d.reviewRequestEnabled === 'on',
+    reviewRequestDelayDays: Math.min(60, Math.max(1, Math.round(Number(d.reviewRequestDelayDays ?? 7)) || 7)),
+    reviewAutoPublish: d.reviewAutoPublish === 'on',
   });
 
   revalidatePath('/', 'layout');

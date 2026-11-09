@@ -13,6 +13,7 @@ export const PLANTILLAS_DE_PRUEBA = [
   { id: 'delivered', label: 'Entregado' },
   { id: 'cancelled', label: 'Cancelado' },
   { id: 'refunded', label: 'Reembolsado' },
+  { id: 'review', label: 'Pedir calificación' },
   { id: 'admin', label: 'Aviso al admin · pedido pagado' },
   { id: 'admin-transfer', label: 'Aviso al admin · transferencia por confirmar' },
   { id: 'lowstock', label: 'Aviso al admin · stock bajo' },

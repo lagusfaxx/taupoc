@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { releaseExpiredReservations } from '@/lib/reservations';
+import { maybeSendDueReviewRequests } from '@/lib/review-requests';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -18,6 +19,10 @@ async function handle(request: NextRequest) {
     return NextResponse.json({ error: 'no autorizado' }, { status: 401 });
   }
   const released = await releaseExpiredReservations();
+  // De paso revisa los correos para pedir calificación. Tiene su propio
+  // freno (una vez cada 15 minutos) y no se espera: puede tardar unos
+  // segundos por el límite de envíos del proveedor.
+  void maybeSendDueReviewRequests();
   return NextResponse.json({ released });
 }
 

@@ -22,6 +22,8 @@ export interface ReviewRow {
   verified: boolean;
   status: 'PUBLISHED' | 'HIDDEN';
   publishedAt: string;
+  /** Número del pedido, si la opinión llegó por el correo de calificación. */
+  orderNumber?: string | null;
 }
 
 function Submit({ label }: { label: string }) {
@@ -240,6 +242,7 @@ export function ReviewManager({
                     </span>
                     {review.verified ? <Badge tone="ok">Verificada</Badge> : null}
                     {review.status === 'HIDDEN' ? <Badge tone="muted">Oculta</Badge> : null}
+                    {review.orderNumber ? <Badge tone="muted">Por correo · {review.orderNumber}</Badge> : null}
                     <span className="text-[12px] text-chalk-faint">
                       {formatDate(review.publishedAt)}
                     </span>

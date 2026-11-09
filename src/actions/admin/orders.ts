@@ -12,6 +12,7 @@ import { changeOrderStatus, deleteOrders, resolveTransfer, saveOrderTracking } f
 import { clearReturnFee, deleteOrderReturn, saveOrderReturn, setReturnFee } from '@/lib/order-returns';
 import { mailTransport, sendMail } from '@/lib/mail';
 import { refundPayment } from '@/lib/mercadopago';
+import { sendReviewRequestForOrder } from '@/lib/review-requests';
 import type { AdminState } from './products';
 
 function revalidateOrder(id: string) {
@@ -356,5 +357,15 @@ export async function returnFeeAction(_prev: AdminState | null, formData: FormDa
     revalidateOrder(id);
     revalidatePath('/devoluciones/pago/[token]', 'page');
   }
+  return result;
+}
+
+/** Manda (o reenvía) el correo que pide calificar los productos del pedido. */
+export async function sendReviewRequestAction(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const orderId = String(formData.get('orderId') ?? '');
+  if (!orderId) return { ok: false, message: 'Pedido no encontrado.' };
+  const result = await sendReviewRequestForOrder(orderId, { force: true, actor: admin.email });
+  revalidateOrder(orderId);
   return result;
 }

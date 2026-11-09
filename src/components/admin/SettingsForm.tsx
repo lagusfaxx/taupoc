@@ -284,6 +284,30 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                     label="Avisarnos cuando haya SKU bajo el umbral de stock (máximo una vez cada 12 horas)"
                   />
                 </div>
+                <div className="mt-6 space-y-4 border-t border-line pt-5">
+                  <p className="font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim">
+                    Pedir calificación
+                  </p>
+                  <Checkbox
+                    name="reviewRequestEnabled"
+                    defaultChecked={settings.reviewRequestEnabled}
+                    label="Enviar un correo automático pidiendo calificar los productos comprados"
+                  />
+                  <Input
+                    label="Días después de la entrega"
+                    name="reviewRequestDelayDays"
+                    type="number"
+                    min={1}
+                    max={60}
+                    defaultValue={String(settings.reviewRequestDelayDays)}
+                    help="Se cuenta desde que el pedido se marca entregado; si nunca se marcó, desde el despacho más 5 días. Sale una sola vez por pedido y solo a pedidos de taupoc.cl. Entre 1 y 60."
+                  />
+                  <Checkbox
+                    name="reviewAutoPublish"
+                    defaultChecked={settings.reviewAutoPublish}
+                    label="Publicar de inmediato las opiniones recibidas (si no, quedan ocultas hasta revisarlas en la ficha del producto)"
+                  />
+                </div>
                 <p className="mt-5 border-l-2 accent-border bg-ink-800 px-4 py-3 text-[12.5px] leading-relaxed text-chalk-dim">
                   Las alertas internas llegan a la dirección definida en{' '}
                   <code className="font-mono">ADMIN_ALERT_EMAIL</code>. Sin proveedor configurado los
