@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import { formatCLP } from '@/lib/money';
-import { formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime } from '@/lib/utils';
 import { buildMetadata } from '@/lib/seo';
 import { dailySales, rangeFor, salesSummary, topProducts } from '@/lib/reports';
 import {
@@ -159,13 +159,18 @@ export default async function AdminDashboard() {
             value={embudo.sessions.toLocaleString('es-CL')}
             delta={delta(embudo.sessions, prevEmbudo.sessions)}
             spark={visitSpark}
-            hint={`${embudo.visitors.toLocaleString('es-CL')} personas distintas`}
+            hint={
+              embudo.trackingSince && embudo.trackingSince > last30.from
+                ? `${embudo.visitors.toLocaleString('es-CL')} personas · se mide desde el ${formatDate(embudo.trackingSince)}`
+                : `${embudo.visitors.toLocaleString('es-CL')} personas distintas`
+            }
+            showDelta={!(embudo.trackingSince && embudo.trackingSince > prev30.from)}
           />
           <Kpi
             label="Conversión"
             value={measuring ? `${conversion.toLocaleString('es-CL')}%` : '—'}
             delta={measuring ? delta(conversion, prevConversion) : null}
-            showDelta={measuring}
+            showDelta={measuring && !(embudo.trackingSince && embudo.trackingSince > prev30.from)}
             hint={measuring ? 'Pedidos pagados por cada 100 visitas' : 'Se calcula cuando haya visitas medidas'}
           />
           <Kpi

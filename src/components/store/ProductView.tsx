@@ -470,7 +470,7 @@ export function ProductView({
 
   return (
     <div
-      className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:gap-14 xl:gap-20"
+      className="grid gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:grid-rows-[auto_1fr] lg:gap-x-14 lg:gap-y-0 xl:gap-x-20"
       style={{ ['--accent' as string]: accent, ['--accent-contrast' as string]: readableOn(accent) }}
     >
       <MetaEvent event="ViewContent" eventKey={`${product.id}:${initialColorSlug ?? ''}`} data={{
@@ -480,7 +480,7 @@ export function ProductView({
         value: inicial?.variants[0]?.price ?? product.basePrice,
         currency: 'CLP',
       }} />
-      <div className="lg:sticky lg:top-24 lg:self-start">
+      <div className="order-2 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start">
         <ProductGallery images={images} colorName={color?.name ?? ''} productName={product.name} />
 
         {/* En el teléfono el color va aquí, a la vista de la foto que cambia. */}
@@ -493,11 +493,9 @@ export function ProductView({
         />
       </div>
 
-      {/* El relleno de abajo deja libre lo que tapa la barra de compra. Es
-          fijo a propósito: si dependiera de si la barra se ve, aparecer
-          movería el botón que el observador vigila, eso la escondería, y el
-          movimiento volvería a mostrarla. */}
-      <div className="pb-24 lg:pb-0">
+      {/* Nombre y precio. En el teléfono van arriba de la foto: quien llega
+          desde un anuncio ve qué es y cuánto cuesta sin tener que bajar. */}
+      <div className="order-1 lg:col-start-2 lg:row-start-1">
         {/* Encabezado */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {product.lineName ? (
@@ -513,11 +511,11 @@ export function ProductView({
           </span>
         </div>
 
-        <h1 className="mt-3 text-balance font-display text-[32px] leading-[1.02] tracking-tightest text-chalk sm:text-[42px]">
+        <h1 className="mt-2.5 text-balance font-display text-[28px] leading-[1.02] tracking-tightest text-chalk sm:text-[42px] lg:mt-3">
           {product.name}
         </h1>
         {product.subtitle ? (
-          <p className="mt-2.5 text-[15px] text-chalk-dim">{product.subtitle}</p>
+          <p className="mt-2.5 hidden text-[15px] text-chalk-dim lg:block">{product.subtitle}</p>
         ) : null}
 
         {/* Con dos líneas casi idénticas en la foto, quien entra necesita un
@@ -525,7 +523,7 @@ export function ProductView({
         {product.comparable ? (
           <a
             href="#comparar"
-            className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-chalk-dim underline underline-offset-4 transition-colors hover:text-chalk"
+            className="mt-3 hidden items-center gap-1.5 text-[13px] text-chalk-dim underline underline-offset-4 transition-colors hover:text-chalk lg:inline-flex"
           >
             ¿En qué se diferencia de la otra línea?
           </a>
@@ -534,7 +532,7 @@ export function ProductView({
         {product.rating.count > 0 ? (
           <a
             href="#opiniones"
-            className="mt-3 inline-flex items-center gap-2 text-chalk-dim transition-colors hover:text-chalk"
+            className="mt-2.5 flex w-fit items-center gap-2 text-chalk-dim transition-colors hover:text-chalk lg:mt-3"
           >
             <RatingSummary average={product.rating.average} count={product.rating.count} size="md" />
             <span className="text-[12.5px] underline underline-offset-4">Ver opiniones</span>
@@ -542,29 +540,47 @@ export function ProductView({
         ) : null}
 
         {/* Precio: el normal, el de transferencia si hay descuento, y las cuotas. */}
-        <div className="mt-7">
-          <Price amount={price} size="lg" />
+        <div className="mt-4 lg:mt-7">
+          <Price amount={price} size="lg" className="text-[34px] leading-none lg:text-[38px]" />
           {transferPrice != null && !product.comingSoon ? (
             <p className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[6px] border border-line bg-ink-900 px-3.5 py-2.5 text-[14px] text-chalk-dim">
-              <strong className="font-display text-[18px] font-bold tracking-tight text-chalk">
+              <strong className="font-display text-[20px] font-bold tracking-tight text-chalk">
                 {formatCLP(transferPrice)}
               </strong>
-              pagando con transferencia
+              con transferencia
               <span className="rounded-[3px] accent-bg px-1.5 py-0.5 font-display text-[11px] font-bold">
                 −{transferDiscount}%
               </span>
             </p>
           ) : null}
           {product.installmentsMax > 1 ? (
-            <p className="mt-2.5 text-[13.5px] text-chalk-dim">
+            <p className="mt-2.5 hidden text-[13.5px] text-chalk-dim lg:block">
               Hasta {product.installmentsMax} cuotas de{' '}
               <strong className="text-chalk">{formatCLP(installment(price, product.installmentsMax))}</strong>{' '}
               con Mercado Pago
             </p>
           ) : null}
         </div>
+      </div>
 
-        <form id="compra" onSubmit={enviar} className="mt-8">
+      {/* El relleno de abajo deja libre lo que tapa la barra de compra. Es
+          fijo a propósito: si dependiera de si la barra se ve, aparecer
+          movería el botón que el observador vigila, eso la escondería, y el
+          movimiento volvería a mostrarla. */}
+      <div className="order-3 pb-24 lg:col-start-2 lg:row-start-2 lg:pb-0">
+        {/* En el teléfono el encabezado va compacto sobre la foto; el subtítulo
+            y las cuotas quedan acá, junto a la compra. */}
+        <div className="lg:hidden">
+          {product.subtitle ? <p className="text-[14.5px] text-chalk-dim">{product.subtitle}</p> : null}
+          {product.installmentsMax > 1 ? (
+            <p className="mt-1.5 text-[13.5px] text-chalk-dim">
+              Hasta {product.installmentsMax} cuotas de{' '}
+              <strong className="text-chalk">{formatCLP(installment(price, product.installmentsMax))}</strong>{' '}
+              con Mercado Pago
+            </p>
+          ) : null}
+        </div>
+        <form id="compra" onSubmit={enviar} className="mt-6 lg:mt-8">
           <input type="hidden" name="variantId" value={variant?.id ?? ''} />
           <input type="hidden" name="quantity" value="1" />
 

@@ -185,7 +185,17 @@ export function ProductCard({
           ) : null}
         </div>
 
-        <div className="mt-2 flex min-h-[20px] items-center">
+        {/* El precio va pegado al nombre y grande: es lo segundo que se busca. */}
+        <div className="mt-1.5">
+          <Price amount={product.basePrice} size="sm" className="text-[19px] leading-tight lg:text-[20px]" />
+          {transferPrice != null && !product.comingSoon ? (
+            <p className="mt-0.5 text-[12.5px] leading-snug text-chalk-dim">
+              <span className="font-semibold text-chalk">{formatCLP(transferPrice)}</span> con transferencia
+            </p>
+          ) : null}
+        </div>
+
+        <div className="mt-2.5 flex min-h-[20px] items-center">
           {!fixed && product.colors.length > 1 ? (
             <div className="flex flex-wrap items-center gap-1.5">
               {product.colors.map((color) => (
@@ -232,14 +242,6 @@ export function ProductCard({
           </p>
         ) : null}
 
-        <div className="mt-auto pt-3">
-          <Price amount={product.basePrice} size="sm" className="text-[16px]" />
-          {transferPrice != null && !product.comingSoon ? (
-            <p className="mt-0.5 text-[12px] text-chalk-dim">
-              <span className="font-semibold text-chalk">{formatCLP(transferPrice)}</span> con transferencia
-            </p>
-          ) : null}
-        </div>
       </div>
     </article>
   );
