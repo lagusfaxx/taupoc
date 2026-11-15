@@ -14,7 +14,14 @@ export interface SalesPoint {
  * Gráfico de área en SVG puro. Sin librería de charting: son pocos puntos,
  * y así el panel no carga 100 kB extra de JavaScript.
  */
-export function SalesChart({ points }: { points: SalesPoint[] }) {
+export function SalesChart({
+  points,
+  previous,
+}: {
+  points: SalesPoint[];
+  /** Totales del período anterior, alineados día a día, para comparar. */
+  previous?: number[];
+}) {
   const gradientId = useId();
   const [hover, setHover] = useState<number | null>(null);
 
@@ -23,7 +30,7 @@ export function SalesChart({ points }: { points: SalesPoint[] }) {
   const padX = 8;
   const padY = 16;
 
-  const max = Math.max(1, ...points.map((p) => p.total));
+  const max = Math.max(1, ...points.map((p) => p.total), ...(previous ?? []));
 
   const coords = useMemo(
     () =>
@@ -48,6 +55,17 @@ export function SalesChart({ points }: { points: SalesPoint[] }) {
   const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'} ${c.x.toFixed(1)} ${c.y.toFixed(1)}`).join(' ');
   const area = `${line} L ${coords[coords.length - 1].x.toFixed(1)} ${height} L ${coords[0].x.toFixed(1)} ${height} Z`;
   const active = hover != null ? coords[hover] : null;
+  const prevLine =
+    previous && previous.length > 1
+      ? previous
+          .slice(0, points.length)
+          .map((total, i) => {
+            const x = padX + (i * (width - padX * 2)) / Math.max(1, points.length - 1);
+            const y = height - padY - (total / max) * (height - padY * 2);
+            return `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`;
+          })
+          .join(' ')
+      : null;
 
   return (
     <div className="relative">
@@ -77,6 +95,9 @@ export function SalesChart({ points }: { points: SalesPoint[] }) {
           />
         ))}
 
+        {prevLine ? (
+          <path d={prevLine} fill="none" stroke="#7C8795" strokeWidth={1.5} strokeDasharray="4 4" strokeLinejoin="round" />
+        ) : null}
         <path d={area} fill={`url(#${gradientId})`} />
         <path d={line} fill="none" stroke="var(--accent)" strokeWidth={2} strokeLinejoin="round" />
 
@@ -105,6 +126,17 @@ export function SalesChart({ points }: { points: SalesPoint[] }) {
         <span>{points[points.length - 1]?.label}</span>
       </div>
 
+      {prevLine ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11.5px] text-chalk-dim">
+          <span className="inline-flex items-center gap-2">
+            <span className="h-0.5 w-5 accent-bg" aria-hidden /> Este período
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="w-5 border-t border-dashed border-chalk-faint" aria-hidden /> Período anterior
+          </span>
+        </div>
+      ) : null}
+
       {active ? (
         <div
           className="pointer-events-none absolute top-2 border border-line bg-ink-800 px-3 py-2 text-[12px] shadow-lift"
@@ -116,9 +148,12 @@ export function SalesChart({ points }: { points: SalesPoint[] }) {
           <p className="font-display text-[9.5px] uppercase tracking-widest text-chalk-faint">
             {active.point.label}
           </p>
-          <p className="mt-1 font-display text-[14px] font-bold accent-text">
+          <p className="mt-1 font-display text-[14px] font-bold text-chalk">
             {formatCLP(active.point.total)}
           </p>
+          {previous && hover != null && previous[hover] != null ? (
+            <p className="text-chalk-faint">Antes: {formatCLP(previous[hover])}</p>
+          ) : null}
           <p className="text-chalk-faint">
             {active.point.orders} {active.point.orders === 1 ? 'pedido' : 'pedidos'}
           </p>

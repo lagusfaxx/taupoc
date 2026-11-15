@@ -1217,3 +1217,45 @@ model PrintJob {
   @@index([status, createdAt])
   @@index([kind])
 }
+
+// ─────────────────────────────────────────────────────────────
+// Analítica propia
+// ─────────────────────────────────────────────────────────────
+
+enum SiteEventType {
+  /// Una página vista en la tienda.
+  PAGE_VIEW
+  /// La ficha de un producto.
+  PRODUCT_VIEW
+  /// Llegó a la página de pago.
+  CHECKOUT_START
+  /// Vio la confirmación de un pedido pagado.
+  PURCHASE
+}
+
+/// Visitas a la tienda, para el embudo de conversión del panel.
+///
+/// No guarda IP ni datos personales: `visitorId` y `sessionId` son
+/// identificadores al azar que el navegador genera y guarda localmente.
+model SiteEvent {
+  id         String        @id @default(cuid())
+  type       SiteEventType
+  visitorId  String
+  sessionId  String
+  path       String
+  productId  String?
+  /// De dónde llegó la sesión: direct, google, instagram, facebook, whatsapp…
+  source     String        @default("direct")
+  campaign   String?
+  /// mobile | desktop | tablet
+  device     String        @default("desktop")
+  storefront String        @default("CL")
+  /// Número de pedido, solo en PURCHASE.
+  orderNumber String?
+  createdAt  DateTime      @default(now())
+
+  @@index([createdAt])
+  @@index([type, createdAt])
+  @@index([sessionId])
+  @@index([productId, createdAt])
+}

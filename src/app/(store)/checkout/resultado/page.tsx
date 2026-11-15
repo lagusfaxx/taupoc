@@ -1,3 +1,4 @@
+import { TrackEvent } from '@/components/shared/Analytics';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -81,6 +82,7 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
 
   return (
     <div className="container py-14 lg:py-20">
+      {rejected ? null : <TrackEvent type="PURCHASE" orderNumber={order.number} />}
       <PaymentTracking
         orderId={order.id}
         approved={approved}

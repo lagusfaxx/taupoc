@@ -69,7 +69,7 @@ export default async function CartPage() {
                   <strong className="text-signal-ok">Tienes despacho sin costo en este pedido.</strong>
                 )}
               </p>
-              <div className="mt-3 h-1 w-full bg-ink-700">
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
                 <div
                   className="h-full accent-bg transition-all duration-500 ease-tech"
                   style={{ width: `${progress}%` }}
@@ -123,7 +123,7 @@ export default async function CartPage() {
 
             <div className="mt-5 flex items-baseline justify-between border-t border-line pt-5">
               <span className="font-display text-[13px] uppercase tracking-widest text-chalk">Total</span>
-              <span className="font-display text-[26px] font-bold tracking-tight accent-text">
+              <span className="font-display text-[26px] font-bold tracking-tight text-chalk">
                 {formatCLP(total)}
               </span>
             </div>
@@ -131,6 +131,15 @@ export default async function CartPage() {
             {cart.hasIssues ? (
               <p className="mt-4 border border-signal-warn/40 bg-signal-warn/10 px-3 py-2.5 text-[13px] text-signal-warn">
                 Ajusta las cantidades marcadas antes de continuar al pago.
+              </p>
+            ) : null}
+
+            {settings.transferEnabled && settings.transferDiscount > 0 ? (
+              <p className="mt-3 flex items-baseline justify-between gap-3 rounded-[6px] border border-line bg-ink-800 px-3 py-2.5 text-[13px] text-chalk-dim">
+                <span>Con transferencia ({settings.transferDiscount}% menos)</span>
+                <strong className="font-display text-[15px] text-chalk">
+                  {formatCLP(Math.round(total * (1 - settings.transferDiscount / 100)))}
+                </strong>
               </p>
             ) : null}
 

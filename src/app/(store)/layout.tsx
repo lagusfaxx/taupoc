@@ -1,3 +1,5 @@
+import { StorePrefs } from '@/components/store/StorePrefs';
+import { Analytics } from '@/components/shared/Analytics';
 import { Header } from '@/components/store/Header';
 import { Footer } from '@/components/store/Footer';
 import { MetaPixel } from '@/components/store/MetaPixel';
@@ -11,6 +13,10 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   const [settings, roulette] = await Promise.all([getSettings(), getRoulette()]);
   return (
     <MetaPixel pixelId={settings.metaPixelId}>
+      <StorePrefs
+        value={{ transferDiscount: settings.transferEnabled ? settings.transferDiscount : 0 }}
+      >
+      <Analytics />
       <div className="flex min-h-screen flex-col">
         <Header />
         <main id="contenido" className="flex-1">
@@ -18,6 +24,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
         </main>
         <Footer />
       </div>
+      </StorePrefs>
       <WhatsAppButton phone={settings.whatsapp} message="Hola, les escribo desde taupoc.cl." />
       {rouletteVisible(roulette, 'CL') ? (
         <RouletteWheel

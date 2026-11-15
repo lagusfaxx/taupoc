@@ -1,3 +1,4 @@
+import { TrackEvent } from '@/components/shared/Analytics';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound, permanentRedirect } from 'next/navigation';
@@ -104,6 +105,7 @@ export default async function IntlProductPage({ params }: { params: Params }) {
     <>
     <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(productLd)} />
     <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(breadcrumbLd)} />
+    <TrackEvent type="PRODUCT_VIEW" productId={product.id} />
     <article className="mx-auto max-w-[1600px] px-4 pb-16 pt-4 sm:px-8 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-16 xl:grid-cols-[minmax(0,1fr)_460px]">
       <div>
         <ProductGallery

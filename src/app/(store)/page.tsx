@@ -11,6 +11,8 @@ import { COUNTRIES } from '@/lib/international';
 import { ProductCard } from '@/components/store/ProductCard';
 import { LineCompareTeaser } from '@/components/store/LineCompareTeaser';
 import { HomeBlocks } from '@/components/store/home/HomeBlocks';
+import { TrustBar } from '@/components/store/home/TrustBar';
+import { BestSellers, HomeHeading, ReviewsStrip } from '@/components/store/home/HomeExtras';
 import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
 
@@ -92,6 +94,7 @@ export default async function HomePage() {
       {blocks.length > 0 ? (
         <>
           <HomeBlocks blocks={blocks} />
+          <BestSellers />
           {/* Con la portada armada en el panel no hay dónde intercalarla, así
               que la cinta de líneas cierra la página. La portada por defecto la
               pone pegada a la grilla, que es su lugar natural. */}
@@ -101,6 +104,7 @@ export default async function HomePage() {
         <PortadaPorDefecto />
       )}
 
+      <ReviewsStrip />
       <IntroCompetencia />
     </>
   );
@@ -120,22 +124,23 @@ const ACCESOS = [
 function IntroCompetencia() {
   return (
     <section className="border-t border-line">
-      <div className="container grid gap-10 py-12 lg:grid-cols-[1.2fr_1fr] lg:gap-16 lg:py-16">
-        <div>
-          <h2 className="font-display text-[24px] leading-tight tracking-tightest text-chalk sm:text-[30px]">
+      <div className="container py-12 lg:py-16">
+        <div className="max-w-2xl">
+          <p className="eyebrow-accent">Guías y categorías</p>
+          <h2 className="mt-2 font-display text-[26px] leading-tight tracking-tightest text-chalk lg:text-[34px]">
             Trajes de baño de competencia en Chile
           </h2>
-          <p className="mt-4 max-w-xl text-[15px] leading-relaxed text-chalk-dim">
+          <p className="mt-4 text-[15px] leading-relaxed text-chalk-dim">
             Distribuidor oficial de TAUPOC en Chile. Jammers y knee suits homologados por World Aquatics,
             tallas 20 a 36. Envío a todo el país y retiro sin costo en Santiago.
           </p>
         </div>
-        <ul className="divide-y divide-line border-y border-line self-start">
+        <ul className="mt-8 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
           {ACCESOS.map((a) => (
             <li key={a.href}>
               <Link
                 href={a.href}
-                className="group flex items-center justify-between gap-4 py-3.5 text-[14.5px] text-chalk-dim transition-colors hover:text-chalk"
+                className="group flex h-full items-center justify-between gap-4 rounded-[6px] border border-line bg-ink-900 px-4 py-4 text-[14px] leading-snug text-chalk-dim transition-colors hover:border-line-bright hover:text-chalk"
               >
                 {a.label}
                 <IconArrow className="h-4 w-4 shrink-0 transition-transform duration-300 group-hover:translate-x-1" />
@@ -215,35 +220,35 @@ async function PortadaPorDefecto() {
 
   return (
     <>
-      <section className="container pb-10 pt-6 lg:pb-12 lg:pt-7">
+      <TrustBar />
+      <section className="container pb-10 pt-10 lg:pb-14 lg:pt-14">
+        <HomeHeading
+          eyebrow="Competición"
+          title="Trajes homologados, listos para despacho"
+          link={{ href: '/catalogo', label: 'Ver catálogo' }}
+        />
         <div className="grid grid-cols-2 gap-x-4 gap-y-10 lg:grid-cols-4 lg:gap-x-6">
           {featured.map((product, i) => (
             <ProductCard key={product.id} product={product} priority={i < 4} />
           ))}
         </div>
-
-        <Link
-          href="/catalogo"
-          className="group mt-8 inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim transition-colors hover:accent-text"
-        >
-          Ver catálogo
-          <IconArrow className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-        </Link>
       </section>
 
       {/* La grilla de arriba muestra las dos líneas con la misma fotografía:
           esta cinta va justo debajo para decir en qué se diferencian antes de
           que el visitante tenga que abrir las dos fichas. */}
       <LineCompareTeaser columns={comparacion} />
+      <BestSellers />
 
       <section className="border-t border-line">
-        <div className="container py-10 lg:py-12">
+        <div className="container py-10 lg:py-14">
+          <HomeHeading eyebrow="Explora" title="Encuentra tu traje" />
           <div className={`grid grid-cols-2 gap-3 lg:gap-4 ${entries.length === 3 ? 'lg:grid-cols-3' : 'lg:grid-cols-4'}`}>
             {entries.map((entry) => (
               <Link
                 key={entry.href}
                 href={entry.href}
-                className="group relative block overflow-hidden border border-line bg-ink-800"
+                className="group relative block overflow-hidden rounded-[6px] border border-line bg-ink-800"
               >
                 <div className="relative aspect-[3/4]">
                   {entry.imageUrl ? (
