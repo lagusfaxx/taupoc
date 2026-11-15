@@ -62,12 +62,43 @@ export function BannerCarousel({
     setDuracion(0);
     videos.current.forEach((video, index) => {
       if (!video) return;
-      if (index === current) void video.play().catch(() => undefined);
-      else {
+      if (index === current) {
+        // Safari en iPhone solo deja partir solo a un video que esté mudo
+        // como atributo, no solo como propiedad, y React no siempre lo escribe.
+        video.muted = true;
+        video.defaultMuted = true;
+        video.setAttribute('muted', '');
+        video.setAttribute('playsinline', '');
+        void video.play().catch(() => undefined);
+      } else {
         video.pause();
         video.currentTime = 0;
       }
     });
+  }, [current]);
+
+  // Con ahorro de batería el iPhone bloquea toda reproducción automática y
+  // deja el video detenido. Al primer toque o desplazamiento sobre la página
+  // se vuelve a intentar: ahí ya hay un gesto del usuario y sí parte.
+  useEffect(() => {
+    const retry = () => {
+      const video = videos.current[current];
+      if (video && video.paused) {
+        video.muted = true;
+        void video.play().catch(() => undefined);
+      }
+    };
+    const options = { passive: true } as const;
+    window.addEventListener('touchstart', retry, options);
+    window.addEventListener('touchend', retry, options);
+    window.addEventListener('click', retry, options);
+    document.addEventListener('visibilitychange', retry);
+    return () => {
+      window.removeEventListener('touchstart', retry);
+      window.removeEventListener('touchend', retry);
+      window.removeEventListener('click', retry);
+      document.removeEventListener('visibilitychange', retry);
+    };
   }, [current]);
 
   useEffect(() => {
