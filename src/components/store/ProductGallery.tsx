@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { IconClose } from '@/components/ui/Icons';
@@ -28,8 +28,27 @@ export function ProductGallery({
   // El portal necesita el document, que en el servidor no existe.
   useEffect(() => setMontado(true), []);
 
+  const tira = useRef<HTMLDivElement>(null);
+
   // Al cambiar de color cambia el set de imágenes: siempre volver a la primera.
-  useEffect(() => setIndex(0), [colorName]);
+  useEffect(() => {
+    setIndex(0);
+    tira.current?.scrollTo({ left: 0 });
+  }, [colorName]);
+
+  /** En el teléfono las fotos se pasan deslizando; el índice sigue al dedo. */
+  function alDeslizar() {
+    const el = tira.current;
+    if (!el || el.clientWidth === 0) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    if (i !== index) setIndex(Math.max(0, Math.min(images.length - 1, i)));
+  }
+
+  function irA(i: number) {
+    setIndex(i);
+    const el = tira.current;
+    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
+  }
 
   useEffect(() => {
     if (!zoom) return;
@@ -49,7 +68,62 @@ export function ProductGallery({
   const active = images[Math.min(index, images.length - 1)];
 
   return (
-    <div className="flex flex-col-reverse gap-3 lg:flex-row lg:gap-4">
+    <>
+    {/* Teléfono: fotos a todo el ancho que se pasan deslizando. El alto se
+        limita para que el nombre y el precio asomen en la primera pantalla,
+        justo debajo de la foto. */}
+    <div className="relative lg:hidden">
+      <div
+        ref={tira}
+        onScroll={alDeslizar}
+        className="no-scrollbar -mx-5 flex snap-x snap-mandatory overflow-x-auto bg-[#EFEFED]"
+      >
+        {images.map((image, i) => (
+          <button
+            key={image.id}
+            type="button"
+            onClick={() => {
+              setIndex(i);
+              setZoom(true);
+            }}
+            aria-label={`Ampliar imagen ${i + 1} de ${images.length}`}
+            data-fly-source={i === index ? '' : undefined}
+            className="relative h-[min(100vw,50svh)] w-full shrink-0 snap-center"
+          >
+            <Image
+              src={image.url}
+              alt={image.alt || `${productName} — ${colorName}`}
+              fill
+              priority={i === 0}
+              sizes="100vw"
+              // Las fotos vienen sobre blanco: multiply lo funde con el gris
+              // del cuadro, igual que en las tarjetas del catálogo.
+              className="object-contain mix-blend-multiply"
+            />
+          </button>
+        ))}
+      </div>
+
+      {images.length > 1 ? (
+        <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-full bg-ink/70 px-2 backdrop-blur" role="tablist" aria-label="Imágenes del producto">
+          {images.map((image, i) => (
+            <button
+              key={image.id}
+              type="button"
+              role="tab"
+              aria-selected={i === index}
+              aria-label={`Ver imagen ${i + 1} de ${images.length}`}
+              onClick={() => irA(i)}
+              className="flex h-5 items-center px-0.5"
+            >
+              <span className={cn('block h-1 rounded-full transition-all', i === index ? 'w-5 bg-chalk' : 'w-2 bg-chalk/40')} />
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+
+    <div className="hidden gap-4 lg:flex">
       {images.length > 1 ? (
         <div
           className="no-scrollbar flex gap-2.5 overflow-x-auto lg:w-[76px] lg:shrink-0 lg:flex-col lg:overflow-visible"
@@ -146,5 +220,6 @@ export function ProductGallery({
         )
       ) : null}
     </div>
+    </>
   );
 }

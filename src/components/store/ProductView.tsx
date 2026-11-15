@@ -385,7 +385,9 @@ export function ProductView({
 
     // La medida se toma antes de esperar al servidor: mientras la acción
     // viaja, el visitante puede desplazarse y el vuelo saldría de otro lugar.
-    const fuente = document.querySelector<HTMLElement>('[data-fly-source]');
+    // Hay una galería para el teléfono y otra para escritorio: vuela la visible.
+    const fuente =
+      [...document.querySelectorAll<HTMLElement>('[data-fly-source]')].find((el) => el.offsetParent !== null) ?? null;
     const caja = fuente?.getBoundingClientRect();
     const origen = caja
       ? { x: caja.x, y: caja.y, width: caja.width, height: caja.height }
@@ -470,7 +472,7 @@ export function ProductView({
 
   return (
     <div
-      className="grid gap-y-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:grid-rows-[auto_1fr] lg:gap-x-14 lg:gap-y-0 xl:gap-x-20"
+      className="grid gap-y-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:grid-rows-[auto_1fr] lg:gap-x-14 lg:gap-y-0 xl:gap-x-20"
       style={{ ['--accent' as string]: accent, ['--accent-contrast' as string]: readableOn(accent) }}
     >
       <MetaEvent event="ViewContent" eventKey={`${product.id}:${initialColorSlug ?? ''}`} data={{
@@ -480,22 +482,13 @@ export function ProductView({
         value: inicial?.variants[0]?.price ?? product.basePrice,
         currency: 'CLP',
       }} />
-      <div className="order-2 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start">
+      <div className="order-1 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start">
         <ProductGallery images={images} colorName={color?.name ?? ''} productName={product.name} />
-
-        {/* En el teléfono el color va aquí, a la vista de la foto que cambia. */}
-        <ColorPicker
-          colors={product.colors}
-          activeId={color?.id}
-          onPick={setColorId}
-          hrefFor={hrefDeColor}
-          className="mt-5 lg:hidden"
-        />
       </div>
 
-      {/* Nombre y precio. En el teléfono van arriba de la foto: quien llega
-          desde un anuncio ve qué es y cuánto cuesta sin tener que bajar. */}
-      <div className="order-1 lg:col-start-2 lg:row-start-1">
+      {/* Nombre y precio. En el teléfono van pegados bajo la foto, que tiene
+          el alto limitado para que se alcancen a ver sin bajar. */}
+      <div className="order-2 lg:col-start-2 lg:row-start-1">
         {/* Encabezado */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {product.lineName ? (
@@ -511,9 +504,14 @@ export function ProductView({
           </span>
         </div>
 
-        <h1 className="mt-2.5 text-balance font-display text-[28px] leading-[1.02] tracking-tightest text-chalk sm:text-[42px] lg:mt-3">
-          {product.name}
-        </h1>
+        {/* En el teléfono el precio comparte renglón con el nombre: así los dos
+            caben en la primera pantalla, pegados a la foto. */}
+        <div className="mt-2 flex items-start justify-between gap-4 lg:mt-3 lg:block">
+          <h1 className="min-w-0 text-balance font-display text-[24px] leading-[1.05] tracking-tightest text-chalk sm:text-[42px] lg:leading-[1.02]">
+            {product.name}
+          </h1>
+          <Price amount={price} size="lg" className="shrink-0 text-[24px] leading-[1.05] lg:hidden" />
+        </div>
         {product.subtitle ? (
           <p className="mt-2.5 hidden text-[15px] text-chalk-dim lg:block">{product.subtitle}</p>
         ) : null}
@@ -540,10 +538,10 @@ export function ProductView({
         ) : null}
 
         {/* Precio: el normal, el de transferencia si hay descuento, y las cuotas. */}
-        <div className="mt-4 lg:mt-7">
-          <Price amount={price} size="lg" className="text-[34px] leading-none lg:text-[38px]" />
+        <div className="mt-3 lg:mt-7">
+          <Price amount={price} size="lg" className="hidden text-[38px] leading-none lg:inline" />
           {transferPrice != null && !product.comingSoon ? (
-            <p className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[6px] border border-line bg-ink-900 px-3.5 py-2.5 text-[14px] text-chalk-dim">
+            <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[6px] border border-line bg-ink-900 px-3.5 py-2 text-[14px] text-chalk-dim lg:mt-3 lg:py-2.5">
               <strong className="font-display text-[20px] font-bold tracking-tight text-chalk">
                 {formatCLP(transferPrice)}
               </strong>
@@ -568,7 +566,7 @@ export function ProductView({
           movería el botón que el observador vigila, eso la escondería, y el
           movimiento volvería a mostrarla. */}
       <div className="order-3 pb-24 lg:col-start-2 lg:row-start-2 lg:pb-0">
-        {/* En el teléfono el encabezado va compacto sobre la foto; el subtítulo
+        {/* En el teléfono el encabezado va compacto bajo la foto; el subtítulo
             y las cuotas quedan acá, junto a la compra. */}
         <div className="lg:hidden">
           {product.subtitle ? <p className="text-[14.5px] text-chalk-dim">{product.subtitle}</p> : null}
@@ -584,15 +582,13 @@ export function ProductView({
           <input type="hidden" name="variantId" value={variant?.id ?? ''} />
           <input type="hidden" name="quantity" value="1" />
 
-          {/* Selector de color — en pantalla ancha vive junto a la talla. En el
-              teléfono se muestra pegado a la foto (más arriba): acá abajo el
-              visitante cambiaba de color sin ver la imagen que cambiaba. */}
+          {/* Selector de color, junto a la talla. */}
           <ColorPicker
             colors={product.colors}
             activeId={color?.id}
             onPick={setColorId}
             hrefFor={hrefDeColor}
-            className="mb-7 hidden lg:block"
+            className="mb-7"
           />
 
           {/* Selector de talla — el punto de mayor fricción del rubro */}

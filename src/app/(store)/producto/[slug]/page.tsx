@@ -321,7 +321,8 @@ export default async function ProductPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(productLd)} />
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(breadcrumb)} />
 
-      <nav aria-label="Ruta de navegación" className="border-b border-line-soft">
+      {/* En el teléfono la ruta no se muestra: la foto va pegada al encabezado. */}
+      <nav aria-label="Ruta de navegación" className="hidden border-b border-line-soft lg:block">
         <ol className="container flex items-center gap-2 py-3.5 text-[12px] text-chalk-faint">
           <li><Link href="/" className="hover:text-chalk">Inicio</Link></li>
           <li aria-hidden>/</li>
@@ -332,7 +333,7 @@ export default async function ProductPage({
       </nav>
 
       <TrackEvent type="PRODUCT_VIEW" productId={product.id} />
-      <div className="container py-8 lg:py-14">
+      <div className="container pb-8 lg:py-14">
         <ProductView
           product={viewData}
           initialColorSlug={color?.slug ?? preseleccion?.slug ?? null}
