@@ -1,3 +1,4 @@
+import { TrackEvent } from '@/components/shared/Analytics';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getCart } from '@/lib/cart';
@@ -39,6 +40,7 @@ export default async function CheckoutPage() {
   return (
     <div className="container py-10 lg:py-16">
       <MetaEvent event="InitiateCheckout" data={metaCartData(cart)} />
+      <TrackEvent type="CHECKOUT_START" />
       <h1 className="font-display text-[30px] leading-none tracking-tightest text-chalk sm:text-[40px]">
         Finalizar compra
       </h1>

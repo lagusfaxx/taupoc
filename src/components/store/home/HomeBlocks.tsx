@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 import { fillRowWithColors, getFeatured } from '@/lib/catalog';
 import type { HomeBlockData } from '@/lib/home';
@@ -7,6 +8,8 @@ import { ButtonLink } from '@/components/ui/Button';
 import { IconArrow } from '@/components/ui/Icons';
 import { BlockMedia } from './BlockMedia';
 import { BannerCarousel, type BannerSlide } from './BannerCarousel';
+import { TrustBar } from './TrustBar';
+import { HomeHeading } from './HomeExtras';
 
 /** Alto del bloque según lo elegido en el panel. */
 const HEIGHTS: Record<string, string> = {
@@ -36,7 +39,12 @@ export function HomeBlocks({ blocks }: { blocks: HomeBlockData[] }) {
   return (
     <>
       {blocks.map((block, index) => (
-        <Block key={block.id} block={block} first={index === 0} />
+        <Fragment key={block.id}>
+          <Block block={block} first={index === 0} />
+          {/* Las garantías de compra van pegadas a la portada: es lo primero
+              que se lee después del banner y antes de mirar productos. */}
+          {index === 0 ? <TrustBar /> : null}
+        </Fragment>
       ))}
     </>
   );
@@ -60,42 +68,19 @@ function Block({ block, first }: { block: HomeBlockData; first: boolean }) {
 
 /** Encabezado corto de una sección; se omite entero si no tiene título. */
 function Heading({ block }: { block: HomeBlockData }) {
-  if (!block.title && !block.eyebrow) return null;
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-      <div>
-        {block.eyebrow ? (
-          <p className="font-display text-[10px] font-semibold uppercase tracking-mega text-chalk-faint">
-            {block.eyebrow}
-          </p>
-        ) : null}
-        {block.title ? (
-          <h2 className="mt-1.5 font-display text-[22px] leading-none tracking-tight text-chalk">
-            {block.title}
-          </h2>
-        ) : null}
-        {block.subtitle ? (
-          <p className="mt-2.5 max-w-xl text-[14.5px] leading-relaxed text-chalk-dim">
-            {block.subtitle}
-          </p>
-        ) : null}
-      </div>
-
-      {block.ctaHref && block.ctaLabel ? (
-        <Link
-          href={block.ctaHref}
-          className="group inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-widest text-chalk-dim transition-colors hover:accent-text"
-        >
-          {block.ctaLabel}
-          <IconArrow className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-        </Link>
-      ) : null}
-    </div>
+    <HomeHeading
+      eyebrow={block.eyebrow}
+      title={block.title}
+      subtitle={block.subtitle}
+      link={block.ctaHref && block.ctaLabel ? { href: block.ctaHref, label: block.ctaLabel } : null}
+    />
   );
 }
 
 /** El primer bloque no lleva borde arriba: el encabezado ya trae el suyo. */
 const borde = (first: boolean) => (first ? '' : 'border-t border-line');
+/** El bloque que sigue a la barra de garantías no repite su borde. */
 
 function Banner({
   block,
@@ -184,7 +169,7 @@ async function Products({
 
   return (
     <section className={cn(borde(first), BACKGROUNDS[block.background])}>
-      <div className="container py-10 lg:py-12">
+      <div className="container py-10 lg:py-14">
         <Heading block={block} />
         <div className={cn('grid gap-x-4 gap-y-10 lg:gap-x-6', COLUMNS[block.columns] ?? COLUMNS[4])}>
           {products.map((product, i) => (
@@ -213,7 +198,7 @@ function Categories({ block, first }: { block: HomeBlockData; first: boolean }) 
             <Link
               key={card.id}
               href={card.href || '/catalogo'}
-              className={cn('group relative block overflow-hidden bg-ink-800', ancha && 'col-span-2 lg:col-span-1')}
+              className={cn('group relative block overflow-hidden rounded-[6px] bg-ink-800', ancha && 'col-span-2 lg:col-span-1')}
             >
               <div className={cn('relative', ancha ? 'aspect-[16/10] lg:aspect-[3/4]' : 'aspect-[3/4]')}>
                 <BlockMedia

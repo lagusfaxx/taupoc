@@ -1,3 +1,4 @@
+import { TrackEvent } from '@/components/shared/Analytics';
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getCart } from '@/lib/cart';
@@ -29,6 +30,7 @@ export default async function IntlCheckoutPage() {
 
   return (
     <section className="mx-auto max-w-[1200px] px-4 pb-16 pt-10 sm:px-8 sm:pt-16">
+      <TrackEvent type="CHECKOUT_START" />
       <h1 className="text-[clamp(40px,6vw,80px)] leading-[0.95]">Pagar</h1>
       <IntlCheckoutForm pricing={pricing} countries={countries.filter((c) => c.code !== 'CL')} />
     </section>

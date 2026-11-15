@@ -1,3 +1,4 @@
+import { TrackEvent } from '@/components/shared/Analytics';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -40,6 +41,7 @@ export default async function IntlResultPage({ searchParams }: { searchParams: S
 
   return (
     <section className="mx-auto max-w-[900px] px-4 pb-16 pt-10 sm:px-8 sm:pt-16">
+      {approved ? <TrackEvent type="PURCHASE" orderNumber={order.number} /> : null}
       <p className="text-[13px] text-graphite-soft">Pedido {order.number}</p>
       <h1 className="mt-3 text-[clamp(40px,6vw,80px)] leading-[0.95]">{title}</h1>
       <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-graphite-soft">{text}</p>

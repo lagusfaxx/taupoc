@@ -42,6 +42,7 @@ export function AdminShell({
       title: 'Ventas',
       items: [
         { href: '/admin', label: 'Resumen', icon: IconChart },
+        { href: '/admin/reportes', label: 'Estadísticas', icon: IconChart },
         { href: '/admin/pedidos', label: 'Pedidos', icon: IconBox, badge: pendingOrders },
         { href: '/admin/clientes', label: 'Clientes', icon: IconUsers },
         { href: '/admin/cotizaciones', label: 'Cotizaciones', icon: IconDoc, badge: newQuotes },
@@ -72,7 +73,6 @@ export function AdminShell({
         { href: '/admin/envios', label: 'Envíos', icon: IconTruck },
         { href: '/admin/internacional', label: 'Internacional', icon: IconTruck },
         { href: '/admin/internacional/banner', label: 'Banner .lat', icon: IconSpark },
-        { href: '/admin/reportes', label: 'Reportes', icon: IconChart },
         { href: '/admin/tallas', label: 'Demanda de tallas', icon: IconRuler },
         { href: '/admin/configuracion', label: 'Ajustes', icon: IconSettings },
       ],

@@ -68,6 +68,12 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     hex: color.hex,
     imageUrl: color.images[0]?.url ?? null,
     stock: color.variants.reduce((s, v) => s + disponibles(v), 0),
+    // Tallas que se pueden comprar hoy: la tarjeta las muestra para que nadie
+    // abra una ficha a buscar una talla que no hay.
+    sizes: color.variants
+      .filter((v) => disponibles(v) > 0)
+      .map((v) => v.size)
+      .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b)),
   }));
 
   const allVariants = product.colors.flatMap((c) => c.variants);

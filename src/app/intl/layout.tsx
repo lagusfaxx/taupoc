@@ -1,3 +1,4 @@
+import { Analytics } from '@/components/shared/Analytics';
 import { IntlFooter, IntlHeader } from '@/components/intl/Shell';
 import { getCartCount } from '@/lib/cart';
 import { getSettings } from '@/lib/settings';
@@ -55,6 +56,7 @@ export default async function IntlLayout({ children }: { children: React.ReactNo
   return (
     <div className="flex min-h-screen flex-col bg-paper text-graphite">
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(orgLd)} />
+      <Analytics />
       <IntlHeader
         cartCount={cartCount}
         logo={

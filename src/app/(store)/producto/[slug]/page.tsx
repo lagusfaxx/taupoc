@@ -1,3 +1,4 @@
+import { TrackEvent } from '@/components/shared/Analytics';
 import type { Metadata } from 'next';
 import { isStudioImage } from '@/lib/intl-catalog';
 import { sweepExpiredReservations } from '@/lib/reservations';
@@ -330,6 +331,7 @@ export default async function ProductPage({
         </ol>
       </nav>
 
+      <TrackEvent type="PRODUCT_VIEW" productId={product.id} />
       <div className="container py-8 lg:py-14">
         <ProductView
           product={viewData}

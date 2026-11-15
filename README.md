@@ -557,3 +557,24 @@ compilar con el token público real configurado. La prueba usa el puerto 3119,
 comprueba entradas por las distintas páginas, Panamá, cambios de ciudad, permiso
 rechazado, código postal faltante, errores de proveedores, caché, móvil y enlaces
 de contacto compartidos; deja capturas en el directorio temporal indicado al terminar.
+
+---
+
+## Estadísticas y analítica propia
+
+El panel trae dos vistas para llevar la tienda:
+
+- **Resumen** (`/admin`): qué atender hoy (transferencias por confirmar, pedidos
+  por despachar, cotizaciones, stock bajo), ventas e ingresos comparados con los
+  30 días anteriores, visitas, conversión, carritos abandonados y el embudo de
+  compra.
+- **Estadísticas** (`/admin/reportes`): embudo y origen del tráfico, rendimiento
+  por producto (visitas → carrito → venta), clientes nuevos y recurrentes, medios
+  de pago y tasa de aprobación, días y horas de compra, cobertura de inventario
+  y el desglose por talla, color, región y cupón.
+
+Las visitas las mide la propia tienda (tabla `SiteEvent`, ruta `/api/t`): sin
+cookies, sin servicios externos y sin guardar IP. Se excluyen los bots y el
+equipo con sesión iniciada. Empieza a contar desde el despliegue; antes de esa
+fecha el embudo no tiene datos. Para distinguir campañas, los enlaces de los
+anuncios deben llevar `utm_source` y `utm_campaign`.

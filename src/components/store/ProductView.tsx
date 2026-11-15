@@ -13,6 +13,7 @@ import { RatingSummary } from '@/components/ui/Stars';
 import { announceCart, flyToCart } from './CartLink';
 import { ProductGallery, type GalleryImage } from './ProductGallery';
 import { MetaEvent, useMetaPixel } from './MetaPixel';
+import { useStorePrefs } from './StorePrefs';
 import { SizeChart, type SizeChartRowData } from './SizeChart';
 import { IconBell, IconCheck, IconExternal, IconShield, IconTruck } from '@/components/ui/Icons';
 
@@ -426,6 +427,8 @@ export function ProductView({
   const accent = color?.accentHex ?? '#00E0B8';
   const images = color?.images.length ? color.images : product.fallbackImages;
   const price = variant?.price ?? product.basePrice;
+  const { transferDiscount } = useStorePrefs();
+  const transferPrice = transferDiscount > 0 ? Math.round(price * (1 - transferDiscount / 100)) : null;
 
   const colorStock = color?.variants.reduce((s, v) => s + v.available, 0) ?? 0;
 
@@ -538,11 +541,22 @@ export function ProductView({
           </a>
         ) : null}
 
-        {/* Precio */}
+        {/* Precio: el normal, el de transferencia si hay descuento, y las cuotas. */}
         <div className="mt-7">
           <Price amount={price} size="lg" />
+          {transferPrice != null && !product.comingSoon ? (
+            <p className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[6px] border border-line bg-ink-900 px-3.5 py-2.5 text-[14px] text-chalk-dim">
+              <strong className="font-display text-[18px] font-bold tracking-tight text-chalk">
+                {formatCLP(transferPrice)}
+              </strong>
+              pagando con transferencia
+              <span className="rounded-[3px] accent-bg px-1.5 py-0.5 font-display text-[11px] font-bold">
+                −{transferDiscount}%
+              </span>
+            </p>
+          ) : null}
           {product.installmentsMax > 1 ? (
-            <p className="mt-2 text-[13.5px] text-chalk-dim">
+            <p className="mt-2.5 text-[13.5px] text-chalk-dim">
               Hasta {product.installmentsMax} cuotas de{' '}
               <strong className="text-chalk">{formatCLP(installment(price, product.installmentsMax))}</strong>{' '}
               con Mercado Pago
@@ -805,28 +819,47 @@ export function ProductView({
         ) : null}
 
         {/* Garantías de compra */}
-        <ul className="mt-8 divide-y divide-line border-y border-line">
-          <li className="flex items-start gap-3 py-3.5">
-            <IconTruck className="mt-0.5 h-5 w-5 shrink-0 text-chalk-faint" />
-            <p className="text-[13.5px] leading-relaxed text-chalk-dim">
-              Despacho a todo Chile en 1 a 8 días hábiles.
-              {product.freeShippingOver
-                ? ` Gratis sobre ${formatCLP(product.freeShippingOver)}.`
-                : ''}{' '}
-              Retiro sin costo en Santiago o entrega en torneo.
-            </p>
-          </li>
-          <li className="flex items-start gap-3 py-3.5">
-            <IconCheck className="mt-0.5 h-5 w-5 shrink-0 text-chalk-faint" />
-            <p className="text-[13.5px] leading-relaxed text-chalk-dim">
-              {product.esAccesorio
-                ? 'Cambio o devolución dentro de 10 días, sin uso y con su empaque original. '
-                : 'Cambio de talla sin costo dentro de 10 días, con el traje sin uso y con etiqueta. '}
-              <Link href="/devoluciones" className="underline underline-offset-2 hover:text-chalk">
-                Ver política
-              </Link>
-            </p>
-          </li>
+        <ul className="mt-8 grid gap-2.5 sm:grid-cols-2">
+          {[
+            {
+              icon: IconTruck,
+              title:
+                product.freeShippingOver && price >= product.freeShippingOver
+                  ? 'Este producto va con envío gratis'
+                  : product.freeShippingOver
+                    ? `Envío gratis sobre ${formatCLP(product.freeShippingOver)}`
+                    : 'Despacho a todo Chile',
+              text: 'A todo Chile en 1 a 8 días hábiles. Retiro sin costo en Santiago o entrega en torneo.',
+            },
+            {
+              icon: IconCheck,
+              title: product.esAccesorio ? 'Cambio o devolución' : 'Cambio de talla sin costo',
+              text: product.esAccesorio
+                ? 'Dentro de 10 días, sin uso y con su empaque original.'
+                : 'Dentro de 10 días, con el traje sin uso y con etiqueta.',
+              href: '/devoluciones',
+            },
+            {
+              icon: IconShield,
+              title: 'Pago seguro',
+              text: 'Crédito, débito y cuotas con Mercado Pago, o transferencia bancaria.',
+            },
+          ].map((item) => (
+            <li key={item.title} className="flex items-start gap-3 rounded-[6px] border border-line bg-ink-900 p-3.5 last:sm:col-span-2">
+              <item.icon className="mt-0.5 h-5 w-5 shrink-0 accent-text" />
+              <div>
+                <p className="text-[13.5px] font-semibold leading-snug text-chalk">{item.title}</p>
+                <p className="mt-1 text-[12.5px] leading-relaxed text-chalk-dim">
+                  {item.text}{' '}
+                  {item.href ? (
+                    <Link href={item.href} className="underline underline-offset-2 hover:text-chalk">
+                      Ver política
+                    </Link>
+                  ) : null}
+                </p>
+              </div>
+            </li>
+          ))}
         </ul>
       </div>
     </div>
