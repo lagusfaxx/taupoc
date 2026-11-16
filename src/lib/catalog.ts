@@ -68,8 +68,8 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     hex: color.hex,
     imageUrl: color.images[0]?.url ?? null,
     stock: color.variants.reduce((s, v) => s + disponibles(v), 0),
-    // Tiene tallas agotadas que la fábrica no niega: se puede ofrecer a pedido.
-    orderable: color.variants.some((v) => disponibles(v) <= 0 && v.factoryAvailable !== false),
+    // Tiene tallas agotadas que la fábrica confirma: se puede ofrecer a pedido.
+    orderable: color.variants.some((v) => disponibles(v) <= 0 && v.factoryAvailable === true),
     // Tallas que se pueden comprar hoy: la tarjeta las muestra para que nadie
     // abra una ficha a buscar una talla que no hay.
     sizes: color.variants

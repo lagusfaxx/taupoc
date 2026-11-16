@@ -213,11 +213,19 @@ const NAME_HINTS: [RegExp, RegExp][] = [
   [/army/i, /^army/i],
   [/rosad/i, /^pink/i],
   [/p[uú]rpura|morado/i, /^purple/i],
+  [/rojo/i, /^red/i],
+  // El proveedor llama "Citycape" a su azul marino 60289.
+  [/marino/i, /^citycape/i],
 ];
 
-/** Propone el color del proveedor que corresponde a uno de la tienda. */
+/**
+ * Propone el color del proveedor que corresponde a uno de la tienda: primero
+ * por código de colorway; si no, por nombre, y cuando el proveedor tiene dos
+ * del mismo nombre ("Red/0102black", "Red/0524yellow") decide el código del
+ * vivo.
+ */
 export function suggestSupplierColor(
-  color: { name: string; code: string | null },
+  color: { name: string; code: string | null; stripCode?: string | null },
   supplierColors: string[],
 ): string | null {
   const digits = (s: string) => s.replace(/\D/g, '');
@@ -230,6 +238,11 @@ export function suggestSupplierColor(
     if (!ours.test(color.name)) continue;
     const matches = supplierColors.filter((s) => theirs.test(s));
     if (matches.length === 1) return matches[0];
+    const strip = color.stripCode ? digits(color.stripCode) : '';
+    if (matches.length > 1 && strip.length >= 3) {
+      const byStrip = matches.filter((s) => digits(s).includes(strip));
+      if (byStrip.length === 1) return byStrip[0];
+    }
   }
   return null;
 }

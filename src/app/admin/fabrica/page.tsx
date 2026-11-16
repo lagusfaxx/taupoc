@@ -40,7 +40,7 @@ export default async function SupplierPage() {
           where: { active: true },
           orderBy: { sortOrder: 'asc' },
           select: {
-            id: true, name: true, code: true, hex: true, supplierColor: true,
+            id: true, name: true, code: true, stripCode: true, hex: true, supplierColor: true,
             variants: {
               where: { active: true },
               select: { size: true, stock: true, reserved: true },
@@ -56,7 +56,7 @@ export default async function SupplierPage() {
     <>
       <PageHeader
         title="Fábrica"
-        description="Enlaza cada producto y color con la tienda B2B del proveedor. La tienda consulta sola qué tallas tiene la fábrica y solo ofrece a pedido las que sí tiene."
+        description="Enlaza cada producto y color con la tienda B2B del proveedor. La tienda consulta sola qué tallas tiene la fábrica y solo ofrece a pedido las que sí tiene; un color sin enlazar no se ofrece."
         actions={
           <form action={syncSupplierNow}>
             <button
@@ -185,7 +185,7 @@ export default async function SupplierPage() {
                           </ul>
                         ) : (
                           <p className="text-[12.5px] text-chalk-faint">
-                            Sin enlazar: sus tallas agotadas se ofrecen a pedido sin saber si la fábrica las tiene.
+                            Sin enlazar: sus tallas agotadas no se ofrecen a pedido hasta que elijas su color del proveedor.
                           </p>
                         )}
                       </li>
