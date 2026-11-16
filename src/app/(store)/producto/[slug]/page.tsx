@@ -171,12 +171,11 @@ export default async function ProductPage({
         available,
         price: v.priceOverride ?? product.basePrice,
         // Agotada pero publicada: se vende a pedido. Una talla apagada no.
-        // La fábrica dice no tenerla: no se ofrece a pedido, queda el aviso.
+        // La fábrica dice no tenerla: no se ofrece a pedido, queda el aviso. El
+        // dato de fábrica es interno: al cliente nunca se le muestra ni se le envía.
         backorder: aPedido && enLinea && v.active && available <= 0 && v.factoryAvailable !== false,
         // A pedido por WhatsApp: se confirma con fábrica antes de cobrar.
         whatsappOrder: aPedido && !enLinea && v.active && available <= 0 && v.factoryAvailable !== false,
-        // El proveedor confirma que la tiene (según su tienda B2B).
-        inFactory: v.factoryAvailable === true,
       };
     }),
   }));
