@@ -1,4 +1,5 @@
 import { TrackEvent } from '@/components/shared/Analytics';
+import { refreshFactoryStockIfStale } from '@/lib/supplier';
 import type { Metadata } from 'next';
 import { isStudioImage } from '@/lib/intl-catalog';
 import { sweepExpiredReservations } from '@/lib/reservations';
@@ -131,6 +132,8 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  // Mantiene al día el stock de fábrica sin depender de una tarea programada.
+  refreshFactoryStockIfStale();
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const resolved = await resolverFicha(slug, query);
   if (!resolved) notFound();
@@ -168,9 +171,12 @@ export default async function ProductPage({
         available,
         price: v.priceOverride ?? product.basePrice,
         // Agotada pero publicada: se vende a pedido. Una talla apagada no.
-        backorder: aPedido && enLinea && v.active && available <= 0,
+        // La fábrica dice no tenerla: no se ofrece a pedido, queda el aviso.
+        backorder: aPedido && enLinea && v.active && available <= 0 && v.factoryAvailable !== false,
         // A pedido por WhatsApp: se confirma con fábrica antes de cobrar.
-        whatsappOrder: aPedido && !enLinea && v.active && available <= 0,
+        whatsappOrder: aPedido && !enLinea && v.active && available <= 0 && v.factoryAvailable !== false,
+        // El proveedor confirma que la tiene (según su tienda B2B).
+        inFactory: v.factoryAvailable === true,
       };
     }),
   }));

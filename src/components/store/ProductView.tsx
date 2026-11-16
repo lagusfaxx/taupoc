@@ -28,6 +28,8 @@ export interface ViewVariant {
   backorder?: boolean;
   /** Agotada: se pide por WhatsApp y se confirma con fábrica antes de cobrar. */
   whatsappOrder?: boolean;
+  /** La tienda del proveedor dice que la fábrica la tiene. */
+  inFactory?: boolean;
 }
 
 /** A partir de acá la ficha muestra las unidades restantes como urgencia. */
@@ -281,8 +283,9 @@ function SizeInterestPanel({
               Talla {variant.size} a pedido
             </p>
             <p className="mt-1.5 text-[13.5px] leading-relaxed text-chalk-dim">
-              No está en bodega, pero la traemos de fábrica en {whatsapp.lead}. Escríbenos y te confirmamos
-              la disponibilidad antes de que pagues.
+              {variant.inFactory
+                ? `Disponible en fábrica: la traemos en ${whatsapp.lead}. Escríbenos por WhatsApp y coordinamos tu pedido.`
+                : `No está en bodega, pero la traemos de fábrica en ${whatsapp.lead}. Escríbenos y te confirmamos la disponibilidad antes de que pagues.`}
             </p>
           </div>
           <button
@@ -517,7 +520,7 @@ export function ProductView({
     const texto =
       `Hola, quiero pedir a fábrica el ${product.name}` +
       `${color ? ` en ${colorLabel(color)}` : ''}, talla ${v.size} (SKU ${v.sku}). ` +
-      '¿Me confirman si está disponible?';
+      (v.inFactory ? 'Vi que está disponible en fábrica.' : '¿Me confirman si está disponible?');
     return `https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`;
   }
   const lead = product.backorderDays ? backorderLead(product.backorderDays) : '';

@@ -17,7 +17,7 @@ const CARD_INCLUDE = {
     orderBy: { sortOrder: 'asc' as const },
     include: {
       images: { orderBy: { sortOrder: 'asc' as const }, take: 1 },
-      variants: { where: { active: true }, select: { stock: true, reserved: true, size: true } },
+      variants: { where: { active: true }, select: { stock: true, reserved: true, size: true, factoryAvailable: true } },
     },
   },
   images: { orderBy: { sortOrder: 'asc' as const }, take: 1 },
@@ -68,8 +68,8 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     hex: color.hex,
     imageUrl: color.images[0]?.url ?? null,
     stock: color.variants.reduce((s, v) => s + disponibles(v), 0),
-    // Con tallas publicadas el color se puede vender a pedido aunque no haya stock.
-    orderable: color.variants.length > 0,
+    // Tiene tallas agotadas que la fábrica no niega: se puede ofrecer a pedido.
+    orderable: color.variants.some((v) => disponibles(v) <= 0 && v.factoryAvailable !== false),
     // Tallas que se pueden comprar hoy: la tarjeta las muestra para que nadie
     // abra una ficha a buscar una talla que no hay.
     sizes: color.variants
