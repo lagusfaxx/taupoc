@@ -4,7 +4,8 @@ export type MetaEventName =
   | 'AddToCart'
   | 'InitiateCheckout'
   | 'Purchase'
-  | 'Search';
+  | 'Search'
+  | 'Contact';
 
 export type MetaEventData = Record<string, unknown>;
 

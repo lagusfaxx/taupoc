@@ -129,11 +129,13 @@ export async function updateOrderItem(_prev: AdminState | null, formData: FormDa
     const reason = `Pedido ${order.number}: cambio ${currentItem.sku} → ${newVariant.sku}`;
     // Si el pedido ya descontó stock, la prenda que vuelve entra al
     // inventario y la nueva sale: así un cambio de talla cuadra solo.
+    // Lo que iba a pedido nunca salió del inventario: no hay nada que devolver.
+    const enStock = currentItem.quantity - currentItem.backorderQty;
     if (order.stockCommitted) {
-      if (currentItem.variantId) {
+      if (currentItem.variantId && enStock > 0) {
         await adjustStock(tx, {
           variantId: currentItem.variantId,
-          delta: currentItem.quantity,
+          delta: enStock,
           type: 'RETURN',
           reason,
           actorEmail: admin.email,
@@ -150,8 +152,8 @@ export async function updateOrderItem(_prev: AdminState | null, formData: FormDa
       });
     } else if (order.stockReserved) {
       // Pedido esperando el pago: la reserva se pasa a la nueva variante.
-      if (currentItem.variantId) {
-        await tx.$executeRaw`UPDATE "Variant" SET reserved = GREATEST(reserved - ${currentItem.quantity}, 0) WHERE id = ${currentItem.variantId}`;
+      if (currentItem.variantId && enStock > 0) {
+        await tx.$executeRaw`UPDATE "Variant" SET reserved = GREATEST(reserved - ${enStock}, 0) WHERE id = ${currentItem.variantId}`;
       }
       await tx.$executeRaw`UPDATE "Variant" SET reserved = reserved + ${currentItem.quantity} WHERE id = ${newVariant.id}`;
     }
@@ -168,6 +170,8 @@ export async function updateOrderItem(_prev: AdminState | null, formData: FormDa
       imageUrl,
       unitPrice,
       lineTotal: unitPrice * currentItem.quantity,
+      // El equipo eligió una variante concreta: sale del stock, ya no es a pedido.
+      backorderQty: 0,
     },
     });
   });

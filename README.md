@@ -578,3 +578,23 @@ cookies, sin servicios externos y sin guardar IP. Se excluyen los bots y el
 equipo con sesión iniciada. Empieza a contar desde el despliegue; antes de esa
 fecha el embudo no tiene datos. Para distinguir campañas, los enlaces de los
 anuncios deben llevar `utm_source` y `utm_campaign`.
+
+---
+
+## Tallas a pedido
+
+Con **Ajustes → Ofrecer a pedido las tallas agotadas** activo, una talla sin
+stock de un producto publicado deja de verse tachada y se ofrece "a pedido",
+con su plazo (por defecto 7 días). Cómo se cierra la venta se elige en Ajustes:
+
+- **Por WhatsApp (por defecto).** Al tocar la talla, la ficha abre WhatsApp con
+  el mensaje ya escrito (producto, color, talla y SKU). El equipo confirma con
+  fábrica y recién entonces cobra; el pedido se registra con *Nuevo pedido* en
+  el panel. El carrito sigue rechazando la talla agotada. El toque queda en la
+  demanda de tallas.
+- **Pago en la tienda.** La talla se compra de inmediato sin confirmar. Esas
+  unidades quedan en `OrderItem.backorderQty` y no pasan por el inventario; el
+  Resumen las lista en "Para atender hoy" hasta que el pedido se despacha.
+
+Una talla **apagada** en el producto no se ofrece a pedido: sigue con el aviso
+por correo. Aplica solo en taupoc.cl; taupoc.lat no cambia.

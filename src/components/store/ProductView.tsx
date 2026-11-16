@@ -8,6 +8,7 @@ import { registerSizeInterest, type InterestState } from '@/actions/size-interes
 import { formatCLP, installment } from '@/lib/money';
 import { cn, readableOn } from '@/lib/utils';
 import { colorLabel } from '@/lib/colors';
+import { backorderLead } from '@/lib/backorder';
 import { Price } from '@/components/ui/Price';
 import { RatingSummary } from '@/components/ui/Stars';
 import { announceCart, flyToCart } from './CartLink';
@@ -15,7 +16,7 @@ import { ProductGallery, type GalleryImage } from './ProductGallery';
 import { MetaEvent, useMetaPixel } from './MetaPixel';
 import { useStorePrefs } from './StorePrefs';
 import { SizeChart, type SizeChartRowData } from './SizeChart';
-import { IconBell, IconCheck, IconExternal, IconShield, IconTruck } from '@/components/ui/Icons';
+import { IconBell, IconCheck, IconExternal, IconShield, IconTruck, IconWhatsapp } from '@/components/ui/Icons';
 
 export interface ViewVariant {
   id: string;
@@ -23,6 +24,10 @@ export interface ViewVariant {
   sku: string;
   available: number;
   price: number;
+  /** Agotada pero se vende a pedido pagando en la tienda. */
+  backorder?: boolean;
+  /** Agotada: se pide por WhatsApp y se confirma con fábrica antes de cobrar. */
+  whatsappOrder?: boolean;
 }
 
 /** A partir de acá la ficha muestra las unidades restantes como urgencia. */
@@ -73,6 +78,10 @@ export interface ProductViewData {
   colorPages?: boolean;
   sizeChart: SizeChartRowData[];
   fallbackImages: GalleryImage[];
+  /** Días que tarda una talla a pedido; `null` si la tienda no vende a pedido. */
+  backorderDays: number | null;
+  /** Número al que se piden las tallas a pedido; vacío si no aplica. */
+  whatsappPhone: string;
   installmentsMax: number;
   freeShippingOver: number | null;
   rating: { average: number; count: number };
@@ -82,10 +91,13 @@ function AddButton({
   disabled,
   comingSoon,
   pending,
+  backorderDays,
 }: {
   disabled: boolean;
   comingSoon: boolean;
   pending: boolean;
+  /** La talla elegida va a pedido: el botón lo dice antes de comprar. */
+  backorderDays?: number | null;
 }) {
   return (
     <button
@@ -98,7 +110,15 @@ function AddButton({
         'disabled:cursor-not-allowed disabled:bg-ink-600 disabled:text-chalk-faint',
       )}
     >
-      {comingSoon ? 'Próximamente' : pending ? 'Agregando…' : disabled ? 'Selecciona una talla' : 'Agregar al carrito'}
+      {comingSoon
+        ? 'Próximamente'
+        : pending
+          ? 'Agregando…'
+          : disabled
+            ? 'Selecciona una talla'
+            : backorderDays
+              ? `Comprar a pedido · ${backorderLead(backorderDays)}`
+              : 'Agregar al carrito'}
     </button>
   );
 }
@@ -215,10 +235,14 @@ function ColorPicker({
 function SizeInterestPanel({
   variant,
   onClose,
+  whatsapp,
 }: {
   variant: ViewVariant | null;
   onClose: () => void;
+  /** Talla a pedido: el enlace de WhatsApp con el mensaje escrito y el plazo. */
+  whatsapp?: { href: string; lead: string; onAsk: () => void } | null;
 }) {
+  const [porCorreo, setPorCorreo] = useState(false);
   const [estado, setEstado] = useState<InterestState | null>(null);
   // pregunta → (correo, si no hay sesión) → listo
   const [paso, setPaso] = useState<'pregunta' | 'correo' | 'listo'>('pregunta');
@@ -244,6 +268,57 @@ function SizeInterestPanel({
     } finally {
       setEnviando(false);
     }
+  }
+
+  // A pedido: la venta se cierra por WhatsApp, donde el equipo confirma con
+  // fábrica antes de cobrar. El aviso por correo queda como segunda opción.
+  if (whatsapp && !porCorreo) {
+    return (
+      <div className="mt-3 border border-line bg-ink-800 p-4 animate-rise-in">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[15px] font-semibold leading-snug text-chalk">
+              Talla {variant.size} a pedido
+            </p>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-chalk-dim">
+              No está en bodega, pero la traemos de fábrica en {whatsapp.lead}. Escríbenos y te confirmamos
+              la disponibilidad antes de que pagues.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="-m-2 flex h-10 w-10 shrink-0 items-center justify-center text-[15px] text-chalk-faint hover:text-chalk"
+          >
+            ✕
+          </button>
+        </div>
+
+        <a
+          href={whatsapp.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            whatsapp.onAsk();
+            // Queda en la demanda de tallas del panel aunque no deje correo.
+            void registerSizeInterest(variant.id).catch(() => null);
+          }}
+          className="mt-4 flex h-12 w-full items-center justify-center gap-2.5 rounded-[4px] bg-[#25D366] font-display text-[12.5px] font-bold uppercase tracking-widest text-[#07090B] transition hover:brightness-110"
+        >
+          <IconWhatsapp className="h-5 w-5" />
+          Pedir talla {variant.size} por WhatsApp
+        </a>
+
+        <button
+          type="button"
+          onClick={() => setPorCorreo(true)}
+          className="mt-3 text-[12.5px] text-chalk-faint underline underline-offset-4 hover:text-chalk"
+        >
+          Prefiero que me avisen por correo cuando vuelva
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -350,7 +425,7 @@ export function ProductView({
   // Si se llega desde el catálogo filtrado por talla, esa talla queda elegida.
   const tallaFiltrada =
     (initialSizes ?? [])
-      .map((size) => inicial?.variants.find((v) => v.size === size && v.available > 0))
+      .map((size) => inicial?.variants.find((v) => v.size === size && (v.available > 0 || v.backorder)))
       .find(Boolean) ?? null;
   const [variantId, setVariantId] = useState<string | null>(
     unicaVariante?.id ?? tallaFiltrada?.id ?? null,
@@ -385,7 +460,9 @@ export function ProductView({
 
     // La medida se toma antes de esperar al servidor: mientras la acción
     // viaja, el visitante puede desplazarse y el vuelo saldría de otro lugar.
-    const fuente = document.querySelector<HTMLElement>('[data-fly-source]');
+    // Hay una galería para el teléfono y otra para escritorio: vuela la visible.
+    const fuente =
+      [...document.querySelectorAll<HTMLElement>('[data-fly-source]')].find((el) => el.offsetParent !== null) ?? null;
     const caja = fuente?.getBoundingClientRect();
     const origen = caja
       ? { x: caja.x, y: caja.y, width: caja.width, height: caja.height }
@@ -431,6 +508,19 @@ export function ProductView({
   const transferPrice = transferDiscount > 0 ? Math.round(price * (1 - transferDiscount / 100)) : null;
 
   const colorStock = color?.variants.reduce((s, v) => s + v.available, 0) ?? 0;
+  // Sin stock y sin tallas a pedido: lo único que queda es pedir el aviso.
+  const sinNada = colorStock === 0 && !color?.variants.some((v) => v.backorder);
+  // Hay tallas que se piden por WhatsApp en este color.
+  const colorWsp = Boolean(color?.variants.some((v) => v.whatsappOrder));
+  const telefono = product.whatsappPhone.replace(/\D/g, '');
+  function enlaceWsp(v: ViewVariant) {
+    const texto =
+      `Hola, quiero pedir a fábrica el ${product.name}` +
+      `${color ? ` en ${colorLabel(color)}` : ''}, talla ${v.size} (SKU ${v.sku}). ` +
+      '¿Me confirman si está disponible?';
+    return `https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`;
+  }
+  const lead = product.backorderDays ? backorderLead(product.backorderDays) : '';
 
   // Al cambiar de color se conserva la talla si sigue existiendo con stock.
   useEffect(() => {
@@ -465,12 +555,12 @@ export function ProductView({
 
   function selectSize(size: string) {
     const match = color?.variants.find((v) => v.size === size);
-    if (match && match.available > 0) setVariantId(match.id);
+    if (match && (match.available > 0 || match.backorder)) setVariantId(match.id);
   }
 
   return (
     <div
-      className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:gap-14 xl:gap-20"
+      className="grid gap-y-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:grid-rows-[auto_1fr] lg:gap-x-14 lg:gap-y-0 xl:gap-x-20"
       style={{ ['--accent' as string]: accent, ['--accent-contrast' as string]: readableOn(accent) }}
     >
       <MetaEvent event="ViewContent" eventKey={`${product.id}:${initialColorSlug ?? ''}`} data={{
@@ -480,24 +570,13 @@ export function ProductView({
         value: inicial?.variants[0]?.price ?? product.basePrice,
         currency: 'CLP',
       }} />
-      <div className="lg:sticky lg:top-24 lg:self-start">
+      <div className="order-1 lg:sticky lg:top-24 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:self-start">
         <ProductGallery images={images} colorName={color?.name ?? ''} productName={product.name} />
-
-        {/* En el teléfono el color va aquí, a la vista de la foto que cambia. */}
-        <ColorPicker
-          colors={product.colors}
-          activeId={color?.id}
-          onPick={setColorId}
-          hrefFor={hrefDeColor}
-          className="mt-5 lg:hidden"
-        />
       </div>
 
-      {/* El relleno de abajo deja libre lo que tapa la barra de compra. Es
-          fijo a propósito: si dependiera de si la barra se ve, aparecer
-          movería el botón que el observador vigila, eso la escondería, y el
-          movimiento volvería a mostrarla. */}
-      <div className="pb-24 lg:pb-0">
+      {/* Nombre y precio. En el teléfono van pegados bajo la foto, que tiene
+          el alto limitado para que se alcancen a ver sin bajar. */}
+      <div className="order-2 lg:col-start-2 lg:row-start-1">
         {/* Encabezado */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {product.lineName ? (
@@ -513,11 +592,16 @@ export function ProductView({
           </span>
         </div>
 
-        <h1 className="mt-3 text-balance font-display text-[32px] leading-[1.02] tracking-tightest text-chalk sm:text-[42px]">
-          {product.name}
-        </h1>
+        {/* En el teléfono el precio comparte renglón con el nombre: así los dos
+            caben en la primera pantalla, pegados a la foto. */}
+        <div className="mt-2 flex items-start justify-between gap-4 lg:mt-3 lg:block">
+          <h1 className="min-w-0 text-balance font-display text-[24px] leading-[1.05] tracking-tightest text-chalk sm:text-[42px] lg:leading-[1.02]">
+            {product.name}
+          </h1>
+          <Price amount={price} size="lg" className="shrink-0 text-[24px] leading-[1.05] lg:hidden" />
+        </div>
         {product.subtitle ? (
-          <p className="mt-2.5 text-[15px] text-chalk-dim">{product.subtitle}</p>
+          <p className="mt-2.5 hidden text-[15px] text-chalk-dim lg:block">{product.subtitle}</p>
         ) : null}
 
         {/* Con dos líneas casi idénticas en la foto, quien entra necesita un
@@ -525,7 +609,7 @@ export function ProductView({
         {product.comparable ? (
           <a
             href="#comparar"
-            className="mt-3 inline-flex items-center gap-1.5 text-[13px] text-chalk-dim underline underline-offset-4 transition-colors hover:text-chalk"
+            className="mt-3 hidden items-center gap-1.5 text-[13px] text-chalk-dim underline underline-offset-4 transition-colors hover:text-chalk lg:inline-flex"
           >
             ¿En qué se diferencia de la otra línea?
           </a>
@@ -534,7 +618,7 @@ export function ProductView({
         {product.rating.count > 0 ? (
           <a
             href="#opiniones"
-            className="mt-3 inline-flex items-center gap-2 text-chalk-dim transition-colors hover:text-chalk"
+            className="mt-2.5 flex w-fit items-center gap-2 text-chalk-dim transition-colors hover:text-chalk lg:mt-3"
           >
             <RatingSummary average={product.rating.average} count={product.rating.count} size="md" />
             <span className="text-[12.5px] underline underline-offset-4">Ver opiniones</span>
@@ -542,41 +626,57 @@ export function ProductView({
         ) : null}
 
         {/* Precio: el normal, el de transferencia si hay descuento, y las cuotas. */}
-        <div className="mt-7">
-          <Price amount={price} size="lg" />
+        <div className="mt-3 lg:mt-7">
+          <Price amount={price} size="lg" className="hidden text-[38px] leading-none lg:inline" />
           {transferPrice != null && !product.comingSoon ? (
-            <p className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[6px] border border-line bg-ink-900 px-3.5 py-2.5 text-[14px] text-chalk-dim">
-              <strong className="font-display text-[18px] font-bold tracking-tight text-chalk">
+            <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[6px] border border-line bg-ink-900 px-3.5 py-2 text-[14px] text-chalk-dim lg:mt-3 lg:py-2.5">
+              <strong className="font-display text-[20px] font-bold tracking-tight text-chalk">
                 {formatCLP(transferPrice)}
               </strong>
-              pagando con transferencia
+              con transferencia
               <span className="rounded-[3px] accent-bg px-1.5 py-0.5 font-display text-[11px] font-bold">
                 −{transferDiscount}%
               </span>
             </p>
           ) : null}
           {product.installmentsMax > 1 ? (
-            <p className="mt-2.5 text-[13.5px] text-chalk-dim">
+            <p className="mt-2.5 hidden text-[13.5px] text-chalk-dim lg:block">
               Hasta {product.installmentsMax} cuotas de{' '}
               <strong className="text-chalk">{formatCLP(installment(price, product.installmentsMax))}</strong>{' '}
               con Mercado Pago
             </p>
           ) : null}
         </div>
+      </div>
 
-        <form id="compra" onSubmit={enviar} className="mt-8">
+      {/* El relleno de abajo deja libre lo que tapa la barra de compra. Es
+          fijo a propósito: si dependiera de si la barra se ve, aparecer
+          movería el botón que el observador vigila, eso la escondería, y el
+          movimiento volvería a mostrarla. */}
+      <div className="order-3 pb-24 lg:col-start-2 lg:row-start-2 lg:pb-0">
+        {/* En el teléfono el encabezado va compacto bajo la foto; el subtítulo
+            y las cuotas quedan acá, junto a la compra. */}
+        <div className="lg:hidden">
+          {product.subtitle ? <p className="text-[14.5px] text-chalk-dim">{product.subtitle}</p> : null}
+          {product.installmentsMax > 1 ? (
+            <p className="mt-1.5 text-[13.5px] text-chalk-dim">
+              Hasta {product.installmentsMax} cuotas de{' '}
+              <strong className="text-chalk">{formatCLP(installment(price, product.installmentsMax))}</strong>{' '}
+              con Mercado Pago
+            </p>
+          ) : null}
+        </div>
+        <form id="compra" onSubmit={enviar} className="mt-6 lg:mt-8">
           <input type="hidden" name="variantId" value={variant?.id ?? ''} />
           <input type="hidden" name="quantity" value="1" />
 
-          {/* Selector de color — en pantalla ancha vive junto a la talla. En el
-              teléfono se muestra pegado a la foto (más arriba): acá abajo el
-              visitante cambiaba de color sin ver la imagen que cambiaba. */}
+          {/* Selector de color, junto a la talla. */}
           <ColorPicker
             colors={product.colors}
             activeId={color?.id}
             onPick={setColorId}
             hrefFor={hrefDeColor}
-            className="mb-7 hidden lg:block"
+            className="mb-7"
           />
 
           {/* Selector de talla — el punto de mayor fricción del rubro */}
@@ -604,7 +704,8 @@ export function ProductView({
             <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
               {color?.variants.map((v) => {
                 const selected = v.id === variant?.id;
-                const out = v.available <= 0;
+                const pedido = Boolean(v.backorder);
+                const out = v.available <= 0 && !pedido;
                 return (
                   <button
                     key={v.id}
@@ -618,24 +719,44 @@ export function ProductView({
                       setVariantId(v.id);
                     }}
                     aria-pressed={out ? v.id === interesId : selected}
-                    aria-label={`Talla ${v.size}${out ? ' agotada, avísame cuando vuelva' : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
+                    aria-label={`Talla ${v.size}${out ? (v.whatsappOrder && telefono ? `, a pedido por WhatsApp, ${lead}` : ' agotada, avísame cuando vuelva') : pedido ? `, a pedido, ${lead}` : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
                     className={cn(
                       'relative flex h-12 items-center justify-center border font-display text-[15px] font-semibold tracking-wide transition-all duration-150',
                       selected
                         ? 'accent-border accent-text bg-ink-800'
                         : out
                           ? v.id === interesId
-                            ? 'border-dashed border-chalk-faint text-chalk-dim'
-                            : 'border-dashed border-line text-chalk-faint/70 hover:border-chalk-faint hover:text-chalk-dim'
-                          : 'border-line text-chalk hover:border-chalk-faint',
+                            ? v.whatsappOrder && telefono
+                              ? 'border-chalk-faint bg-ink-800 text-chalk'
+                              : 'border-dashed border-chalk-faint text-chalk-dim'
+                            : v.whatsappOrder && telefono
+                              ? 'border-line text-chalk-dim hover:border-chalk-faint hover:text-chalk'
+                              : 'border-dashed border-line text-chalk-faint/70 hover:border-chalk-faint hover:text-chalk-dim'
+                          : pedido
+                            ? 'border-line text-chalk-dim hover:border-chalk-faint hover:text-chalk'
+                            : 'border-line text-chalk hover:border-chalk-faint',
                     )}
                   >
                     {v.size}
-                    {out ? (
+                    {out && v.whatsappOrder && telefono ? (
+                      <span
+                        className="absolute inset-x-0 bottom-[3px] text-center font-sans text-[8.5px] font-medium normal-case leading-none tracking-normal text-signal-info"
+                        aria-hidden
+                      >
+                        a pedido
+                      </span>
+                    ) : out ? (
                       <>
                         <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 rotate-[-20deg] bg-line" aria-hidden />
                         <IconBell className="absolute right-0.5 top-0.5 h-3 w-3 accent-text" />
                       </>
+                    ) : pedido ? (
+                      <span
+                        className="absolute inset-x-0 bottom-[3px] text-center font-sans text-[8.5px] font-medium normal-case leading-none tracking-normal text-signal-info"
+                        aria-hidden
+                      >
+                        a pedido
+                      </span>
                     ) : v.available <= SHOW_UNITS_LEFT ? (
                       <span className="absolute right-1 top-1 h-1.5 w-1.5 bg-signal-warn" aria-hidden />
                     ) : null}
@@ -645,7 +766,32 @@ export function ProductView({
             </div>
             )}
 
-            {!interesId && !unicaVariante && color?.variants.some((v) => v.available <= 0) ? (
+            {!interesId && !unicaVariante && colorWsp && telefono ? (
+              <p
+                className={cn(
+                  'mt-3 flex items-start gap-2 border px-3 py-2.5 text-[13px] leading-snug transition-colors',
+                  resaltarAviso ? 'accent-border bg-ink-800 text-chalk' : 'border-line-soft text-chalk-dim',
+                )}
+              >
+                <IconWhatsapp className="mt-px h-4 w-4 shrink-0 text-[#25D366]" />
+                <span>
+                  Las tallas <strong className="text-chalk">a pedido</strong> no están en bodega: tócala y
+                  pídela por WhatsApp. Confirmamos con fábrica y llega en {lead}.
+                </span>
+              </p>
+            ) : null}
+
+            {!unicaVariante && color?.variants.some((v) => v.backorder) ? (
+              <p className="mt-3 flex items-start gap-2 border border-line-soft px-3 py-2.5 text-[13px] leading-snug text-chalk-dim">
+                <IconTruck className="mt-px h-4 w-4 shrink-0 text-signal-info" />
+                <span>
+                  Las tallas <strong className="text-chalk">a pedido</strong> no están en bodega: las traemos de
+                  fábrica en {lead} y después sale tu despacho.
+                </span>
+              </p>
+            ) : null}
+
+            {!interesId && !unicaVariante && color?.variants.some((v) => v.available <= 0 && !v.backorder && !(v.whatsappOrder && telefono)) ? (
               <p
                 className={cn(
                   'mt-3 flex items-start gap-2 border px-3 py-2.5 text-[13px] leading-snug transition-colors',
@@ -667,13 +813,27 @@ export function ProductView({
                 key={interesId}
                 variant={color?.variants.find((v) => v.id === interesId) ?? null}
                 onClose={() => setInteresId(null)}
+                whatsapp={(() => {
+                  const v = color?.variants.find((x) => x.id === interesId);
+                  return v?.whatsappOrder && telefono
+                    ? {
+                        href: enlaceWsp(v),
+                        lead,
+                        onAsk: () => track('Contact', { content_ids: [product.id], content_name: product.name }),
+                      }
+                    : null;
+                })()}
               />
             ) : null}
 
             {/* Estado de stock en vivo */}
             <p ref={liveRef} aria-live="polite" className="mt-3 min-h-[20px] text-[13px]">
               {variant ? (
-                variant.available <= SHOW_UNITS_LEFT ? (
+                variant.backorder ? (
+                  <span className="text-signal-info">
+                    Talla {variant.size} a pedido: llega de fábrica en {lead} · SKU {variant.sku}
+                  </span>
+                ) : variant.available <= SHOW_UNITS_LEFT ? (
                   <span className="text-signal-warn">
                     Quedan {variant.available} {variant.available === 1 ? 'unidad' : 'unidades'} de la talla{' '}
                     {variant.size} en {color ? colorLabel(color) : ''} · SKU {variant.sku}
@@ -683,9 +843,11 @@ export function ProductView({
                     {variant.available} unidades disponibles · SKU {variant.sku}
                   </span>
                 )
-              ) : colorStock === 0 ? (
+              ) : sinNada ? (
                 <span className="text-chalk-faint">
-                  Este color está agotado por ahora.
+                  {colorWsp && telefono
+                    ? 'Sin stock en bodega: elige tu talla y pídela por WhatsApp.'
+                    : 'Este color está agotado por ahora.'}
                 </span>
               ) : (
                 <span className="text-chalk-faint">
@@ -698,7 +860,7 @@ export function ProductView({
           </fieldset>
 
           <div ref={compraRef} className="mt-6 space-y-3">
-            {colorStock === 0 && !product.comingSoon && !unicaVariante ? (
+            {sinNada && !product.comingSoon && !unicaVariante ? (
               // Con el color agotado el botón de compra era un callejón sin
               // salida; ahora lleva a pedir la talla.
               <button
@@ -709,11 +871,16 @@ export function ProductView({
                 }}
                 className="flex h-14 w-full items-center justify-center gap-2 border border-line-bright font-display text-[13px] font-bold uppercase tracking-widest text-chalk clip-notch-sm"
               >
-                <IconBell className="h-4 w-4" />
-                Avísame cuando vuelva
+                {colorWsp && telefono ? <IconWhatsapp className="h-4 w-4" /> : <IconBell className="h-4 w-4" />}
+                {colorWsp && telefono ? 'Elige tu talla para pedirla' : 'Avísame cuando vuelva'}
               </button>
             ) : (
-              <AddButton disabled={!variant} comingSoon={product.comingSoon} pending={enviando} />
+              <AddButton
+                disabled={!variant}
+                comingSoon={product.comingSoon}
+                pending={enviando}
+                backorderDays={variant?.backorder ? product.backorderDays : null}
+              />
             )}
 
             {state ? (
@@ -787,9 +954,11 @@ export function ProductView({
                 </p>
                 <p className="mt-1 truncate text-[12px] text-chalk-faint">
                   {variant
-                    ? `Talla ${variant.size} · ${color ? colorLabel(color) : ''}`
-                    : colorStock === 0
-                      ? 'Agotado · te avisamos'
+                    ? `Talla ${variant.size} · ${variant.backorder ? `a pedido, ${lead}` : color ? colorLabel(color) : ''}`
+                    : sinNada
+                      ? colorWsp && telefono
+                        ? 'A pedido por WhatsApp'
+                        : 'Agotado · te avisamos'
                       : 'Elige tu talla'}
                 </p>
               </div>
@@ -800,18 +969,18 @@ export function ProductView({
                   form="compra"
                   className="h-12 shrink-0 accent-bg px-6 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm"
                 >
-                  Agregar
+                  {variant.backorder ? 'Comprar a pedido' : 'Agregar'}
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => {
-                    if (colorStock === 0) setResaltarAviso(true);
+                    if (sinNada) setResaltarAviso(true);
                     document.getElementById('tallas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }}
                   className="h-12 shrink-0 border border-line-bright px-6 font-display text-[12px] font-bold uppercase tracking-widest text-chalk clip-notch-sm"
                 >
-                  {colorStock === 0 ? 'Avísame' : 'Ver tallas'}
+                  {sinNada && !(colorWsp && telefono) ? 'Avísame' : 'Ver tallas'}
                 </button>
               )}
             </div>

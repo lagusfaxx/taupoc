@@ -142,6 +142,10 @@ export default async function ProductPage({
   const rating = resumenDeNotas(product.reviews);
   const esAccesorio = product.kind === 'ACCESSORY';
 
+  // Venta a pedido: solo productos publicados (no los que aún no se lanzan).
+  const aPedido = settings.backorderEnabled && product.status === 'ACTIVE';
+  const enLinea = settings.backorderMode === 'online';
+
   const colors = product.colors.map((color) => ({
     id: color.id,
     name: color.name,
@@ -163,6 +167,10 @@ export default async function ProductPage({
         sku: v.sku,
         available,
         price: v.priceOverride ?? product.basePrice,
+        // Agotada pero publicada: se vende a pedido. Una talla apagada no.
+        backorder: aPedido && enLinea && v.active && available <= 0,
+        // A pedido por WhatsApp: se confirma con fábrica antes de cobrar.
+        whatsappOrder: aPedido && !enLinea && v.active && available <= 0,
       };
     }),
   }));
@@ -203,6 +211,8 @@ export default async function ProductPage({
       cn: r.cn, usa: r.usa, uk: r.uk, aus: r.aus, nz: r.nz,
     })),
     fallbackImages: product.images.map((img) => ({ id: img.id, url: img.url, alt: img.alt })),
+    backorderDays: aPedido ? settings.backorderDays : null,
+    whatsappPhone: aPedido && !enLinea ? settings.whatsapp : '',
     installmentsMax: settings.installmentsMax,
     freeShippingOver: settings.freeShippingOver,
     rating,
@@ -321,7 +331,8 @@ export default async function ProductPage({
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(productLd)} />
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(breadcrumb)} />
 
-      <nav aria-label="Ruta de navegación" className="border-b border-line-soft">
+      {/* En el teléfono la ruta no se muestra: la foto va pegada al encabezado. */}
+      <nav aria-label="Ruta de navegación" className="hidden border-b border-line-soft lg:block">
         <ol className="container flex items-center gap-2 py-3.5 text-[12px] text-chalk-faint">
           <li><Link href="/" className="hover:text-chalk">Inicio</Link></li>
           <li aria-hidden>/</li>
@@ -332,7 +343,7 @@ export default async function ProductPage({
       </nav>
 
       <TrackEvent type="PRODUCT_VIEW" productId={product.id} />
-      <div className="container py-8 lg:py-14">
+      <div className="container pb-8 lg:py-14">
         <ProductView
           product={viewData}
           initialColorSlug={color?.slug ?? preseleccion?.slug ?? null}

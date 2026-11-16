@@ -15,6 +15,7 @@ import { sendAdminTransferPending, sendOrderPlaced, type OrderMailData } from '@
 import { methodsForDestination, paymentMethodDiscount, paymentMethodOptions } from '@/lib/payment-methods';
 import { clpToUsdCents, createPaypalOrder, paypalConfigured } from '@/lib/paypal';
 import { isValidRut } from '@/lib/chile';
+import { backorderLead } from '@/lib/backorder';
 import { OutOfStockError, reservationDeadline, reserveOrderStock, sweepExpiredReservations } from '@/lib/reservations';
 import {
   enviaQuotes,
@@ -252,6 +253,8 @@ export async function createCheckout(
   await sweepExpiredReservations();
   const reservedUntil = reservationDeadline(method.id, settings);
 
+  const aPedido = cart.lines.filter((line) => line.backorderQty > 0);
+
   let order;
   try {
     order = await prisma.$transaction(async (tx) => {
@@ -299,8 +302,23 @@ export async function createCheckout(
               unitPrice: line.unitPrice,
               quantity: line.quantity,
               lineTotal: line.lineTotal,
+              // Lo que no hay en stock se pide a fábrica: no se aparta.
+              backorderQty: line.backorderQty,
             })),
           },
+          ...(aPedido.length > 0
+            ? {
+                events: {
+                  create: {
+                    type: 'backorder',
+                    message:
+                      `Incluye tallas a pedido de fábrica (${backorderLead(cart.backorderDays ?? 7)}): ` +
+                      aPedido.map((l) => `${l.backorderQty} × ${l.sku}`).join(', ') + '.',
+                    actor: 'Sistema',
+                  },
+                },
+              }
+            : {}),
         },
         include: { items: true },
       });

@@ -14,7 +14,10 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   return (
     <MetaPixel pixelId={settings.metaPixelId}>
       <StorePrefs
-        value={{ transferDiscount: settings.transferEnabled ? settings.transferDiscount : 0 }}
+        value={{
+          transferDiscount: settings.transferEnabled ? settings.transferDiscount : 0,
+          backorderDays: settings.backorderEnabled ? settings.backorderDays : 0,
+        }}
       >
       <Analytics />
       <div className="flex min-h-screen flex-col">

@@ -505,7 +505,7 @@ export async function inventoryCoverage() {
 /** Lo que hay que atender ahora, sin importar el período. */
 export async function operations() {
   const twoDaysAgo = new Date(Date.now() - 48 * 3600_000);
-  const [toPrepare, late, transfers, quotes, returnsOpen] = await Promise.all([
+  const [toPrepare, late, transfers, quotes, backorders, returnsOpen] = await Promise.all([
     prisma.order.count({ where: { status: { in: ['PAID', 'PROCESSING'] } } }),
     prisma.order.count({
       where: { status: { in: ['PAID', 'PROCESSING'] }, OR: [{ paidAt: { lt: twoDaysAgo } }, { paidAt: null, createdAt: { lt: twoDaysAgo } }] },
@@ -516,6 +516,11 @@ export async function operations() {
       _sum: { total: true },
     }),
     prisma.quoteRequest.count({ where: { status: 'NEW' } }),
+    // Tallas vendidas a pedido en pedidos ya pagados: hay que pedirlas a fábrica.
+    prisma.orderItem.findMany({
+      where: { backorderQty: { gt: 0 }, order: { status: { in: ['PAID', 'PROCESSING'] } } },
+      select: { sku: true, backorderQty: true, orderId: true },
+    }),
     prisma.orderReturn.count({ where: { status: { notIn: ['COMPLETED', 'CANCELLED'] } } }),
   ]);
   return {
@@ -525,6 +530,9 @@ export async function operations() {
     transfersAmount: transfers._sum.total ?? 0,
     quotes,
     returnsOpen,
+    backorderOrders: new Set(backorders.map((b) => b.orderId)).size,
+    backorderUnits: backorders.reduce((sum, b) => sum + b.backorderQty, 0),
+    backorderSkus: backorders.map((b) => `${b.backorderQty} × ${b.sku}`),
   };
 }
 

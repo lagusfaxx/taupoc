@@ -150,6 +150,13 @@ export default async function AdminOrderDetail({ params }: { params: Promise<{ i
                           <span className="block text-[11.5px] text-chalk-faint">
                             {item.colorName} · Talla {item.size}
                           </span>
+                          {item.backorderQty > 0 ? (
+                            <span className="mt-1 inline-block border border-signal-info/50 bg-signal-info/10 px-1.5 py-0.5 text-[11px] font-medium text-signal-info">
+                              {item.backorderQty === item.quantity
+                                ? 'A pedido: pedir a fábrica'
+                                : `${item.backorderQty} de ${item.quantity} a pedido: pedir a fábrica`}
+                            </span>
+                          ) : null}
                         </span>
                       </div>
                     </Td>

@@ -745,6 +745,9 @@ model OrderItem {
   unitPrice   Int
   quantity    Int
   lineTotal   Int
+  /// Unidades de esta línea vendidas "a pedido": no había stock y se piden a
+  /// fábrica. No se apartan ni se descuentan del inventario.
+  backorderQty Int @default(0)
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variant Variant? @relation(fields: [variantId], references: [id], onDelete: SetNull)

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import type { Gender } from '@prisma/client';
 import {
@@ -94,6 +95,25 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
     : one(params.q) ? `Resultados para "${one(params.q)}"`
     : 'Catálogo de competición';
 
+  const lineaActiva = one(params.linea);
+  const categoriaActiva = one(params.categoria);
+  const sinFiltro = !gender && !lineaActiva && !categoriaActiva;
+  const accesos = [
+    { href: '/catalogo', label: 'Todo', active: sinFiltro },
+    { href: '/catalogo?genero=MALE', label: 'Hombre', active: gender === 'MALE' },
+    { href: '/catalogo?genero=FEMALE', label: 'Mujer', active: gender === 'FEMALE' },
+    ...facets.lines.map((l) => ({
+      href: `/catalogo?linea=${l.slug}`,
+      label: l.name,
+      active: lineaActiva === l.slug,
+    })),
+    ...facets.categories.map((c) => ({
+      href: `/catalogo?categoria=${c.slug}`,
+      label: c.name,
+      active: categoriaActiva === c.slug,
+    })),
+  ];
+
   const itemList = {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
@@ -126,6 +146,24 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
           <h1 className="font-display text-[24px] leading-none tracking-tight text-chalk sm:text-[30px]">
             {heading}
           </h1>
+
+          {/* Accesos directos por categoría: un toque en vez de abrir los filtros. */}
+          <nav aria-label="Categorías" className="no-scrollbar -mx-5 mt-5 flex gap-2 overflow-x-auto px-5 lg:mx-0 lg:px-0">
+            {accesos.map((a) => (
+              <Link
+                key={a.href}
+                href={a.href}
+                aria-current={a.active ? 'page' : undefined}
+                className={
+                  a.active
+                    ? 'shrink-0 rounded-full bg-chalk px-4 py-2 text-[13px] font-semibold text-ink'
+                    : 'shrink-0 rounded-full border border-line px-4 py-2 text-[13px] text-chalk-dim transition-colors hover:border-line-bright hover:text-chalk'
+                }
+              >
+                {a.label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
 

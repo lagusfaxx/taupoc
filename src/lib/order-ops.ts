@@ -104,16 +104,19 @@ export async function changeOrderStatus(params: {
     let oversold: Awaited<ReturnType<typeof oversoldUnits>> = [];
     if ((willCommit && !order.stockCommitted) || (willRestore && order.stockCommitted)) {
       const items = await tx.orderItem.findMany({ where: { orderId: id } });
-      for (const item of items)
-        if (item.variantId)
+      for (const item of items) {
+        // Las unidades a pedido se piden a fábrica: nunca pasan por el stock.
+        const unidades = item.quantity - item.backorderQty;
+        if (item.variantId && unidades > 0)
           await adjustStock(tx, {
             variantId: item.variantId,
-            delta: willCommit ? -item.quantity : item.quantity,
+            delta: willCommit ? -unidades : unidades,
             type: willCommit ? 'SALE' : status === 'REFUNDED' ? 'RETURN' : 'CANCEL',
             reason: `Pedido ${order.number}: ${ORDER_STATUS_LABEL[status]}`,
             actorEmail: actor,
             orderId: id,
           });
+      }
       if (willCommit) oversold = await oversoldUnits(tx, id);
     }
     await tx.order.update({
@@ -310,10 +313,10 @@ export async function deleteOrders(params: { orderIds: string[]; actor: string }
       await releaseOrderReservation(tx, id);
       if (order.stockCommitted) {
         for (const item of order.items)
-          if (item.variantId)
+          if (item.variantId && item.quantity - item.backorderQty > 0)
             await adjustStock(tx, {
               variantId: item.variantId,
-              delta: item.quantity,
+              delta: item.quantity - item.backorderQty,
               type: 'CANCEL',
               reason: `Pedido ${order.number} eliminado`,
               actorEmail: params.actor,

@@ -48,6 +48,15 @@
     ::-webkit-scrollbar-thumb:hover { background: #39424e; }
   }
 
+  /* Un video de portada no es un reproductor: si el iPhone bloquea la
+     reproducción automática (ahorro de batería), no se muestra su botón de
+     play encima; el video parte al primer toque sobre la página. */
+  video[playsinline]::-webkit-media-controls-start-playback-button,
+  video[playsinline]::-webkit-media-controls {
+    display: none !important;
+    -webkit-appearance: none;
+  }
+
   input[type='number']::-webkit-outer-spin-button,
   input[type='number']::-webkit-inner-spin-button {
     -webkit-appearance: none;
