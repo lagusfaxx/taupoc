@@ -10,7 +10,7 @@ import { DEFAULT_META_PIXEL_ID } from '@/lib/meta-pixel';
 import { cn } from '@/lib/utils';
 import { Card } from './Card';
 import { AdminTabs } from './AdminTabs';
-import { Checkbox, Input, Textarea } from '@/components/ui/Field';
+import { Checkbox, Input, Select, Textarea } from '@/components/ui/Field';
 import { MediaField } from './MediaField';
 
 function Submit() {
@@ -137,9 +137,18 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                     <Checkbox
                       name="backorderEnabled"
                       defaultChecked={settings.backorderEnabled}
-                      label="Vender a pedido las tallas agotadas"
-                      help="Una talla sin stock se puede comprar igual: el cliente paga y la pides a fábrica. Solo en taupoc.cl, en productos publicados. Para no ofrecer una talla, apágala en el producto."
+                      label="Ofrecer a pedido las tallas agotadas"
+                      help="Una talla sin stock deja de aparecer tachada y se ofrece a pedido de fábrica. Solo en taupoc.cl, en productos publicados. Para no ofrecer una talla, apágala en el producto."
                     />
+                    <Select
+                      label="Cómo se cierra una talla a pedido"
+                      name="backorderMode"
+                      defaultValue={settings.backorderMode}
+                      help="Por WhatsApp: el cliente te escribe con la talla ya escrita y cobras recién cuando la fábrica confirma. Pago en la tienda: paga de inmediato, sin confirmar; úsalo solo si la fábrica siempre tiene la talla."
+                    >
+                      <option value="whatsapp">Por WhatsApp, confirmando con fábrica</option>
+                      <option value="online">Pago en la tienda, sin confirmar</option>
+                    </Select>
                     <Input
                       label="Plazo de las tallas a pedido (días)"
                       name="backorderDays"

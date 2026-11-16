@@ -144,6 +144,7 @@ export default async function ProductPage({
 
   // Venta a pedido: solo productos publicados (no los que aún no se lanzan).
   const aPedido = settings.backorderEnabled && product.status === 'ACTIVE';
+  const enLinea = settings.backorderMode === 'online';
 
   const colors = product.colors.map((color) => ({
     id: color.id,
@@ -167,7 +168,9 @@ export default async function ProductPage({
         available,
         price: v.priceOverride ?? product.basePrice,
         // Agotada pero publicada: se vende a pedido. Una talla apagada no.
-        backorder: aPedido && v.active && available <= 0,
+        backorder: aPedido && enLinea && v.active && available <= 0,
+        // A pedido por WhatsApp: se confirma con fábrica antes de cobrar.
+        whatsappOrder: aPedido && !enLinea && v.active && available <= 0,
       };
     }),
   }));
@@ -209,6 +212,7 @@ export default async function ProductPage({
     })),
     fallbackImages: product.images.map((img) => ({ id: img.id, url: img.url, alt: img.alt })),
     backorderDays: aPedido ? settings.backorderDays : null,
+    whatsappPhone: aPedido && !enLinea ? settings.whatsapp : '',
     installmentsMax: settings.installmentsMax,
     freeShippingOver: settings.freeShippingOver,
     rating,

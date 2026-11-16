@@ -61,6 +61,12 @@ export interface SiteSettings {
   backorderEnabled: boolean;
   /** Días que tarda en llegar de fábrica una talla a pedido. */
   backorderDays: number;
+  /**
+   * Cómo se cierra una talla a pedido. "whatsapp": el cliente escribe y el
+   * equipo confirma con fábrica antes de cobrar. "online": se paga en la
+   * tienda sin confirmar, para cuando la fábrica siempre tiene la talla.
+   */
+  backorderMode: 'whatsapp' | 'online';
 
   // Medios de pago
   mercadoPagoEnabled: boolean;
@@ -112,6 +118,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   transferReservationHours: 24,
   backorderEnabled: true,
   backorderDays: 7,
+  backorderMode: 'whatsapp',
 
   mercadoPagoEnabled: true,
   mercadoPagoDiscount: 0,

@@ -581,17 +581,20 @@ anuncios deben llevar `utm_source` y `utm_campaign`.
 
 ---
 
-## Venta a pedido
+## Tallas a pedido
 
-Con **Ajustes → Vender a pedido las tallas agotadas** activo, una talla sin stock
-de un producto publicado se puede comprar igual: el cliente ve "a pedido" y el
-plazo (por defecto 7 días) en la ficha, el carrito, el pago y el correo.
+Con **Ajustes → Ofrecer a pedido las tallas agotadas** activo, una talla sin
+stock de un producto publicado deja de verse tachada y se ofrece "a pedido",
+con su plazo (por defecto 7 días). Cómo se cierra la venta se elige en Ajustes:
 
-- Esas unidades quedan en `OrderItem.backorderQty` y **no pasan por el
-  inventario**: no se apartan, no se descuentan y no disparan la alerta de
-  "vendido sin stock".
-- El Resumen del panel lista en "Para atender hoy" las tallas pagadas que hay
-  que encargar a fábrica; desaparecen al despachar el pedido.
-- Una talla **apagada** en el producto no se vende a pedido: sigue ofreciendo
-  solo el aviso por correo.
-- Aplica solo en taupoc.cl; taupoc.lat no cambia.
+- **Por WhatsApp (por defecto).** Al tocar la talla, la ficha abre WhatsApp con
+  el mensaje ya escrito (producto, color, talla y SKU). El equipo confirma con
+  fábrica y recién entonces cobra; el pedido se registra con *Nuevo pedido* en
+  el panel. El carrito sigue rechazando la talla agotada. El toque queda en la
+  demanda de tallas.
+- **Pago en la tienda.** La talla se compra de inmediato sin confirmar. Esas
+  unidades quedan en `OrderItem.backorderQty` y no pasan por el inventario; el
+  Resumen las lista en "Para atender hoy" hasta que el pedido se despacha.
+
+Una talla **apagada** en el producto no se ofrece a pedido: sigue con el aviso
+por correo. Aplica solo en taupoc.cl; taupoc.lat no cambia.

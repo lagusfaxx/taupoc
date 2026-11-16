@@ -16,7 +16,7 @@ import { ProductGallery, type GalleryImage } from './ProductGallery';
 import { MetaEvent, useMetaPixel } from './MetaPixel';
 import { useStorePrefs } from './StorePrefs';
 import { SizeChart, type SizeChartRowData } from './SizeChart';
-import { IconBell, IconCheck, IconExternal, IconShield, IconTruck } from '@/components/ui/Icons';
+import { IconBell, IconCheck, IconExternal, IconShield, IconTruck, IconWhatsapp } from '@/components/ui/Icons';
 
 export interface ViewVariant {
   id: string;
@@ -24,8 +24,10 @@ export interface ViewVariant {
   sku: string;
   available: number;
   price: number;
-  /** Agotada pero se vende a pedido: se trae de fábrica. */
+  /** Agotada pero se vende a pedido pagando en la tienda. */
   backorder?: boolean;
+  /** Agotada: se pide por WhatsApp y se confirma con fábrica antes de cobrar. */
+  whatsappOrder?: boolean;
 }
 
 /** A partir de acá la ficha muestra las unidades restantes como urgencia. */
@@ -78,6 +80,8 @@ export interface ProductViewData {
   fallbackImages: GalleryImage[];
   /** Días que tarda una talla a pedido; `null` si la tienda no vende a pedido. */
   backorderDays: number | null;
+  /** Número al que se piden las tallas a pedido; vacío si no aplica. */
+  whatsappPhone: string;
   installmentsMax: number;
   freeShippingOver: number | null;
   rating: { average: number; count: number };
@@ -231,10 +235,14 @@ function ColorPicker({
 function SizeInterestPanel({
   variant,
   onClose,
+  whatsapp,
 }: {
   variant: ViewVariant | null;
   onClose: () => void;
+  /** Talla a pedido: el enlace de WhatsApp con el mensaje escrito y el plazo. */
+  whatsapp?: { href: string; lead: string; onAsk: () => void } | null;
 }) {
+  const [porCorreo, setPorCorreo] = useState(false);
   const [estado, setEstado] = useState<InterestState | null>(null);
   // pregunta → (correo, si no hay sesión) → listo
   const [paso, setPaso] = useState<'pregunta' | 'correo' | 'listo'>('pregunta');
@@ -260,6 +268,57 @@ function SizeInterestPanel({
     } finally {
       setEnviando(false);
     }
+  }
+
+  // A pedido: la venta se cierra por WhatsApp, donde el equipo confirma con
+  // fábrica antes de cobrar. El aviso por correo queda como segunda opción.
+  if (whatsapp && !porCorreo) {
+    return (
+      <div className="mt-3 border border-line bg-ink-800 p-4 animate-rise-in">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[15px] font-semibold leading-snug text-chalk">
+              Talla {variant.size} a pedido
+            </p>
+            <p className="mt-1.5 text-[13.5px] leading-relaxed text-chalk-dim">
+              No está en bodega, pero la traemos de fábrica en {whatsapp.lead}. Escríbenos y te confirmamos
+              la disponibilidad antes de que pagues.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="-m-2 flex h-10 w-10 shrink-0 items-center justify-center text-[15px] text-chalk-faint hover:text-chalk"
+          >
+            ✕
+          </button>
+        </div>
+
+        <a
+          href={whatsapp.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => {
+            whatsapp.onAsk();
+            // Queda en la demanda de tallas del panel aunque no deje correo.
+            void registerSizeInterest(variant.id).catch(() => null);
+          }}
+          className="mt-4 flex h-12 w-full items-center justify-center gap-2.5 rounded-[4px] bg-[#25D366] font-display text-[12.5px] font-bold uppercase tracking-widest text-[#07090B] transition hover:brightness-110"
+        >
+          <IconWhatsapp className="h-5 w-5" />
+          Pedir talla {variant.size} por WhatsApp
+        </a>
+
+        <button
+          type="button"
+          onClick={() => setPorCorreo(true)}
+          className="mt-3 text-[12.5px] text-chalk-faint underline underline-offset-4 hover:text-chalk"
+        >
+          Prefiero que me avisen por correo cuando vuelva
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -451,6 +510,16 @@ export function ProductView({
   const colorStock = color?.variants.reduce((s, v) => s + v.available, 0) ?? 0;
   // Sin stock y sin tallas a pedido: lo único que queda es pedir el aviso.
   const sinNada = colorStock === 0 && !color?.variants.some((v) => v.backorder);
+  // Hay tallas que se piden por WhatsApp en este color.
+  const colorWsp = Boolean(color?.variants.some((v) => v.whatsappOrder));
+  const telefono = product.whatsappPhone.replace(/\D/g, '');
+  function enlaceWsp(v: ViewVariant) {
+    const texto =
+      `Hola, quiero pedir a fábrica el ${product.name}` +
+      `${color ? ` en ${colorLabel(color)}` : ''}, talla ${v.size} (SKU ${v.sku}). ` +
+      '¿Me confirman si está disponible?';
+    return `https://wa.me/${telefono}?text=${encodeURIComponent(texto)}`;
+  }
   const lead = product.backorderDays ? backorderLead(product.backorderDays) : '';
 
   // Al cambiar de color se conserva la talla si sigue existiendo con stock.
@@ -650,22 +719,33 @@ export function ProductView({
                       setVariantId(v.id);
                     }}
                     aria-pressed={out ? v.id === interesId : selected}
-                    aria-label={`Talla ${v.size}${out ? ' agotada, avísame cuando vuelva' : pedido ? `, a pedido, ${lead}` : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
+                    aria-label={`Talla ${v.size}${out ? (v.whatsappOrder && telefono ? `, a pedido por WhatsApp, ${lead}` : ' agotada, avísame cuando vuelva') : pedido ? `, a pedido, ${lead}` : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
                     className={cn(
                       'relative flex h-12 items-center justify-center border font-display text-[15px] font-semibold tracking-wide transition-all duration-150',
                       selected
                         ? 'accent-border accent-text bg-ink-800'
                         : out
                           ? v.id === interesId
-                            ? 'border-dashed border-chalk-faint text-chalk-dim'
-                            : 'border-dashed border-line text-chalk-faint/70 hover:border-chalk-faint hover:text-chalk-dim'
+                            ? v.whatsappOrder && telefono
+                              ? 'border-chalk-faint bg-ink-800 text-chalk'
+                              : 'border-dashed border-chalk-faint text-chalk-dim'
+                            : v.whatsappOrder && telefono
+                              ? 'border-line text-chalk-dim hover:border-chalk-faint hover:text-chalk'
+                              : 'border-dashed border-line text-chalk-faint/70 hover:border-chalk-faint hover:text-chalk-dim'
                           : pedido
                             ? 'border-line text-chalk-dim hover:border-chalk-faint hover:text-chalk'
                             : 'border-line text-chalk hover:border-chalk-faint',
                     )}
                   >
                     {v.size}
-                    {out ? (
+                    {out && v.whatsappOrder && telefono ? (
+                      <span
+                        className="absolute inset-x-0 bottom-[3px] text-center font-sans text-[8.5px] font-medium normal-case leading-none tracking-normal text-signal-info"
+                        aria-hidden
+                      >
+                        a pedido
+                      </span>
+                    ) : out ? (
                       <>
                         <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 rotate-[-20deg] bg-line" aria-hidden />
                         <IconBell className="absolute right-0.5 top-0.5 h-3 w-3 accent-text" />
@@ -686,6 +766,21 @@ export function ProductView({
             </div>
             )}
 
+            {!interesId && !unicaVariante && colorWsp && telefono ? (
+              <p
+                className={cn(
+                  'mt-3 flex items-start gap-2 border px-3 py-2.5 text-[13px] leading-snug transition-colors',
+                  resaltarAviso ? 'accent-border bg-ink-800 text-chalk' : 'border-line-soft text-chalk-dim',
+                )}
+              >
+                <IconWhatsapp className="mt-px h-4 w-4 shrink-0 text-[#25D366]" />
+                <span>
+                  Las tallas <strong className="text-chalk">a pedido</strong> no están en bodega: tócala y
+                  pídela por WhatsApp. Confirmamos con fábrica y llega en {lead}.
+                </span>
+              </p>
+            ) : null}
+
             {!unicaVariante && color?.variants.some((v) => v.backorder) ? (
               <p className="mt-3 flex items-start gap-2 border border-line-soft px-3 py-2.5 text-[13px] leading-snug text-chalk-dim">
                 <IconTruck className="mt-px h-4 w-4 shrink-0 text-signal-info" />
@@ -696,7 +791,7 @@ export function ProductView({
               </p>
             ) : null}
 
-            {!interesId && !unicaVariante && color?.variants.some((v) => v.available <= 0 && !v.backorder) ? (
+            {!interesId && !unicaVariante && color?.variants.some((v) => v.available <= 0 && !v.backorder && !(v.whatsappOrder && telefono)) ? (
               <p
                 className={cn(
                   'mt-3 flex items-start gap-2 border px-3 py-2.5 text-[13px] leading-snug transition-colors',
@@ -718,6 +813,16 @@ export function ProductView({
                 key={interesId}
                 variant={color?.variants.find((v) => v.id === interesId) ?? null}
                 onClose={() => setInteresId(null)}
+                whatsapp={(() => {
+                  const v = color?.variants.find((x) => x.id === interesId);
+                  return v?.whatsappOrder && telefono
+                    ? {
+                        href: enlaceWsp(v),
+                        lead,
+                        onAsk: () => track('Contact', { content_ids: [product.id], content_name: product.name }),
+                      }
+                    : null;
+                })()}
               />
             ) : null}
 
@@ -740,7 +845,9 @@ export function ProductView({
                 )
               ) : sinNada ? (
                 <span className="text-chalk-faint">
-                  Este color está agotado por ahora.
+                  {colorWsp && telefono
+                    ? 'Sin stock en bodega: elige tu talla y pídela por WhatsApp.'
+                    : 'Este color está agotado por ahora.'}
                 </span>
               ) : (
                 <span className="text-chalk-faint">
@@ -764,8 +871,8 @@ export function ProductView({
                 }}
                 className="flex h-14 w-full items-center justify-center gap-2 border border-line-bright font-display text-[13px] font-bold uppercase tracking-widest text-chalk clip-notch-sm"
               >
-                <IconBell className="h-4 w-4" />
-                Avísame cuando vuelva
+                {colorWsp && telefono ? <IconWhatsapp className="h-4 w-4" /> : <IconBell className="h-4 w-4" />}
+                {colorWsp && telefono ? 'Elige tu talla para pedirla' : 'Avísame cuando vuelva'}
               </button>
             ) : (
               <AddButton
@@ -849,7 +956,9 @@ export function ProductView({
                   {variant
                     ? `Talla ${variant.size} · ${variant.backorder ? `a pedido, ${lead}` : color ? colorLabel(color) : ''}`
                     : sinNada
-                      ? 'Agotado · te avisamos'
+                      ? colorWsp && telefono
+                        ? 'A pedido por WhatsApp'
+                        : 'Agotado · te avisamos'
                       : 'Elige tu talla'}
                 </p>
               </div>
@@ -871,7 +980,7 @@ export function ProductView({
                   }}
                   className="h-12 shrink-0 border border-line-bright px-6 font-display text-[12px] font-bold uppercase tracking-widest text-chalk clip-notch-sm"
                 >
-                  {sinNada ? 'Avísame' : 'Ver tallas'}
+                  {sinNada && !(colorWsp && telefono) ? 'Avísame' : 'Ver tallas'}
                 </button>
               )}
             </div>
