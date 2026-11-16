@@ -134,6 +134,19 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                       defaultValue={String(settings.transferReservationHours)}
                       help="Cuánto se apartan las tallas de un pedido que espera la transferencia. Confirmarla después igual descuenta el stock. Entre 1 y 168."
                     />
+                    <Checkbox
+                      name="backorderEnabled"
+                      defaultChecked={settings.backorderEnabled}
+                      label="Vender a pedido las tallas agotadas"
+                      help="Una talla sin stock se puede comprar igual: el cliente paga y la pides a fábrica. Solo en taupoc.cl, en productos publicados. Para no ofrecer una talla, apágala en el producto."
+                    />
+                    <Input
+                      label="Plazo de las tallas a pedido (días)"
+                      name="backorderDays"
+                      type="number"
+                      defaultValue={String(settings.backorderDays)}
+                      help="Lo que tarda en llegar de fábrica. Se le muestra al cliente antes de comprar. Entre 1 y 60."
+                    />
                     <Textarea
                       label="Barra de anuncio"
                       name="announcementBar"

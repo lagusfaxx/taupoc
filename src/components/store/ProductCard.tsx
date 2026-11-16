@@ -19,6 +19,8 @@ export interface ProductCardColor {
   stock: number;
   /** Tallas con unidades disponibles, en orden. */
   sizes?: string[];
+  /** Tiene tallas publicadas: sin stock, se puede vender a pedido. */
+  orderable?: boolean;
 }
 
 export interface ProductCardData {
@@ -75,13 +77,20 @@ export function ProductCard({
   const href = `/producto/${product.slug}${fixed ? `-${fixed.slug}` : ''}${qs ? `?${qs}` : ''}`;
   const image = active?.imageUrl ?? product.fallbackImage;
   // Con la tarjeta fijada a un color manda el stock de ese color, no el del modelo.
-  const unavailable = product.comingSoon || (fixed ? fixed.stock === 0 : product.totalStock === 0);
+  const { transferDiscount, backorderDays } = useStorePrefs();
+  const sinStock = fixed ? fixed.stock === 0 : product.totalStock === 0;
+  // Sin stock pero con tallas publicadas y venta a pedido: se puede comprar.
+  const aPedido =
+    sinStock &&
+    !product.comingSoon &&
+    backorderDays > 0 &&
+    (fixed ? Boolean(fixed.orderable) : product.colors.some((c) => c.orderable));
+  const unavailable = product.comingSoon || (sinStock && !aPedido);
 
   // Las dos líneas comparten fotografía: la superior lleva el sello y el
   // filete de acento fijo.
   const elite = (product.tier ?? 0) > 1;
 
-  const { transferDiscount } = useStorePrefs();
   const transferPrice =
     transferDiscount > 0 ? Math.round(product.basePrice * (1 - transferDiscount / 100)) : null;
 
@@ -128,6 +137,12 @@ export function ProductCard({
               </span>
             ) : null}
           </div>
+
+          {aPedido ? (
+            <span className="absolute right-2.5 top-2.5 rounded-[3px] bg-ink/90 px-2 py-1 font-display text-[9px] font-semibold uppercase tracking-widest text-chalk">
+              A pedido
+            </span>
+          ) : null}
 
           {unavailable ? (
             <span className="absolute right-2.5 top-2.5 rounded-[3px] bg-ink/90 px-2 py-1 font-display text-[9px] font-semibold uppercase tracking-mega text-chalk-dim">
@@ -233,6 +248,12 @@ export function ProductCard({
             </p>
           ) : null}
         </div>
+
+        {aPedido ? (
+          <p className="mt-1.5 text-[12px] text-chalk-faint">
+            A pedido · llega en hasta {backorderDays} {backorderDays === 1 ? 'día' : 'días'}
+          </p>
+        ) : null}
 
         {/* En pantallas táctiles no hay cursor: las tallas van escritas. */}
         {!unavailable && sizeList.length > 0 ? (

@@ -8,6 +8,7 @@ import { registerSizeInterest, type InterestState } from '@/actions/size-interes
 import { formatCLP, installment } from '@/lib/money';
 import { cn, readableOn } from '@/lib/utils';
 import { colorLabel } from '@/lib/colors';
+import { backorderLead } from '@/lib/backorder';
 import { Price } from '@/components/ui/Price';
 import { RatingSummary } from '@/components/ui/Stars';
 import { announceCart, flyToCart } from './CartLink';
@@ -23,6 +24,8 @@ export interface ViewVariant {
   sku: string;
   available: number;
   price: number;
+  /** Agotada pero se vende a pedido: se trae de fábrica. */
+  backorder?: boolean;
 }
 
 /** A partir de acá la ficha muestra las unidades restantes como urgencia. */
@@ -73,6 +76,8 @@ export interface ProductViewData {
   colorPages?: boolean;
   sizeChart: SizeChartRowData[];
   fallbackImages: GalleryImage[];
+  /** Días que tarda una talla a pedido; `null` si la tienda no vende a pedido. */
+  backorderDays: number | null;
   installmentsMax: number;
   freeShippingOver: number | null;
   rating: { average: number; count: number };
@@ -82,10 +87,13 @@ function AddButton({
   disabled,
   comingSoon,
   pending,
+  backorderDays,
 }: {
   disabled: boolean;
   comingSoon: boolean;
   pending: boolean;
+  /** La talla elegida va a pedido: el botón lo dice antes de comprar. */
+  backorderDays?: number | null;
 }) {
   return (
     <button
@@ -98,7 +106,15 @@ function AddButton({
         'disabled:cursor-not-allowed disabled:bg-ink-600 disabled:text-chalk-faint',
       )}
     >
-      {comingSoon ? 'Próximamente' : pending ? 'Agregando…' : disabled ? 'Selecciona una talla' : 'Agregar al carrito'}
+      {comingSoon
+        ? 'Próximamente'
+        : pending
+          ? 'Agregando…'
+          : disabled
+            ? 'Selecciona una talla'
+            : backorderDays
+              ? `Comprar a pedido · ${backorderLead(backorderDays)}`
+              : 'Agregar al carrito'}
     </button>
   );
 }
@@ -350,7 +366,7 @@ export function ProductView({
   // Si se llega desde el catálogo filtrado por talla, esa talla queda elegida.
   const tallaFiltrada =
     (initialSizes ?? [])
-      .map((size) => inicial?.variants.find((v) => v.size === size && v.available > 0))
+      .map((size) => inicial?.variants.find((v) => v.size === size && (v.available > 0 || v.backorder)))
       .find(Boolean) ?? null;
   const [variantId, setVariantId] = useState<string | null>(
     unicaVariante?.id ?? tallaFiltrada?.id ?? null,
@@ -433,6 +449,9 @@ export function ProductView({
   const transferPrice = transferDiscount > 0 ? Math.round(price * (1 - transferDiscount / 100)) : null;
 
   const colorStock = color?.variants.reduce((s, v) => s + v.available, 0) ?? 0;
+  // Sin stock y sin tallas a pedido: lo único que queda es pedir el aviso.
+  const sinNada = colorStock === 0 && !color?.variants.some((v) => v.backorder);
+  const lead = product.backorderDays ? backorderLead(product.backorderDays) : '';
 
   // Al cambiar de color se conserva la talla si sigue existiendo con stock.
   useEffect(() => {
@@ -467,7 +486,7 @@ export function ProductView({
 
   function selectSize(size: string) {
     const match = color?.variants.find((v) => v.size === size);
-    if (match && match.available > 0) setVariantId(match.id);
+    if (match && (match.available > 0 || match.backorder)) setVariantId(match.id);
   }
 
   return (
@@ -616,7 +635,8 @@ export function ProductView({
             <div className="grid grid-cols-5 gap-2 sm:grid-cols-6">
               {color?.variants.map((v) => {
                 const selected = v.id === variant?.id;
-                const out = v.available <= 0;
+                const pedido = Boolean(v.backorder);
+                const out = v.available <= 0 && !pedido;
                 return (
                   <button
                     key={v.id}
@@ -630,7 +650,7 @@ export function ProductView({
                       setVariantId(v.id);
                     }}
                     aria-pressed={out ? v.id === interesId : selected}
-                    aria-label={`Talla ${v.size}${out ? ' agotada, avísame cuando vuelva' : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
+                    aria-label={`Talla ${v.size}${out ? ' agotada, avísame cuando vuelva' : pedido ? `, a pedido, ${lead}` : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
                     className={cn(
                       'relative flex h-12 items-center justify-center border font-display text-[15px] font-semibold tracking-wide transition-all duration-150',
                       selected
@@ -639,7 +659,9 @@ export function ProductView({
                           ? v.id === interesId
                             ? 'border-dashed border-chalk-faint text-chalk-dim'
                             : 'border-dashed border-line text-chalk-faint/70 hover:border-chalk-faint hover:text-chalk-dim'
-                          : 'border-line text-chalk hover:border-chalk-faint',
+                          : pedido
+                            ? 'border-line text-chalk-dim hover:border-chalk-faint hover:text-chalk'
+                            : 'border-line text-chalk hover:border-chalk-faint',
                     )}
                   >
                     {v.size}
@@ -648,6 +670,13 @@ export function ProductView({
                         <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 rotate-[-20deg] bg-line" aria-hidden />
                         <IconBell className="absolute right-0.5 top-0.5 h-3 w-3 accent-text" />
                       </>
+                    ) : pedido ? (
+                      <span
+                        className="absolute inset-x-0 bottom-[3px] text-center font-sans text-[8.5px] font-medium normal-case leading-none tracking-normal text-signal-info"
+                        aria-hidden
+                      >
+                        a pedido
+                      </span>
                     ) : v.available <= SHOW_UNITS_LEFT ? (
                       <span className="absolute right-1 top-1 h-1.5 w-1.5 bg-signal-warn" aria-hidden />
                     ) : null}
@@ -657,7 +686,17 @@ export function ProductView({
             </div>
             )}
 
-            {!interesId && !unicaVariante && color?.variants.some((v) => v.available <= 0) ? (
+            {!unicaVariante && color?.variants.some((v) => v.backorder) ? (
+              <p className="mt-3 flex items-start gap-2 border border-line-soft px-3 py-2.5 text-[13px] leading-snug text-chalk-dim">
+                <IconTruck className="mt-px h-4 w-4 shrink-0 text-signal-info" />
+                <span>
+                  Las tallas <strong className="text-chalk">a pedido</strong> no están en bodega: las traemos de
+                  fábrica en {lead} y después sale tu despacho.
+                </span>
+              </p>
+            ) : null}
+
+            {!interesId && !unicaVariante && color?.variants.some((v) => v.available <= 0 && !v.backorder) ? (
               <p
                 className={cn(
                   'mt-3 flex items-start gap-2 border px-3 py-2.5 text-[13px] leading-snug transition-colors',
@@ -685,7 +724,11 @@ export function ProductView({
             {/* Estado de stock en vivo */}
             <p ref={liveRef} aria-live="polite" className="mt-3 min-h-[20px] text-[13px]">
               {variant ? (
-                variant.available <= SHOW_UNITS_LEFT ? (
+                variant.backorder ? (
+                  <span className="text-signal-info">
+                    Talla {variant.size} a pedido: llega de fábrica en {lead} · SKU {variant.sku}
+                  </span>
+                ) : variant.available <= SHOW_UNITS_LEFT ? (
                   <span className="text-signal-warn">
                     Quedan {variant.available} {variant.available === 1 ? 'unidad' : 'unidades'} de la talla{' '}
                     {variant.size} en {color ? colorLabel(color) : ''} · SKU {variant.sku}
@@ -695,7 +738,7 @@ export function ProductView({
                     {variant.available} unidades disponibles · SKU {variant.sku}
                   </span>
                 )
-              ) : colorStock === 0 ? (
+              ) : sinNada ? (
                 <span className="text-chalk-faint">
                   Este color está agotado por ahora.
                 </span>
@@ -710,7 +753,7 @@ export function ProductView({
           </fieldset>
 
           <div ref={compraRef} className="mt-6 space-y-3">
-            {colorStock === 0 && !product.comingSoon && !unicaVariante ? (
+            {sinNada && !product.comingSoon && !unicaVariante ? (
               // Con el color agotado el botón de compra era un callejón sin
               // salida; ahora lleva a pedir la talla.
               <button
@@ -725,7 +768,12 @@ export function ProductView({
                 Avísame cuando vuelva
               </button>
             ) : (
-              <AddButton disabled={!variant} comingSoon={product.comingSoon} pending={enviando} />
+              <AddButton
+                disabled={!variant}
+                comingSoon={product.comingSoon}
+                pending={enviando}
+                backorderDays={variant?.backorder ? product.backorderDays : null}
+              />
             )}
 
             {state ? (
@@ -799,8 +847,8 @@ export function ProductView({
                 </p>
                 <p className="mt-1 truncate text-[12px] text-chalk-faint">
                   {variant
-                    ? `Talla ${variant.size} · ${color ? colorLabel(color) : ''}`
-                    : colorStock === 0
+                    ? `Talla ${variant.size} · ${variant.backorder ? `a pedido, ${lead}` : color ? colorLabel(color) : ''}`
+                    : sinNada
                       ? 'Agotado · te avisamos'
                       : 'Elige tu talla'}
                 </p>
@@ -812,18 +860,18 @@ export function ProductView({
                   form="compra"
                   className="h-12 shrink-0 accent-bg px-6 font-display text-[12px] font-bold uppercase tracking-widest clip-notch-sm"
                 >
-                  Agregar
+                  {variant.backorder ? 'Comprar a pedido' : 'Agregar'}
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => {
-                    if (colorStock === 0) setResaltarAviso(true);
+                    if (sinNada) setResaltarAviso(true);
                     document.getElementById('tallas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   }}
                   className="h-12 shrink-0 border border-line-bright px-6 font-display text-[12px] font-bold uppercase tracking-widest text-chalk clip-notch-sm"
                 >
-                  {colorStock === 0 ? 'Avísame' : 'Ver tallas'}
+                  {sinNada ? 'Avísame' : 'Ver tallas'}
                 </button>
               )}
             </div>

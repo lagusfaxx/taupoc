@@ -163,6 +163,11 @@ export default async function CheckoutResultPage({ searchParams }: { searchParam
                   <span className="block text-[13px] text-chalk-faint">
                     {item.colorName} · Talla {item.size} · {item.quantity} u.
                   </span>
+                  {item.backorderQty > 0 ? (
+                    <span className="block text-[13px] text-signal-info">
+                      A pedido: la traemos de fábrica en hasta {settings.backorderDays} días y luego despachamos.
+                    </span>
+                  ) : null}
                 </span>
                 <span className="shrink-0 text-chalk">{formatCLP(item.lineTotal)}</span>
               </li>

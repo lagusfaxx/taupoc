@@ -237,13 +237,17 @@ function panel(label: string, inner: string, color = LINE): string {
     </td></tr></table>`;
 }
 
-function itemsTable(items: { productName: string; colorName: string; size: string; quantity: number; lineTotal: number }[]) {
+function itemsTable(items: { productName: string; colorName: string; size: string; quantity: number; lineTotal: number; backorderQty?: number }[]) {
   const rows = items
     .map(
       (i) => `<tr>
         <td valign="top" style="padding:12px 0;border-bottom:1px solid ${LINE_SOFT};">
           <div style="color:${CHALK};font-weight:600;font-size:14.5px;">${esc(i.productName)}</div>
-          <div style="color:${CHALK_FAINT};font-size:12.5px;margin-top:3px;">${esc(i.colorName)} · Talla ${esc(i.size)} · ${i.quantity} u.</div>
+          <div style="color:${CHALK_FAINT};font-size:12.5px;margin-top:3px;">${esc(i.colorName)} · Talla ${esc(i.size)} · ${i.quantity} u.</div>${
+            i.backorderQty && i.backorderQty > 0
+              ? `<div style="color:#4B9BF0;font-size:12.5px;margin-top:3px;">A pedido: la traemos de fábrica antes de despachar.</div>`
+              : ''
+          }
         </td>
         <td align="right" valign="top" style="padding:12px 0 12px 16px;border-bottom:1px solid ${LINE_SOFT};color:${CHALK};white-space:nowrap;font-size:14.5px;">${formatCLP(i.lineTotal)}</td>
       </tr>`,
@@ -303,7 +307,7 @@ export interface OrderMailData {
   trackingNumber?: string | null;
   trackingUrl?: string | null;
   carrier?: string | null;
-  items: { productName: string; colorName: string; size: string; quantity: number; lineTotal: number }[];
+  items: { productName: string; colorName: string; size: string; quantity: number; lineTotal: number; backorderQty?: number }[];
 }
 
 /**

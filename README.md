@@ -578,3 +578,20 @@ cookies, sin servicios externos y sin guardar IP. Se excluyen los bots y el
 equipo con sesión iniciada. Empieza a contar desde el despliegue; antes de esa
 fecha el embudo no tiene datos. Para distinguir campañas, los enlaces de los
 anuncios deben llevar `utm_source` y `utm_campaign`.
+
+---
+
+## Venta a pedido
+
+Con **Ajustes → Vender a pedido las tallas agotadas** activo, una talla sin stock
+de un producto publicado se puede comprar igual: el cliente ve "a pedido" y el
+plazo (por defecto 7 días) en la ficha, el carrito, el pago y el correo.
+
+- Esas unidades quedan en `OrderItem.backorderQty` y **no pasan por el
+  inventario**: no se apartan, no se descuentan y no disparan la alerta de
+  "vendido sin stock".
+- El Resumen del panel lista en "Para atender hoy" las tallas pagadas que hay
+  que encargar a fábrica; desaparecen al despachar el pedido.
+- Una talla **apagada** en el producto no se vende a pedido: sigue ofreciendo
+  solo el aviso por correo.
+- Aplica solo en taupoc.cl; taupoc.lat no cambia.

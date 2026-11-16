@@ -142,6 +142,9 @@ export default async function ProductPage({
   const rating = resumenDeNotas(product.reviews);
   const esAccesorio = product.kind === 'ACCESSORY';
 
+  // Venta a pedido: solo productos publicados (no los que aún no se lanzan).
+  const aPedido = settings.backorderEnabled && product.status === 'ACTIVE';
+
   const colors = product.colors.map((color) => ({
     id: color.id,
     name: color.name,
@@ -163,6 +166,8 @@ export default async function ProductPage({
         sku: v.sku,
         available,
         price: v.priceOverride ?? product.basePrice,
+        // Agotada pero publicada: se vende a pedido. Una talla apagada no.
+        backorder: aPedido && v.active && available <= 0,
       };
     }),
   }));
@@ -203,6 +208,7 @@ export default async function ProductPage({
       cn: r.cn, usa: r.usa, uk: r.uk, aus: r.aus, nz: r.nz,
     })),
     fallbackImages: product.images.map((img) => ({ id: img.id, url: img.url, alt: img.alt })),
+    backorderDays: aPedido ? settings.backorderDays : null,
     installmentsMax: settings.installmentsMax,
     freeShippingOver: settings.freeShippingOver,
     rating,

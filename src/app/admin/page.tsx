@@ -58,7 +58,7 @@ export default async function AdminDashboard() {
   const conversion = pct(embudo.paidOrders, embudo.sessions);
   const prevConversion = pct(prevEmbudo.paidOrders, prevEmbudo.sessions);
   const measuring = embudo.sessions > 0;
-  const pendientes = ops.toPrepare + ops.transfers + ops.quotes + ops.returnsOpen + lowStock.length;
+  const pendientes = ops.backorderOrders + ops.toPrepare + ops.transfers + ops.quotes + ops.returnsOpen + lowStock.length;
 
   // La etapa donde se pierde más gente es la que conviene mirar primero.
   const etapas = [
@@ -107,6 +107,15 @@ export default async function AdminDashboard() {
                   count={ops.transfers}
                   label="Transferencias por confirmar"
                   detail={`${formatCLP(ops.transfersAmount)} esperando que revises el abono`}
+                />
+              ) : null}
+              {ops.backorderOrders > 0 ? (
+                <ActionItem
+                  href="/admin/pedidos?estado=PAID"
+                  count={ops.backorderUnits}
+                  label="Tallas a pedido por encargar a fábrica"
+                  detail={`${ops.backorderSkus.slice(0, 3).join(' · ')}${ops.backorderSkus.length > 3 ? ' …' : ''}`}
+                  tone="bad"
                 />
               ) : null}
               {ops.toPrepare > 0 ? (

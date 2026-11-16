@@ -54,6 +54,13 @@ export interface SiteSettings {
   reservationMinutes: number;
   /** Horas que se aparta el stock de un pedido que espera una transferencia. */
   transferReservationHours: number;
+  /**
+   * Venta a pedido: una talla agotada se puede comprar igual y se pide a
+   * fábrica. Solo en taupoc.cl y solo en productos publicados.
+   */
+  backorderEnabled: boolean;
+  /** Días que tarda en llegar de fábrica una talla a pedido. */
+  backorderDays: number;
 
   // Medios de pago
   mercadoPagoEnabled: boolean;
@@ -103,6 +110,8 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   catalogSplitByColor: true,
   reservationMinutes: 15,
   transferReservationHours: 24,
+  backorderEnabled: true,
+  backorderDays: 7,
 
   mercadoPagoEnabled: true,
   mercadoPagoDiscount: 0,
