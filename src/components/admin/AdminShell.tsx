@@ -53,6 +53,7 @@ export function AdminShell({
       items: [
         { href: '/admin/productos', label: 'Productos', icon: IconTag },
         { href: '/admin/inventario', label: 'Inventario', icon: IconBox, badge: lowStock },
+        { href: '/admin/fabrica', label: 'Fábrica', icon: IconTruck },
         { href: '/admin/categorias', label: 'Categorías', icon: IconRuler },
         { href: '/admin/cupones', label: 'Cupones', icon: IconTag },
       ],

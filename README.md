@@ -598,3 +598,20 @@ con su plazo (por defecto 7 días). Cómo se cierra la venta se elige en Ajustes
 
 Una talla **apagada** en el producto no se ofrece a pedido: sigue con el aviso
 por correo. Aplica solo en taupoc.cl; taupoc.lat no cambia.
+
+### Stock de fábrica
+
+**Panel → Fábrica** enlaza cada producto y color con la tienda B2B del proveedor
+(Shopify). Su catálogo se lee sin iniciar sesión y dice, por color y talla, si
+la fábrica la tiene; no trae cantidades. La tienda lo consulta sola cada 30
+minutos (o con `/api/cron/fabrica` y `CRON_TOKEN`) y guarda el resultado en
+`Variant.factoryAvailable`:
+
+- **La fábrica la tiene:** la talla agotada se ofrece a pedido.
+- **La fábrica no la tiene:** no se ofrece a pedido; queda el aviso por correo.
+- **Color sin enlazar:** se ofrece a pedido "por confirmar", como antes.
+
+El dato es interno: al cliente nunca se le muestra el stock de fábrica ni se le
+envía; solo decide si una talla agotada se ofrece a pedido o no.
+
+Si el proveedor no responde se mantiene el último dato conocido.
