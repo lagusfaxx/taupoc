@@ -609,7 +609,7 @@ minutos (o con `/api/cron/fabrica` y `CRON_TOKEN`) y guarda el resultado en
 
 - **La fábrica la tiene:** la talla agotada se ofrece a pedido.
 - **La fábrica no la tiene:** no se ofrece a pedido; queda el aviso por correo.
-- **Color sin enlazar:** se ofrece a pedido "por confirmar", como antes.
+- **Color sin enlazar:** tampoco se ofrece a pedido, hasta que se enlace.
 
 El dato es interno: al cliente nunca se le muestra el stock de fábrica ni se le
 envía; solo decide si una talla agotada se ofrece a pedido o no.

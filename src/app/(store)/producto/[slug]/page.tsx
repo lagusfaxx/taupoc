@@ -171,11 +171,12 @@ export default async function ProductPage({
         available,
         price: v.priceOverride ?? product.basePrice,
         // Agotada pero publicada: se vende a pedido. Una talla apagada no.
-        // La fábrica dice no tenerla: no se ofrece a pedido, queda el aviso. El
-        // dato de fábrica es interno: al cliente nunca se le muestra ni se le envía.
-        backorder: aPedido && enLinea && v.active && available <= 0 && v.factoryAvailable !== false,
+        // A pedido solo lo que la fábrica confirma tener; sin confirmación (color
+        // sin enlazar o fábrica sin stock) queda el aviso por correo. El dato de
+        // fábrica es interno: al cliente nunca se le muestra ni se le envía.
+        backorder: aPedido && enLinea && v.active && available <= 0 && v.factoryAvailable === true,
         // A pedido por WhatsApp: se confirma con fábrica antes de cobrar.
-        whatsappOrder: aPedido && !enLinea && v.active && available <= 0 && v.factoryAvailable !== false,
+        whatsappOrder: aPedido && !enLinea && v.active && available <= 0 && v.factoryAvailable === true,
       };
     }),
   }));

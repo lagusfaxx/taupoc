@@ -60,8 +60,8 @@ export async function addToCart(
   const available = Math.max(0, variant.stock - variant.reserved);
   // Con venta a pedido una talla agotada se compra igual y se pide a fábrica.
   const base = backorderPolicy(await getSettings(), await getStore());
-  // Si la fábrica dice no tenerla, tampoco se vende a pedido.
-  const policy = { ...base, enabled: base.enabled && variant.factoryAvailable !== false };
+  // A pedido solo lo que la fábrica confirma tener.
+  const policy = { ...base, enabled: base.enabled && variant.factoryAvailable === true };
   if (available <= 0 && !policy.enabled) {
     return { ok: false, message: 'Esa talla está agotada. Avísanos y te contamos cuándo repone.' };
   }
@@ -157,7 +157,7 @@ export async function updateCartItem(itemId: string, quantity: number): Promise<
   const available = Math.max(0, item.variant.stock - item.variant.reserved);
   const policy = backorderPolicy(await getSettings(), await getStore());
   const limit =
-    policy.enabled && item.variant.active && item.variant.factoryAvailable !== false
+    policy.enabled && item.variant.active && item.variant.factoryAvailable === true
       ? available + BACKORDER_MAX_PER_LINE
       : available;
   const next = Math.min(quantity, limit, MAX_PER_LINE);

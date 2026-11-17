@@ -40,11 +40,10 @@ export default async function SupplierPage() {
           where: { active: true },
           orderBy: { sortOrder: 'asc' },
           select: {
-            id: true, name: true, code: true, hex: true, supplierColor: true,
-            variants: {
-              where: { active: true },
-              select: { size: true, stock: true, reserved: true },
-            },
+            id: true, name: true, code: true, stripCode: true, hex: true, supplierColor: true,
+            // También las tallas apagadas: si la fábrica las tiene, hay que
+            // verlas acá para saber que conviene encenderlas.
+            variants: { select: { size: true, stock: true, reserved: true, active: true } },
           },
         },
       },
@@ -56,7 +55,7 @@ export default async function SupplierPage() {
     <>
       <PageHeader
         title="Fábrica"
-        description="Enlaza cada producto y color con la tienda B2B del proveedor. La tienda consulta sola qué tallas tiene la fábrica y solo ofrece a pedido las que sí tiene."
+        description="Enlaza cada producto y color con la tienda B2B del proveedor. La tienda consulta sola qué tallas tiene la fábrica y solo ofrece a pedido las que sí tiene; un color sin enlazar no se ofrece."
         actions={
           <form action={syncSupplierNow}>
             <button
@@ -158,14 +157,15 @@ export default async function SupplierPage() {
                         </label>
 
                         {value ? (
+                          <div>
                           <ul className="flex flex-wrap gap-1.5" aria-label={`Tallas de ${color.name}`}>
                             {sizes.map((v) => {
-                              const inStock = v.stock - v.reserved > 0;
+                              const inStock = v.active && v.stock - v.reserved > 0;
                               const factory = rows.find((r) => r.size == null || r.size === v.size)?.available ?? false;
                               return (
                                 <li
                                   key={v.size}
-                                  title={`Talla ${v.size}: ${inStock ? 'en tu bodega' : factory ? 'en fábrica' : 'sin stock en fábrica'}`}
+                                  title={`Talla ${v.size}: ${inStock ? 'en tu bodega' : factory ? 'en fábrica' : 'sin stock en fábrica'}${v.active ? '' : ' · apagada en el producto, no se ofrece'}`}
                                   className={cn(
                                     'flex min-w-[44px] flex-col items-center border px-1.5 py-1 text-center',
                                     inStock
@@ -179,13 +179,23 @@ export default async function SupplierPage() {
                                   <span className="text-[9.5px] leading-tight">
                                     {inStock ? 'bodega' : factory ? 'fábrica' : 'no hay'}
                                   </span>
+                                  {!v.active ? (
+                                    <span className="text-[9.5px] leading-tight text-signal-warn">apagada</span>
+                                  ) : null}
                                 </li>
                               );
                             })}
                           </ul>
+                          {sizes.some((v) => !v.active && rows.find((r) => r.size == null || r.size === v.size)?.available) ? (
+                            <p className="mt-2 text-[12px] text-signal-warn">
+                              La fábrica tiene tallas que están apagadas en el producto: enciéndelas en la matriz de
+                              stock para ofrecerlas a pedido.
+                            </p>
+                          ) : null}
+                          </div>
                         ) : (
                           <p className="text-[12.5px] text-chalk-faint">
-                            Sin enlazar: sus tallas agotadas se ofrecen a pedido sin saber si la fábrica las tiene.
+                            Sin enlazar: sus tallas agotadas no se ofrecen a pedido hasta que elijas su color del proveedor.
                           </p>
                         )}
                       </li>

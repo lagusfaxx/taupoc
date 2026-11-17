@@ -141,7 +141,7 @@ export async function getCart(): Promise<CartSummary> {
     const available = Math.max(0, v.stock - v.reserved);
     // A pedido solo lo que está publicado: una talla apagada no se ofrece.
     const porPedir =
-      v.active && p.status === 'ACTIVE' && v.factoryAvailable !== false
+      v.active && p.status === 'ACTIVE' && v.factoryAvailable === true
         ? backorderUnits(item.quantity, available, policy)
         : 0;
     const aPedido = porPedir > 0 && porPedir <= BACKORDER_MAX_PER_LINE;
@@ -165,7 +165,7 @@ export async function getCart(): Promise<CartSummary> {
       overStock: item.quantity > available && !aPedido,
       backorderQty: aPedido ? porPedir : 0,
       maxQuantity:
-        policy.enabled && v.active && p.status === 'ACTIVE' && v.factoryAvailable !== false
+        policy.enabled && v.active && p.status === 'ACTIVE' && v.factoryAvailable === true
           ? available + BACKORDER_MAX_PER_LINE
           : available,
     };
