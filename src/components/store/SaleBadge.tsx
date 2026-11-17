@@ -3,16 +3,12 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 
-/** Badge rojo de oferta. "−20%" o "−20% talla 28". */
-export function SaleBadge({
-  percent,
-  size,
-  className,
-}: {
-  percent: number;
-  size?: string | null;
-  className?: string;
-}) {
+/**
+ * Badge rojo de oferta: solo el porcentaje. La talla va escrita al lado
+ * ("Solo talla 22"), nunca se omite: un "−30%" suelto en la tarjeta haría
+ * creer que todo el modelo está rebajado.
+ */
+export function SaleBadge({ percent, className }: { percent: number; className?: string }) {
   return (
     <span
       className={cn(
@@ -20,7 +16,7 @@ export function SaleBadge({
         className,
       )}
     >
-      −{percent}%{size ? ` talla ${size}` : ''}
+      −{percent}%
     </span>
   );
 }

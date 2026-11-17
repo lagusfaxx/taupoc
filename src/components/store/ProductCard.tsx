@@ -140,7 +140,7 @@ export function ProductCard({
                 {product.tierLabel}
               </span>
             ) : null}
-            {sale ? <SaleBadge percent={sale.percent} size={sale.size} /> : null}
+            {sale ? <SaleBadge percent={sale.percent} /> : null}
             {lastUnits ? (
               <span className="rounded-[3px] bg-ink px-2 py-1 font-display text-[9px] font-semibold uppercase tracking-widest text-chalk">
                 {stockLeft === 1 ? 'Última unidad' : 'Últimas unidades'}
@@ -215,7 +215,7 @@ export function ProductCard({
           <Price amount={product.basePrice} size="sm" className="text-[19px] leading-tight lg:text-[20px]" />
           {sale ? (
             <p className="mt-0.5 text-[12.5px] font-semibold leading-snug text-signal-bad">
-              Talla {sale.size} a {formatCLP(sale.price)}{' '}
+              Solo talla {sale.size}: {formatCLP(sale.price)}{' '}
               <s className="font-normal text-chalk-faint">{formatCLP(sale.regular)}</s>
             </p>
           ) : null}
