@@ -788,7 +788,7 @@ export function ProductView({
                     {v.size}
                     {!out && v.salePercent ? (
                       <span
-                        className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[2px] bg-signal-bad px-1 py-px font-display text-[8.5px] font-bold leading-none tracking-wide text-white"
+                        className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[2px] bg-signal-sale px-1 py-px font-display text-[8.5px] font-bold leading-none tracking-wide text-white"
                         aria-hidden
                       >
                         −{v.salePercent}%

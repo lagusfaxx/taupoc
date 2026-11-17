@@ -41,6 +41,9 @@ const config: Config = {
           ok: '#22C58B',
           warn: '#F0A93B',
           bad: '#F04B4B',
+          // Fondo de los badges de oferta: con texto blanco da 4,8:1 (WCAG AA).
+          // `bad` sobre blanco queda en 3,6:1 y no se lee bien a 9 px.
+          sale: '#D92D2D',
           info: '#4B9BF0',
         },
         // taupoc.lat: papel claro, texto grafito y un único acento, solo para acciones.
