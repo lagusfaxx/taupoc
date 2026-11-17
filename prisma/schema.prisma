@@ -340,6 +340,17 @@ model Variant {
   /// Stock reservado por pedidos pendientes de pago.
   reserved          Int     @default(0)
   priceOverride     Int?
+  /// Descuento de esta talla, en porcentaje (1 a 90). Se aplica sobre el
+  /// precio normal (`priceOverride` o el `basePrice` del producto) y la tienda
+  /// lo muestra como oferta de esa talla con su badge.
+  salePercent       Int?
+  /// Fin de la oferta de la talla. Vacío: sin fecha de término. Pasada la
+  /// fecha la talla vuelve sola a su precio normal y la ficha muestra la
+  /// cuenta regresiva mientras dura.
+  saleEndsAt        DateTime?
+  /// Desde cuántas unidades disponibles la tienda muestra el badge "Quedan
+  /// solo N". Vacío: el valor por defecto de la tienda (3). Cero: nunca.
+  scarcityFrom      Int?
   lowStockThreshold Int     @default(1)
   barcode           String?
   active            Boolean @default(true)

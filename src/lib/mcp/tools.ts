@@ -22,6 +22,7 @@ import {
 import { packingSlipsPdf } from '../print/packing-slip';
 import { agentStatus, cancelJob, enqueuePrint, printedRefs, printQueueEnabled, queueOverview } from '../print/queue';
 import { tool, ToolError, type McpTool } from './protocol';
+import { unitPriceOf } from '@/lib/variant-price';
 
 /** Cómo firma el asistente en el historial de pedidos e inventario. */
 const ACTOR = 'Claude (MCP)';
@@ -304,8 +305,11 @@ const verProducto = tool({
         talla: v.size,
         stock: v.stock,
         reservado: v.reserved,
-        precio: v.priceOverride ?? p.basePrice,
+        precio: unitPriceOf(v, p.basePrice),
         precioPropio: v.priceOverride,
+        ofertaPorcentaje: v.salePercent,
+        ofertaHasta: v.saleEndsAt,
+        badgeQuedanPocasDesde: v.scarcityFrom,
         umbralStockBajo: v.lowStockThreshold,
         activa: v.active,
       })),
@@ -356,7 +360,7 @@ const inventario = tool({
         stock: v.stock,
         reservado: v.reserved,
         umbral: v.lowStockThreshold || settings.lowStockThreshold,
-        precio: v.priceOverride ?? v.product.basePrice,
+        precio: unitPriceOf(v, v.product.basePrice),
         activa: v.active,
       }))
       .filter((v) => a.filtro !== 'bajo' || (v.stock > 0 && v.stock <= v.umbral));

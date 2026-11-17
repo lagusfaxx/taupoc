@@ -53,9 +53,16 @@ export function CartLineItem({ line, compact }: { line: CartLine; compact?: bool
             <p className="mt-0.5 font-mono text-[11.5px] text-chalk-faint/80">{line.sku}</p>
           </div>
 
-          <p className="shrink-0 text-right font-display text-[15px] font-semibold text-chalk">
-            {formatCLP(line.lineTotal)}
-          </p>
+          <div className="shrink-0 text-right">
+            <p className="font-display text-[15px] font-semibold text-chalk">{formatCLP(line.lineTotal)}</p>
+            {line.salePercent && line.regularUnitPrice > line.unitPrice ? (
+              <p className="mt-0.5 text-[12px]">
+                <s className="text-chalk-faint">{formatCLP(line.regularUnitPrice * line.quantity)}</s>{' '}
+                <span className="font-semibold text-signal-bad">−{line.salePercent}%</span>
+                <span className="block text-[11px] text-chalk-faint">Sin cupón: ya está en oferta</span>
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {line.overStock ? (

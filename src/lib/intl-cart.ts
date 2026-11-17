@@ -13,6 +13,7 @@ export async function evaluateIntlCart(cart: CartSummary, fx: FxConfig, email?: 
       productId: line.productId,
       unitPrice: line.unitCents,
       quantity: line.quantity,
+      onSale: line.salePercent != null,
     })),
     email,
     { currency: 'USD', clpPerUsd: fx.clpPerUsd },

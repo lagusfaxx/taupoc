@@ -3,6 +3,7 @@ import { requireAdmin } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { PageHeader } from '@/components/admin/PageHeader';
 import { CreateOrderForm } from '@/components/admin/CreateOrderForm';
+import { unitPriceOf } from '@/lib/variant-price';
 export const dynamic = 'force-dynamic';
 export default async function NewOrderPage() {
   await requireAdmin();
@@ -18,7 +19,7 @@ export default async function NewOrderPage() {
         variants={variants.map((v) => ({
           id: v.id,
           label: `${v.product.name} · ${v.color.name} · Talla ${v.size} · ${v.sku}`,
-          price: v.priceOverride ?? v.product.basePrice,
+          price: unitPriceOf(v, v.product.basePrice),
           stock: v.stock - v.reserved,
         }))}
       />

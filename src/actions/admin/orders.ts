@@ -13,6 +13,7 @@ import { clearReturnFee, deleteOrderReturn, saveOrderReturn, setReturnFee } from
 import { mailTransport, sendMail } from '@/lib/mail';
 import { refundPayment } from '@/lib/mercadopago';
 import type { AdminState } from './products';
+import { unitPriceOf } from '@/lib/variant-price';
 
 function revalidateOrder(id: string) {
   revalidatePath('/admin/pedidos');
@@ -121,7 +122,7 @@ export async function updateOrderItem(_prev: AdminState | null, formData: FormDa
   }
 
   const imageUrl = newVariant.color.images[0]?.url ?? currentItem.imageUrl;
-  const unitPrice = newVariant.priceOverride ?? newVariant.product.basePrice;
+  const unitPrice = unitPriceOf(newVariant, newVariant.product.basePrice);
 
   await prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;

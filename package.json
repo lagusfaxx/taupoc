@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:meta": "tsx --test tests/meta-pixel.test.ts",
+    "test:precio": "tsx --test tests/variant-price.test.ts",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",

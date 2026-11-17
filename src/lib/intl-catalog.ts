@@ -4,6 +4,7 @@ import { prisma } from './db';
 import { clpToIntlCents } from './fx';
 import { getCurrentFx } from './fx-server';
 import { colorPagePath, resolveProductRoute, type ProductDetail } from './catalog';
+import { unitPriceOf } from '@/lib/variant-price';
 
 /*
  * Catálogo de taupoc.lat. Lee los mismos productos, colores y variantes que
@@ -136,7 +137,7 @@ export async function getIntlProduct(
         variantId: v.id,
         size: v.size,
         available: canBuy ? Math.max(0, v.stock - v.reserved) : 0,
-        priceCents: price(v.priceOverride ?? product.basePrice),
+        priceCents: price(unitPriceOf(v, product.basePrice)),
       })),
     colors: publishable.map((c) => ({
       slug: c.slug,

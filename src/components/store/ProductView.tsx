@@ -11,6 +11,7 @@ import { colorLabel } from '@/lib/colors';
 import { backorderLead } from '@/lib/backorder';
 import { Price } from '@/components/ui/Price';
 import { RatingSummary } from '@/components/ui/Stars';
+import { SaleBadge, SaleCountdown } from './SaleBadge';
 import { announceCart, flyToCart } from './CartLink';
 import { ProductGallery, type GalleryImage } from './ProductGallery';
 import { MetaEvent, useMetaPixel } from './MetaPixel';
@@ -23,13 +24,19 @@ export interface ViewVariant {
   size: string;
   sku: string;
   available: number;
+  /** Lo que se cobra hoy, con la oferta de la talla si tiene. */
   price: number;
+  /** Precio sin la oferta. Igual a `price` si la talla no está en oferta. */
+  regularPrice: number;
+  /** Descuento vigente de la talla, o null. */
+  salePercent: number | null;
+  /** Fin de la oferta (ISO), o null si no tiene término. */
+  saleEndsAt: string | null;
+  /** Quedan pocas: el stock bajó del umbral de urgencia de la talla. */
+  scarce: boolean;
   /** Agotada: se ofrece a pedido por WhatsApp; el equipo confirma a mano antes de cobrar. */
   whatsappOrder?: boolean;
 }
-
-/** A partir de acá la ficha muestra las unidades restantes como urgencia. */
-const SHOW_UNITS_LEFT = 3;
 
 export interface ViewColor {
   id: string;
@@ -497,6 +504,11 @@ export function ProductView({
   const accent = color?.accentHex ?? '#00E0B8';
   const images = color?.images.length ? color.images : product.fallbackImages;
   const price = variant?.price ?? product.basePrice;
+  const regularPrice = variant?.regularPrice ?? product.basePrice;
+  const enOferta = variant?.salePercent != null && price < regularPrice;
+  // Tallas en oferta del color a la vista con stock: si no se eligió talla, la
+  // ficha las anuncia para llevar al cliente directo a ellas.
+  const tallasEnOferta = color?.variants.filter((v) => v.salePercent != null && v.available > 0) ?? [];
   const { transferDiscount } = useStorePrefs();
   const transferPrice = transferDiscount > 0 ? Math.round(price * (1 - transferDiscount / 100)) : null;
 
@@ -591,7 +603,10 @@ export function ProductView({
           <h1 className="min-w-0 text-balance font-display text-[24px] leading-[1.05] tracking-tightest text-chalk sm:text-[42px] lg:leading-[1.02]">
             {product.name}
           </h1>
-          <Price amount={price} size="lg" className="shrink-0 text-[24px] leading-[1.05] lg:hidden" />
+          <span className="flex shrink-0 flex-col items-end lg:hidden">
+            <Price amount={price} size="lg" className={cn('text-[24px] leading-[1.05]', enOferta && 'text-signal-bad')} />
+            {enOferta ? <s className="text-[13px] text-chalk-faint">{formatCLP(regularPrice)}</s> : null}
+          </span>
         </div>
         {product.subtitle ? (
           <p className="mt-2.5 hidden text-[15px] text-chalk-dim lg:block">{product.subtitle}</p>
@@ -620,7 +635,50 @@ export function ProductView({
 
         {/* Precio: el normal, el de transferencia si hay descuento, y las cuotas. */}
         <div className="mt-3 lg:mt-7">
-          <Price amount={price} size="lg" className="hidden text-[38px] leading-none lg:inline" />
+          <span className="hidden items-baseline gap-3 lg:flex">
+            <Price amount={price} size="lg" className={cn('text-[38px] leading-none', enOferta && 'text-signal-bad')} />
+            {enOferta ? (
+              <>
+                <s className="text-[18px] text-chalk-faint">{formatCLP(regularPrice)}</s>
+                <SaleBadge percent={variant!.salePercent!} size={variant!.size} className="self-center" />
+              </>
+            ) : null}
+          </span>
+          {enOferta && variant ? (
+            <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-semibold text-signal-bad">
+              <span className="lg:hidden">
+                <SaleBadge percent={variant.salePercent!} size={variant.size} />
+              </span>
+              <span>Ahorras {formatCLP(regularPrice - price)}</span>
+              {variant.saleEndsAt ? (
+                <>
+                  <span aria-hidden className="text-chalk-faint">·</span>
+                  <SaleCountdown endsAt={variant.saleEndsAt} />
+                </>
+              ) : null}
+              <span className="w-full text-[11.5px] font-normal text-chalk-faint">
+                Precio de oferta · no acumulable con cupones
+              </span>
+            </p>
+          ) : !variant && tallasEnOferta.length > 0 && !product.comingSoon ? (
+            <button
+              type="button"
+              onClick={() => {
+                const mejor = [...tallasEnOferta].sort((a, b) => (b.salePercent ?? 0) - (a.salePercent ?? 0))[0];
+                setInteresId(null);
+                setVariantId(mejor.id);
+                document.getElementById('tallas')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+              className="mt-2.5 flex w-full items-center gap-2 rounded-[6px] border border-signal-bad/50 bg-signal-bad/10 px-3.5 py-2 text-left text-[13px] text-chalk transition-colors hover:bg-signal-bad/20"
+            >
+              <SaleBadge percent={Math.max(...tallasEnOferta.map((v) => v.salePercent ?? 0))} />
+              <span>
+                Oferta en {tallasEnOferta.length === 1 ? 'la talla' : 'las tallas'}{' '}
+                <strong>{tallasEnOferta.map((v) => v.size).join(', ')}</strong>
+                {tallasEnOferta.some((v) => v.scarce) ? ' · quedan pocas' : ''}
+              </span>
+            </button>
+          ) : null}
           {transferPrice != null && !product.comingSoon ? (
             <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-[6px] border border-line bg-ink-900 px-3.5 py-2 text-[14px] text-chalk-dim lg:mt-3 lg:py-2.5">
               <strong className="font-display text-[20px] font-bold tracking-tight text-chalk">
@@ -711,7 +769,7 @@ export function ProductView({
                       setVariantId(v.id);
                     }}
                     aria-pressed={out ? v.id === interesId : selected}
-                    aria-label={`Talla ${v.size}${out ? (v.whatsappOrder && telefono ? `, a pedido por WhatsApp, ${lead}` : ' agotada, avísame cuando vuelva') : v.available <= SHOW_UNITS_LEFT ? `, quedan ${v.available}` : ''}`}
+                    aria-label={`Talla ${v.size}${out ? (v.whatsappOrder && telefono ? `, a pedido por WhatsApp, ${lead}` : ' agotada, avísame cuando vuelva') : v.scarce ? `, quedan ${v.available}` : ''}${!out && v.salePercent ? `, en oferta ${v.salePercent}% de descuento` : ''}`}
                     className={cn(
                       'relative flex h-12 items-center justify-center border font-display text-[15px] font-semibold tracking-wide transition-all duration-150',
                       selected
@@ -728,6 +786,14 @@ export function ProductView({
                     )}
                   >
                     {v.size}
+                    {!out && v.salePercent ? (
+                      <span
+                        className="absolute -top-2 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-[2px] bg-signal-bad px-1 py-px font-display text-[8.5px] font-bold leading-none tracking-wide text-white"
+                        aria-hidden
+                      >
+                        −{v.salePercent}%
+                      </span>
+                    ) : null}
                     {out && v.whatsappOrder && telefono ? (
                       <span
                         className="absolute inset-x-0 bottom-[3px] text-center font-sans text-[8.5px] font-medium normal-case leading-none tracking-normal text-signal-info"
@@ -740,8 +806,13 @@ export function ProductView({
                         <span className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 rotate-[-20deg] bg-line" aria-hidden />
                         <IconBell className="absolute right-0.5 top-0.5 h-3 w-3 accent-text" />
                       </>
-                    ) : v.available <= SHOW_UNITS_LEFT ? (
-                      <span className="absolute right-1 top-1 h-1.5 w-1.5 bg-signal-warn" aria-hidden />
+                    ) : v.scarce ? (
+                      <span
+                        className="absolute inset-x-0 bottom-[3px] text-center font-sans text-[8.5px] font-semibold normal-case leading-none tracking-normal text-signal-warn"
+                        aria-hidden
+                      >
+                        {v.available === 1 ? 'última' : `quedan ${v.available}`}
+                      </span>
                     ) : null}
                   </button>
                 );
@@ -804,10 +875,18 @@ export function ProductView({
             {/* Estado de stock en vivo */}
             <p ref={liveRef} aria-live="polite" className="mt-3 min-h-[20px] text-[13px]">
               {variant ? (
-                variant.available <= SHOW_UNITS_LEFT ? (
-                  <span className="text-signal-warn">
-                    Quedan {variant.available} {variant.available === 1 ? 'unidad' : 'unidades'} de la talla{' '}
-                    {variant.size} en {color ? colorLabel(color) : ''} · SKU {variant.sku}
+                variant.scarce ? (
+                  <span className="inline-flex flex-wrap items-center gap-2 font-semibold text-signal-warn">
+                    <span className="relative flex h-2 w-2" aria-hidden>
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-signal-warn opacity-75" />
+                      <span className="relative inline-flex h-2 w-2 rounded-full bg-signal-warn" />
+                    </span>
+                    {variant.available === 1
+                      ? `¡Última unidad en talla ${variant.size}!`
+                      : `¡Quedan solo ${variant.available} en talla ${variant.size}!`}
+                    <span className="font-normal text-chalk-faint">
+                      {color ? colorLabel(color) : ''} · SKU {variant.sku}
+                    </span>
                   </span>
                 ) : (
                   <span className="text-signal-ok">
@@ -919,8 +998,10 @@ export function ProductView({
           >
             <div className="container flex items-center gap-3 py-3">
               <div className="min-w-0 flex-1">
-                <p className="truncate font-display text-[17px] leading-none text-chalk">
-                  {formatCLP(price)}
+                <p className="flex items-baseline gap-2 truncate font-display text-[17px] leading-none text-chalk">
+                  <span className={cn(enOferta && 'text-signal-bad')}>{formatCLP(price)}</span>
+                  {enOferta ? <s className="font-sans text-[12px] text-chalk-faint">{formatCLP(regularPrice)}</s> : null}
+                  {enOferta ? <SaleBadge percent={variant!.salePercent!} className="px-1.5 py-0.5" /> : null}
                 </p>
                 <p className="mt-1 truncate text-[12px] text-chalk-faint">
                   {variant

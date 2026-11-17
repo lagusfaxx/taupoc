@@ -10,6 +10,7 @@ import { setStock } from '@/lib/inventory';
 import { deleteImage } from '@/lib/uploads';
 import { importMediaFromUrl, storeMediaImage } from '@/lib/media';
 import { parseCLP } from '@/lib/money';
+import { MAX_SALE_PERCENT } from '@/lib/variant-price';
 
 export interface AdminState {
   ok: boolean;
@@ -405,6 +406,75 @@ export async function saveVariantMatrix(
   return {
     ok: true,
     message: changed === 0 ? 'No había cambios que guardar.' : `${changed} cambios guardados.`,
+  };
+}
+
+/**
+ * Oferta y urgencia por talla. Cada talla del modelo lleva su descuento, su
+ * fecha de término y desde cuántas unidades se avisa "Quedan solo N". Se
+ * guarda en todas las variantes de esa talla (todos los colores): la oferta
+ * es de la talla del modelo, no de un SKU suelto.
+ *
+ * Campos por talla: `pct:<talla>` (0 o vacío quita la oferta),
+ * `ends:<talla>` (ISO, vacío = sin término) y `scar:<talla>` (vacío = valor
+ * por defecto de la tienda, 0 = nunca).
+ */
+export async function saveSizeDeals(
+  _prev: AdminState | null,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+  const productId = String(formData.get('productId') ?? '');
+  const product = productId
+    ? await prisma.product.findUnique({ where: { id: productId }, include: { variants: true } })
+    : null;
+  if (!product) return { ok: false, message: 'Producto no encontrado.' };
+
+  const sizes = [...new Set(product.variants.map((v) => v.size))];
+  const now = Date.now();
+  let changed = 0;
+
+  for (const size of sizes) {
+    if (!formData.has(`pct:${size}`)) continue;
+    const pctRaw = String(formData.get(`pct:${size}`) ?? '').trim();
+    const endsRaw = String(formData.get(`ends:${size}`) ?? '').trim();
+    const scarRaw = String(formData.get(`scar:${size}`) ?? '').trim();
+
+    const pct = pctRaw === '' ? 0 : Math.round(Number(pctRaw));
+    if (!Number.isFinite(pct) || pct < 0 || pct > MAX_SALE_PERCENT) {
+      return { ok: false, message: `Talla ${size}: el descuento va de 1 a ${MAX_SALE_PERCENT} %.` };
+    }
+    let endsAt: Date | null = null;
+    if (pct > 0 && endsRaw) {
+      endsAt = new Date(endsRaw);
+      if (Number.isNaN(endsAt.getTime())) return { ok: false, message: `Talla ${size}: la fecha de término no es válida.` };
+      if (endsAt.getTime() <= now) return { ok: false, message: `Talla ${size}: la fecha de término ya pasó.` };
+    }
+    const scar = scarRaw === '' ? null : Math.round(Number(scarRaw));
+    if (scar !== null && (!Number.isFinite(scar) || scar < 0 || scar > 99)) {
+      return { ok: false, message: `Talla ${size}: "quedan pocas" va de 0 a 99 unidades.` };
+    }
+
+    const data = { salePercent: pct > 0 ? pct : null, saleEndsAt: endsAt, scarcityFrom: scar };
+    const actuales = product.variants.filter((v) => v.size === size);
+    const distinto = actuales.some(
+      (v) =>
+        v.salePercent !== data.salePercent ||
+        (v.saleEndsAt?.getTime() ?? null) !== (endsAt?.getTime() ?? null) ||
+        v.scarcityFrom !== data.scarcityFrom,
+    );
+    if (!distinto) continue;
+    await prisma.variant.updateMany({ where: { productId, size }, data });
+    changed++;
+  }
+
+  revalidateCatalog(product.slug);
+  return {
+    ok: true,
+    message:
+      changed === 0
+        ? 'No había cambios que guardar.'
+        : `${changed} ${changed === 1 ? 'talla actualizada' : 'tallas actualizadas'}.`,
   };
 }
 
