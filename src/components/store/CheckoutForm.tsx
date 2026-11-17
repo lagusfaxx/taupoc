@@ -707,9 +707,6 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
                   <span className="block text-chalk-faint">
                     {line.colorName} · T{line.size} · {line.quantity} u.
                   </span>
-                  {line.backorderQty > 0 ? (
-                    <span className="block text-[12.5px] text-signal-info">A pedido de fábrica</span>
-                  ) : null}
                 </span>
                 <span className="shrink-0 text-chalk">{formatCLP(line.lineTotal)}</span>
               </li>
@@ -775,9 +772,7 @@ export function CheckoutForm({ cart, installmentsMax, paymentMethods, usdRate, c
             </li>
             <li className="flex items-start gap-2.5 text-[12.5px] leading-relaxed text-chalk-faint">
               <IconTruck className="mt-0.5 h-4 w-4 shrink-0" />
-              {cart.backorderDays
-                ? `Tu pedido incluye tallas a pedido: las traemos de fábrica en hasta ${cart.backorderDays} ${cart.backorderDays === 1 ? 'día' : 'días'} y despachamos todo junto.`
-                : 'Despachamos el mismo día hábil una vez acreditado el pago.'}
+              Despachamos el mismo día hábil una vez acreditado el pago.
             </li>
             <li className="flex items-start gap-2.5 text-[12.5px] leading-relaxed text-chalk-faint">
               <IconCheck className="mt-0.5 h-4 w-4 shrink-0" />

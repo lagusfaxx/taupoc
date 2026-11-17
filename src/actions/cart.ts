@@ -8,9 +8,6 @@ import { evaluateCoupon } from '@/lib/pricing';
 import { getSession } from '@/lib/auth';
 import { sweepExpiredReservations } from '@/lib/reservations';
 import type { MetaEventData } from '@/lib/meta-pixel';
-import { getSettings } from '@/lib/settings';
-import { getStore } from '@/lib/storefront-server';
-import { BACKORDER_MAX_PER_LINE, backorderLead, backorderPolicy } from '@/lib/backorder';
 
 export interface CartActionState {
   ok: boolean;
@@ -58,14 +55,9 @@ export async function addToCart(
   }
 
   const available = Math.max(0, variant.stock - variant.reserved);
-  // Con venta a pedido una talla agotada se compra igual y se pide a fábrica.
-  const base = backorderPolicy(await getSettings(), await getStore());
-  // A pedido solo lo que la fábrica confirma tener.
-  const policy = { ...base, enabled: base.enabled && variant.factoryAvailable === true };
-  if (available <= 0 && !policy.enabled) {
+  if (available <= 0) {
     return { ok: false, message: 'Esa talla está agotada. Avísanos y te contamos cuándo repone.' };
   }
-  const limit = policy.enabled ? available + BACKORDER_MAX_PER_LINE : available;
 
   const cart = await getOrCreateCart();
   const existing = await prisma.cartItem.findUnique({
@@ -73,14 +65,12 @@ export async function addToCart(
   });
 
   const desired = (existing?.quantity ?? 0) + parsed.data.quantity;
-  const quantity = Math.min(desired, limit, MAX_PER_LINE);
+  const quantity = Math.min(desired, available, MAX_PER_LINE);
 
   if (existing && quantity === existing.quantity) {
     return {
       ok: false,
-      message: policy.enabled
-        ? `Ya tienes el máximo de la talla ${variant.size} en ${variant.color.name} en tu carrito.`
-        : `Solo quedan ${available} unidades de la talla ${variant.size} en ${variant.color.name}.`,
+      message: `Solo quedan ${available} unidades de la talla ${variant.size} en ${variant.color.name}.`,
     };
   }
 
@@ -122,9 +112,7 @@ export async function addToCart(
         currency: 'CLP',
       },
     } : {}),
-    message:
-      `${variant.product.name} · ${variant.color.name} · Talla ${variant.size} agregado.` +
-      (quantity > available ? ` Va a pedido: la traemos de fábrica en ${backorderLead(policy.days)}.` : ''),
+    message: `${variant.product.name} · ${variant.color.name} · Talla ${variant.size} agregado.`,
   };
 }
 
@@ -155,25 +143,14 @@ export async function updateCartItem(itemId: string, quantity: number): Promise<
   }
 
   const available = Math.max(0, item.variant.stock - item.variant.reserved);
-  const policy = backorderPolicy(await getSettings(), await getStore());
-  const limit =
-    policy.enabled && item.variant.active && item.variant.factoryAvailable === true
-      ? available + BACKORDER_MAX_PER_LINE
-      : available;
-  const next = Math.min(quantity, limit, MAX_PER_LINE);
+  const next = Math.min(quantity, available, MAX_PER_LINE);
 
   await prisma.cartItem.update({ where: { id: item.id }, data: { quantity: next } });
   revalidatePath('/carrito');
   revalidatePath('/', 'layout');
 
   if (next < quantity) {
-    return {
-      ok: false,
-      message:
-        limit > available
-          ? `Puedes llevar hasta ${limit} unidades de esta talla.`
-          : `Solo quedan ${available} unidades disponibles.`,
-    };
+    return { ok: false, message: `Solo quedan ${available} unidades disponibles.` };
   }
   return { ok: true, message: 'Carrito actualizado.' };
 }
