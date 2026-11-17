@@ -98,7 +98,7 @@ export function SizeDeals({ productId, rows }: { productId: string; rows: SizeDe
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-[640px] text-[12.5px] leading-relaxed text-chalk-faint">
           El descuento se aplica a esa talla en todos los colores y la tienda lo muestra con un badge
-          <strong className="text-chalk"> “−X% en talla N”</strong> en la tarjeta y en la ficha, con cuenta
+          <strong className="text-chalk"> “−X%”</strong> (y “Solo talla N” bajo el precio) en la tarjeta y en la ficha, con cuenta
           regresiva si le pones término. Al vencer, la talla vuelve sola a su precio normal. “Quedan
           pocas” muestra <strong className="text-chalk">“¡Quedan solo N!”</strong> cuando el stock real
           de un color baja de ese número (vacío = {DEFAULT_SCARCITY_FROM}, 0 = nunca). Los cupones no se
@@ -224,7 +224,7 @@ export function SizeDeals({ productId, rows }: { productId: string; rows: SizeDe
                     <span className="flex flex-wrap gap-1.5">
                       {valid && !expired ? (
                         <span className="rounded-[3px] bg-signal-sale px-1.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-white">
-                          −{pct}% talla {r.size}
+                          −{pct}%
                         </span>
                       ) : null}
                       {expired ? <span className="text-[11.5px] text-signal-bad">Fecha ya pasada</span> : null}

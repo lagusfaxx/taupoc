@@ -640,14 +640,14 @@ export function ProductView({
             {enOferta ? (
               <>
                 <s className="text-[18px] text-chalk-faint">{formatCLP(regularPrice)}</s>
-                <SaleBadge percent={variant!.salePercent!} size={variant!.size} className="self-center" />
+                <SaleBadge percent={variant!.salePercent!} className="self-center" />
               </>
             ) : null}
           </span>
           {enOferta && variant ? (
             <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-semibold text-signal-bad">
               <span className="lg:hidden">
-                <SaleBadge percent={variant.salePercent!} size={variant.size} />
+                <SaleBadge percent={variant.salePercent!} />
               </span>
               <span>Ahorras {formatCLP(regularPrice - price)}</span>
               {variant.saleEndsAt ? (
@@ -673,7 +673,8 @@ export function ProductView({
             >
               <SaleBadge percent={Math.max(...tallasEnOferta.map((v) => v.salePercent ?? 0))} />
               <span>
-                Oferta en {tallasEnOferta.length === 1 ? 'la talla' : 'las tallas'}{' '}
+                {new Set(tallasEnOferta.map((v) => v.salePercent)).size > 1 ? 'Hasta ese descuento en' : 'Solo en'}{' '}
+                {tallasEnOferta.length === 1 ? 'la talla' : 'las tallas'}{' '}
                 <strong>{tallasEnOferta.map((v) => v.size).join(', ')}</strong>
                 {tallasEnOferta.some((v) => v.scarce) ? ' · quedan pocas' : ''}
               </span>
