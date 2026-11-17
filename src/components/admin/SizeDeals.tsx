@@ -223,7 +223,7 @@ export function SizeDeals({ productId, rows }: { productId: string; rows: SizeDe
                   <td className="border-b border-line-soft px-3 py-2">
                     <span className="flex flex-wrap gap-1.5">
                       {valid && !expired ? (
-                        <span className="rounded-[3px] bg-signal-bad px-1.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-white">
+                        <span className="rounded-[3px] bg-signal-sale px-1.5 py-0.5 font-display text-[10px] font-bold uppercase tracking-wide text-white">
                           −{pct}% talla {r.size}
                         </span>
                       ) : null}

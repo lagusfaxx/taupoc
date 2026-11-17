@@ -16,7 +16,7 @@ export function SaleBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-[3px] bg-signal-bad px-2 py-1 font-display text-[9.5px] font-bold uppercase leading-none tracking-widest text-white',
+        'inline-flex items-center rounded-[3px] bg-signal-sale px-2 py-1 font-display text-[9.5px] font-bold uppercase leading-none tracking-widest text-white',
         className,
       )}
     >
