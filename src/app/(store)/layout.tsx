@@ -16,7 +16,9 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <StorePrefs
         value={{
           transferDiscount: settings.transferEnabled ? settings.transferDiscount : 0,
-          backorderDays: settings.backorderEnabled ? settings.backorderDays : 0,
+          // Sin número de WhatsApp no hay a dónde pedir la talla.
+          backorderDays:
+            settings.backorderEnabled && settings.whatsapp.replace(/\D/g, '') ? settings.backorderDays : 0,
         }}
       >
       <Analytics />

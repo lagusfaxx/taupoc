@@ -234,10 +234,6 @@ model Product {
   featured  Boolean @default(false)
   sortOrder Int     @default(0)
 
-  /// Identificador del producto en la tienda B2B del proveedor (su "handle").
-  /// Con él se consulta qué tallas tiene la fábrica.
-  supplierHandle String?
-
   seoTitle       String?
   seoDescription String?
 
@@ -324,8 +320,6 @@ model ProductColor {
   stripHex     String?
   sortOrder    Int     @default(0)
   active       Boolean @default(true)
-  /// Nombre de este color en la tienda B2B del proveedor, ej. "Purple/5008".
-  supplierColor String?
 
   product  Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
   variants Variant[]
@@ -348,10 +342,6 @@ model Variant {
   priceOverride     Int?
   lowStockThreshold Int     @default(1)
   barcode           String?
-  /// Si la fábrica tiene esta talla, según la tienda B2B del proveedor.
-  /// `null`: no se sabe (color sin enlazar o todavía sin consultar).
-  factoryAvailable  Boolean?
-  factoryCheckedAt  DateTime?
   active            Boolean @default(true)
   sortOrder         Int     @default(0)
 
@@ -755,9 +745,6 @@ model OrderItem {
   unitPrice   Int
   quantity    Int
   lineTotal   Int
-  /// Unidades de esta línea vendidas "a pedido": no había stock y se piden a
-  /// fábrica. No se apartan ni se descuentan del inventario.
-  backorderQty Int @default(0)
 
   order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variant Variant? @relation(fields: [variantId], references: [id], onDelete: SetNull)

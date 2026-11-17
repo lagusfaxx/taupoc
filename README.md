@@ -583,35 +583,14 @@ anuncios deben llevar `utm_source` y `utm_campaign`.
 
 ## Tallas a pedido
 
-Con **Ajustes → Ofrecer a pedido las tallas agotadas** activo, una talla sin
-stock de un producto publicado deja de verse tachada y se ofrece "a pedido",
-con su plazo (por defecto 7 días). Cómo se cierra la venta se elige en Ajustes:
+Con **Ajustes → Tallas agotadas: botón para pedirlas por WhatsApp** activo, una
+talla sin stock de un producto publicado no se muestra tachada: dice "a pedido"
+y al tocarla abre WhatsApp con el producto, el color, la talla y el SKU ya
+escritos, junto con el plazo configurado (7 días por defecto).
 
-- **Por WhatsApp (por defecto).** Al tocar la talla, la ficha abre WhatsApp con
-  el mensaje ya escrito (producto, color, talla y SKU). El equipo confirma con
-  fábrica y recién entonces cobra; el pedido se registra con *Nuevo pedido* en
-  el panel. El carrito sigue rechazando la talla agotada. El toque queda en la
-  demanda de tallas.
-- **Pago en la tienda.** La talla se compra de inmediato sin confirmar. Esas
-  unidades quedan en `OrderItem.backorderQty` y no pasan por el inventario; el
-  Resumen las lista en "Para atender hoy" hasta que el pedido se despacha.
+Nada es automático: el equipo revisa a mano si la fábrica tiene la talla y
+recién entonces cobra, registrando el pedido con *Nuevo pedido* en el panel. El
+carrito sigue rechazando la talla agotada y el stock de bodega no se toca.
 
-Una talla **apagada** en el producto no se ofrece a pedido: sigue con el aviso
-por correo. Aplica solo en taupoc.cl; taupoc.lat no cambia.
-
-### Stock de fábrica
-
-**Panel → Fábrica** enlaza cada producto y color con la tienda B2B del proveedor
-(Shopify). Su catálogo se lee sin iniciar sesión y dice, por color y talla, si
-la fábrica la tiene; no trae cantidades. La tienda lo consulta sola cada 30
-minutos (o con `/api/cron/fabrica` y `CRON_TOKEN`) y guarda el resultado en
-`Variant.factoryAvailable`:
-
-- **La fábrica la tiene:** la talla agotada se ofrece a pedido.
-- **La fábrica no la tiene:** no se ofrece a pedido; queda el aviso por correo.
-- **Color sin enlazar:** tampoco se ofrece a pedido, hasta que se enlace.
-
-El dato es interno: al cliente nunca se le muestra el stock de fábrica ni se le
-envía; solo decide si una talla agotada se ofrece a pedido o no.
-
-Si el proveedor no responde se mantiene el último dato conocido.
+Una talla **apagada** en el producto no se ofrece. Sin número de WhatsApp en
+Ajustes, las tallas agotadas vuelven al aviso por correo. Solo en taupoc.cl.

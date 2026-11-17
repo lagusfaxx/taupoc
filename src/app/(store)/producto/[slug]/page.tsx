@@ -1,5 +1,4 @@
 import { TrackEvent } from '@/components/shared/Analytics';
-import { refreshFactoryStockIfStale } from '@/lib/supplier';
 import type { Metadata } from 'next';
 import { isStudioImage } from '@/lib/intl-catalog';
 import { sweepExpiredReservations } from '@/lib/reservations';
@@ -132,8 +131,6 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  // Mantiene al día el stock de fábrica sin depender de una tarea programada.
-  refreshFactoryStockIfStale();
   const [{ slug }, query] = await Promise.all([params, searchParams]);
   const resolved = await resolverFicha(slug, query);
   if (!resolved) notFound();
@@ -145,9 +142,9 @@ export default async function ProductPage({
   const rating = resumenDeNotas(product.reviews);
   const esAccesorio = product.kind === 'ACCESSORY';
 
-  // Venta a pedido: solo productos publicados (no los que aún no se lanzan).
+  // Tallas a pedido por WhatsApp: solo productos publicados (no los que aún
+  // no se lanzan) y solo si hay un número de WhatsApp en Ajustes.
   const aPedido = settings.backorderEnabled && product.status === 'ACTIVE';
-  const enLinea = settings.backorderMode === 'online';
 
   const colors = product.colors.map((color) => ({
     id: color.id,
@@ -170,13 +167,9 @@ export default async function ProductPage({
         sku: v.sku,
         available,
         price: v.priceOverride ?? product.basePrice,
-        // Agotada pero publicada: se vende a pedido. Una talla apagada no.
-        // A pedido solo lo que la fábrica confirma tener; sin confirmación (color
-        // sin enlazar o fábrica sin stock) queda el aviso por correo. El dato de
-        // fábrica es interno: al cliente nunca se le muestra ni se le envía.
-        backorder: aPedido && enLinea && v.active && available <= 0 && v.factoryAvailable === true,
-        // A pedido por WhatsApp: se confirma con fábrica antes de cobrar.
-        whatsappOrder: aPedido && !enLinea && v.active && available <= 0 && v.factoryAvailable === true,
+        // Agotada pero publicada: se ofrece a pedido por WhatsApp y el equipo
+        // confirma a mano. Una talla apagada en el producto no se ofrece.
+        whatsappOrder: aPedido && v.active && available <= 0,
       };
     }),
   }));
@@ -218,7 +211,7 @@ export default async function ProductPage({
     })),
     fallbackImages: product.images.map((img) => ({ id: img.id, url: img.url, alt: img.alt })),
     backorderDays: aPedido ? settings.backorderDays : null,
-    whatsappPhone: aPedido && !enLinea ? settings.whatsapp : '',
+    whatsappPhone: aPedido ? settings.whatsapp : '',
     installmentsMax: settings.installmentsMax,
     freeShippingOver: settings.freeShippingOver,
     rating,

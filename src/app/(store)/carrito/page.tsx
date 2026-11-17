@@ -128,13 +128,6 @@ export default async function CartPage() {
               </span>
             </div>
 
-            {cart.backorderDays ? (
-              <p className="mt-4 border border-signal-info/40 bg-signal-info/10 px-3 py-2.5 text-[13px] leading-snug text-signal-info">
-                Tu pedido incluye tallas a pedido: las traemos de fábrica en hasta {cart.backorderDays}{' '}
-                {cart.backorderDays === 1 ? 'día' : 'días'} y despachamos todo junto.
-              </p>
-            ) : null}
-
             {cart.hasIssues ? (
               <p className="mt-4 border border-signal-warn/40 bg-signal-warn/10 px-3 py-2.5 text-[13px] text-signal-warn">
                 Ajusta las cantidades marcadas antes de continuar al pago.

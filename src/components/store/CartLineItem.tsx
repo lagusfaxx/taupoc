@@ -58,14 +58,6 @@ export function CartLineItem({ line, compact }: { line: CartLine; compact?: bool
           </p>
         </div>
 
-        {line.backorderQty > 0 ? (
-          <p className="mt-2 border border-signal-info/40 bg-signal-info/10 px-2.5 py-1.5 text-[12.5px] text-signal-info">
-            {line.backorderQty === line.quantity
-              ? 'A pedido: la traemos de fábrica antes de despachar.'
-              : `${line.backorderQty} de ${line.quantity} van a pedido: las traemos de fábrica antes de despachar.`}
-          </p>
-        ) : null}
-
         {line.overStock ? (
           <p className="mt-2 border border-signal-warn/40 bg-signal-warn/10 px-2.5 py-1.5 text-[12.5px] text-signal-warn">
             {line.available === 0
@@ -91,7 +83,7 @@ export function CartLineItem({ line, compact }: { line: CartLine; compact?: bool
             <button
               type="button"
               onClick={() => change(line.quantity + 1)}
-              disabled={pending || line.quantity >= line.maxQuantity}
+              disabled={pending || line.quantity >= line.available}
               aria-label="Agregar una unidad"
               className="flex h-9 w-9 items-center justify-center text-chalk-dim transition-colors hover:bg-ink-800 hover:text-chalk disabled:opacity-40"
             >

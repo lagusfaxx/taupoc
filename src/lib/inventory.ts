@@ -73,12 +73,7 @@ export async function commitStockForOrder(orderId: string) {
     const changed = await tx.order.updateMany({where:{id:orderId,stockCommitted:false},data:{stockCommitted:true}});
     if (!changed.count) return [];
     await releaseOrderReservation(tx, orderId);
-    const items = (
-      await tx.orderItem.findMany({ where: { orderId }, select: { variantId: true, quantity: true, backorderQty: true } })
-    )
-      // Las unidades a pedido nunca estuvieron en el inventario.
-      .map((i) => ({ variantId: i.variantId, quantity: i.quantity - i.backorderQty }))
-      .filter((i) => i.quantity > 0);
+    const items = await tx.orderItem.findMany({ where: { orderId }, select: { variantId: true, quantity: true } });
     for (const item of items) {
       if (!item.variantId) continue;
       await adjustStock(tx, {
@@ -126,12 +121,7 @@ export async function restoreStockForOrder(orderId: string, type: MovementType =
   await prisma.$transaction(async (tx) => {
     const changed = await tx.order.updateMany({where:{id:orderId,stockCommitted:true},data:{stockCommitted:false}});
     if (!changed.count) return;
-    const items = (
-      await tx.orderItem.findMany({ where: { orderId }, select: { variantId: true, quantity: true, backorderQty: true } })
-    )
-      // Las unidades a pedido nunca estuvieron en el inventario.
-      .map((i) => ({ variantId: i.variantId, quantity: i.quantity - i.backorderQty }))
-      .filter((i) => i.quantity > 0);
+    const items = await tx.orderItem.findMany({ where: { orderId }, select: { variantId: true, quantity: true } });
     for (const item of items) {
       if (!item.variantId) continue;
       await adjustStock(tx, {

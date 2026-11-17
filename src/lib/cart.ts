@@ -6,9 +6,6 @@ import { cookieSecure } from './cookies';
 import { evaluateCoupon } from './pricing';
 import { getSession } from './auth';
 import { colorLabel } from './colors';
-import { getSettings } from './settings';
-import { getStore } from './storefront-server';
-import { BACKORDER_MAX_PER_LINE, backorderPolicy, backorderUnits } from './backorder';
 
 const CART_COOKIE = 'taupoc_cart';
 const CART_MAX_AGE = 60 * 60 * 24 * 45;
@@ -31,12 +28,8 @@ export interface CartLine {
   weightGrams: number;
   /** Stock disponible ahora mismo, para avisar si bajó desde que se agregó. */
   available: number;
-  /** La cantidad pedida supera el stock disponible y no se puede pedir a fábrica. */
+  /** La cantidad pedida supera el stock disponible. */
   overStock: boolean;
-  /** Unidades de la línea que no están en stock y se piden a fábrica. */
-  backorderQty: number;
-  /** Tope de unidades que acepta la línea, contando lo que se puede pedir. */
-  maxQuantity: number;
 }
 
 export interface CartSummary {
@@ -52,8 +45,6 @@ export interface CartSummary {
   couponError: string | null;
   weightGrams: number;
   hasIssues: boolean;
-  /** Días de espera si alguna línea va a pedido; `null` si todo está en stock. */
-  backorderDays: number | null;
 }
 
 export const EMPTY_CART: CartSummary = {
@@ -67,7 +58,6 @@ export const EMPTY_CART: CartSummary = {
   couponFreeShipping: false,
   couponError: null,
   weightGrams: 0,
-  backorderDays: null,
   hasIssues: false,
 };
 
@@ -127,8 +117,6 @@ export async function getCart(): Promise<CartSummary> {
   });
   if (!cart) return EMPTY_CART;
 
-  const policy = backorderPolicy(await getSettings(), await getStore());
-
   const lines: CartLine[] = cart.items.map((item) => {
     const v = item.variant;
     const p = v.product;
@@ -139,12 +127,6 @@ export async function getCart(): Promise<CartSummary> {
       p.images[0] ??
       null;
     const available = Math.max(0, v.stock - v.reserved);
-    // A pedido solo lo que está publicado: una talla apagada no se ofrece.
-    const porPedir =
-      v.active && p.status === 'ACTIVE' && v.factoryAvailable === true
-        ? backorderUnits(item.quantity, available, policy)
-        : 0;
-    const aPedido = porPedir > 0 && porPedir <= BACKORDER_MAX_PER_LINE;
     return {
       itemId: item.id,
       variantId: v.id,
@@ -162,12 +144,7 @@ export async function getCart(): Promise<CartSummary> {
       lineTotal: unitPrice * item.quantity,
       weightGrams: p.weightGrams,
       available,
-      overStock: item.quantity > available && !aPedido,
-      backorderQty: aPedido ? porPedir : 0,
-      maxQuantity:
-        policy.enabled && v.active && p.status === 'ACTIVE' && v.factoryAvailable === true
-          ? available + BACKORDER_MAX_PER_LINE
-          : available,
+      overStock: item.quantity > available,
     };
   });
 
@@ -193,7 +170,6 @@ export async function getCart(): Promise<CartSummary> {
     couponError:
       cart.couponCode && !evaluation.ok ? (evaluation.reason ?? 'Cupón inválido.') : null,
     weightGrams,
-    backorderDays: lines.some((l) => l.backorderQty > 0) ? policy.days : null,
     hasIssues: lines.some((l) => l.overStock),
   };
 }

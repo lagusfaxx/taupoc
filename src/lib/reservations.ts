@@ -58,15 +58,11 @@ export function reservationDeadline(
 async function orderUnits(tx: Tx, orderId: string) {
   const items = await tx.orderItem.findMany({
     where: { orderId },
-    select: {
-      variantId: true, quantity: true, backorderQty: true, sku: true, productName: true, colorName: true, size: true,
-    },
+    select: { variantId: true, quantity: true, sku: true, productName: true, colorName: true, size: true },
   });
   const byVariant = new Map<string, (typeof items)[number]>();
-  for (const raw of items) {
-    // Las unidades a pedido no salen del inventario: se piden a fábrica.
-    const item = { ...raw, quantity: raw.quantity - raw.backorderQty };
-    if (!item.variantId || item.quantity <= 0) continue;
+  for (const item of items) {
+    if (!item.variantId) continue;
     const seen = byVariant.get(item.variantId);
     byVariant.set(item.variantId, seen ? { ...seen, quantity: seen.quantity + item.quantity } : item);
   }
