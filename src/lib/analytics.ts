@@ -1,6 +1,7 @@
 import 'server-only';
 import { Prisma } from '@prisma/client';
 import { prisma } from './db';
+import { unitPriceOf } from '@/lib/variant-price';
 
 /**
  * Indicadores para llevar la tienda: embudo de conversión, origen del tráfico,
@@ -394,6 +395,8 @@ export async function abandonedCarts(limit = 8) {
             select: {
               size: true,
               priceOverride: true,
+              salePercent: true,
+              saleEndsAt: true,
               product: { select: { name: true, basePrice: true } },
             },
           },
@@ -412,7 +415,7 @@ export async function abandonedCarts(limit = 8) {
     cartId: c.id,
     updatedAt: c.updatedAt,
     units: c.items.reduce((s, i) => s + i.quantity, 0),
-    value: c.items.reduce((s, i) => s + i.quantity * (i.variant.priceOverride ?? i.variant.product.basePrice), 0),
+    value: c.items.reduce((s, i) => s + i.quantity * (unitPriceOf(i.variant, i.variant.product.basePrice)), 0),
     items: c.items.map((i) => `${i.variant.product.name} T${i.variant.size}`).join(', '),
     customer: c.userId ? userMap.get(c.userId) ?? null : null,
   }));

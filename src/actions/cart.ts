@@ -8,6 +8,7 @@ import { evaluateCoupon } from '@/lib/pricing';
 import { getSession } from '@/lib/auth';
 import { sweepExpiredReservations } from '@/lib/reservations';
 import type { MetaEventData } from '@/lib/meta-pixel';
+import { unitPriceOf, variantPrice } from '@/lib/variant-price';
 
 export interface CartActionState {
   ok: boolean;
@@ -106,9 +107,9 @@ export async function addToCart(
         contents: [{
           id: variant.productId,
           quantity: quantity - (existing?.quantity ?? 0),
-          item_price: variant.priceOverride ?? variant.product.basePrice,
+          item_price: unitPriceOf(variant, variant.product.basePrice),
         }],
-        value: (quantity - (existing?.quantity ?? 0)) * (variant.priceOverride ?? variant.product.basePrice),
+        value: (quantity - (existing?.quantity ?? 0)) * (unitPriceOf(variant, variant.product.basePrice)),
         currency: 'CLP',
       },
     } : {}),
@@ -185,11 +186,15 @@ export async function applyCoupon(
   const session = await getSession();
   const evaluation = await evaluateCoupon(
     code,
-    cart.items.map((i) => ({
-      productId: i.variant.productId,
-      unitPrice: i.variant.priceOverride ?? i.variant.product.basePrice,
-      quantity: i.quantity,
-    })),
+    cart.items.map((i) => {
+      const pricing = variantPrice(i.variant, i.variant.product.basePrice);
+      return {
+        productId: i.variant.productId,
+        unitPrice: pricing.price,
+        quantity: i.quantity,
+        onSale: pricing.percent != null,
+      };
+    }),
     session?.email,
   );
 
@@ -200,5 +205,11 @@ export async function applyCoupon(
   await prisma.cart.update({ where: { id: cart.id }, data: { couponCode: code } });
   revalidatePath('/carrito');
   revalidatePath('/checkout');
-  return { ok: true, message: `Cupón ${code} aplicado.` };
+  const conOferta = cart.items.some((i) => variantPrice(i.variant, i.variant.product.basePrice).percent != null);
+  return {
+    ok: true,
+    message: conOferta
+      ? `Cupón ${code} aplicado. No incluye las tallas en oferta: es oferta o cupón.`
+      : `Cupón ${code} aplicado.`,
+  };
 }

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { colorLabel } from '@/lib/colors';
 import { formatCLP } from '@/lib/money';
 import { useStorePrefs } from './StorePrefs';
+import { SaleBadge } from './SaleBadge';
 
 export interface ProductCardColor {
   id: string;
@@ -21,6 +22,10 @@ export interface ProductCardColor {
   sizes?: string[];
   /** Tiene tallas publicadas: sin stock, se puede vender a pedido. */
   orderable?: boolean;
+  /** Mejor oferta por talla del color con stock, o null. */
+  sale?: { percent: number; size: string; price: number; regular: number } | null;
+  /** Tallas con stock bajo el umbral de urgencia. */
+  scarceSizes?: string[];
 }
 
 export interface ProductCardData {
@@ -98,6 +103,10 @@ export function ProductCard({
   const sizeList = active?.sizes ?? [];
   const stockLeft = fixed ? fixed.stock : (active?.stock ?? product.totalStock);
   const lastUnits = !unavailable && stockLeft > 0 && stockLeft <= 2;
+  // Oferta de una talla del color a la vista: badge sobre la foto y precio
+  // de esa talla bajo el precio normal.
+  const sale = !unavailable ? (active?.sale ?? null) : null;
+  const scarceSizes = !unavailable && !lastUnits ? (active?.scarceSizes ?? []) : [];
 
   return (
     <article className="group flex flex-col" style={{ ['--accent' as string]: product.accentHex }}>
@@ -131,6 +140,7 @@ export function ProductCard({
                 {product.tierLabel}
               </span>
             ) : null}
+            {sale ? <SaleBadge percent={sale.percent} size={sale.size} /> : null}
             {lastUnits ? (
               <span className="rounded-[3px] bg-ink px-2 py-1 font-display text-[9px] font-semibold uppercase tracking-widest text-chalk">
                 {stockLeft === 1 ? 'Última unidad' : 'Últimas unidades'}
@@ -203,6 +213,17 @@ export function ProductCard({
         {/* El precio va pegado al nombre y grande: es lo segundo que se busca. */}
         <div className="mt-1.5">
           <Price amount={product.basePrice} size="sm" className="text-[19px] leading-tight lg:text-[20px]" />
+          {sale ? (
+            <p className="mt-0.5 text-[12.5px] font-semibold leading-snug text-signal-bad">
+              Talla {sale.size} a {formatCLP(sale.price)}{' '}
+              <s className="font-normal text-chalk-faint">{formatCLP(sale.regular)}</s>
+            </p>
+          ) : null}
+          {scarceSizes.length > 0 ? (
+            <p className="mt-0.5 text-[12px] font-semibold leading-snug text-signal-warn">
+              Quedan pocas en talla {scarceSizes.slice(0, 3).join(', ')}
+            </p>
+          ) : null}
           {transferPrice != null && !product.comingSoon ? (
             <p className="mt-0.5 text-[12.5px] leading-snug text-chalk-dim">
               <span className="font-semibold text-chalk">{formatCLP(transferPrice)}</span> con transferencia

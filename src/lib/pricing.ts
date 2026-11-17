@@ -7,6 +7,11 @@ export interface PriceableLine {
   productId: string | null;
   unitPrice: number;
   quantity: number;
+  /**
+   * La talla está en oferta. Cupón u oferta, no los dos: estas líneas no
+   * cuentan para el mínimo ni para la base del descuento del cupón.
+   */
+  onSale?: boolean;
 }
 
 /** Las líneas y el descuento usan la unidad menor de esta moneda. Los cupones se guardan en CLP. */
@@ -68,7 +73,17 @@ export async function evaluateCoupon(
     return { ...NO_DISCOUNT, reason: 'El cupón alcanzó su límite de usos.' };
   }
 
-  const subtotal = lines.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
+  // Las tallas en oferta no acumulan cupón: quedan fuera de la base y del
+  // mínimo de compra. Si todo el carrito está en oferta, el cupón no aplica.
+  const eligible = lines.filter((l) => !l.onSale);
+  if (eligible.length === 0) {
+    return {
+      ...NO_DISCOUNT,
+      reason: 'Los productos en oferta no acumulan cupones: es oferta o cupón.',
+      coupon,
+    };
+  }
+  const subtotal = eligible.reduce((s, l) => s + l.unitPrice * l.quantity, 0);
   if (coupon.minSubtotal && subtotal < Math.ceil(convert(coupon.minSubtotal))) {
     return {
       ...NO_DISCOUNT,
@@ -94,13 +109,19 @@ export async function evaluateCoupon(
   const restricted = coupon.products.length > 0;
   const allowedIds = new Set(coupon.products.map((p) => p.productId));
   const base = restricted
-    ? lines
+    ? eligible
         .filter((l) => l.productId && allowedIds.has(l.productId))
         .reduce((s, l) => s + l.unitPrice * l.quantity, 0)
     : subtotal;
 
   if (restricted && base === 0) {
-    return { ...NO_DISCOUNT, reason: 'El cupón no aplica a los productos del carrito.', coupon };
+    return {
+      ...NO_DISCOUNT,
+      reason: eligible.length < lines.length
+        ? 'El cupón no aplica a los productos del carrito (los que están en oferta no acumulan cupón).'
+        : 'El cupón no aplica a los productos del carrito.',
+      coupon,
+    };
   }
 
   if (coupon.type === 'FREE_SHIPPING') {

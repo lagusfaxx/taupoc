@@ -3,6 +3,7 @@ import { cache } from 'react';
 import type { Gender, Prisma, ProductStatus } from '@prisma/client';
 import { prisma } from './db';
 import type { ProductCardData } from '@/components/store/ProductCard';
+import { isScarce, variantPrice } from './variant-price';
 
 export const GENDER_LABEL: Record<Gender, string> = {
   MALE: 'Hombre',
@@ -17,7 +18,18 @@ const CARD_INCLUDE = {
     orderBy: { sortOrder: 'asc' as const },
     include: {
       images: { orderBy: { sortOrder: 'asc' as const }, take: 1 },
-      variants: { where: { active: true }, select: { stock: true, reserved: true, size: true } },
+      variants: {
+        where: { active: true },
+        select: {
+          stock: true,
+          reserved: true,
+          size: true,
+          priceOverride: true,
+          salePercent: true,
+          saleEndsAt: true,
+          scarcityFrom: true,
+        },
+      },
     },
   },
   images: { orderBy: { sortOrder: 'asc' as const }, take: 1 },
@@ -59,6 +71,23 @@ function conTallaDisponible(
   return colors.length > 0 ? { ...product, colors } : null;
 }
 
+/**
+ * La mejor oferta por talla del color que se puede comprar hoy: es la que la
+ * tarjeta anuncia con su badge. Ante empate gana la talla más barata.
+ */
+function mejorOferta(product: ProductWithCard, color: ProductWithCard['colors'][number]) {
+  let best: { percent: number; size: string; price: number; regular: number } | null = null;
+  for (const v of color.variants) {
+    if (disponibles(v) <= 0) continue;
+    const p = variantPrice(v, product.basePrice);
+    if (p.percent == null) continue;
+    if (!best || p.percent > best.percent || (p.percent === best.percent && p.price < best.price)) {
+      best = { percent: p.percent, size: v.size, price: p.price, regular: p.regular };
+    }
+  }
+  return best;
+}
+
 export function toCardData(product: ProductWithCard): ProductCardData {
   const colors = product.colors.map((color) => ({
     id: color.id,
@@ -74,6 +103,12 @@ export function toCardData(product: ProductWithCard): ProductCardData {
     // abra una ficha a buscar una talla que no hay.
     sizes: color.variants
       .filter((v) => disponibles(v) > 0)
+      .map((v) => v.size)
+      .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b)),
+    sale: mejorOferta(product, color),
+    // Tallas con pocas unidades: la tarjeta avisa "Quedan pocas en talla N".
+    scarceSizes: color.variants
+      .filter((v) => isScarce(disponibles(v), v))
       .map((v) => v.size)
       .sort((a, b) => Number(a) - Number(b) || a.localeCompare(b)),
   }));

@@ -3,6 +3,7 @@ import { prisma } from './db';
 import { adminOrderSchema } from './admin-order-input';
 import { adjustStock, checkLowStock } from './inventory';
 import { notifyOrderStatus } from './order-ops';
+import { unitPriceOf } from '@/lib/variant-price';
 
 /** Todos los importes y snapshots se resuelven aquí, nunca desde el navegador. */
 export async function createAdminOrder(input: unknown, actor: string) {
@@ -20,7 +21,7 @@ export async function createAdminOrder(input: unknown, actor: string) {
       throw new Error('Un producto ya no existe. Recarga el catálogo.');
     const items = d.items.map((item) => {
       const v = variants.find((v) => v.id === item.variantId)!;
-      const unitPrice = v.priceOverride ?? v.product.basePrice;
+      const unitPrice = unitPriceOf(v, v.product.basePrice);
       return {
         variantId: v.id,
         productId: v.productId,

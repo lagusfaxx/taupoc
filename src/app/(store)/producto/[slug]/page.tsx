@@ -23,6 +23,7 @@ import { LineCompare } from '@/components/store/LineCompare';
 import { ProductReviews } from '@/components/store/ProductReviews';
 import { SectionHeading } from '@/components/store/SectionHeading';
 import { Accordion } from '@/components/store/Accordion';
+import { isScarce, variantPrice } from '@/lib/variant-price';
 
 // El encabezado lee el cookie del carrito: estas páginas ya se renderizan por
 // solicitud. Declararlo permite compilar la imagen sin base de datos.
@@ -161,12 +162,17 @@ export default async function ProductPage({
     variants: color.variants.filter((v) => v.active || !esAccesorio).map((v) => {
       // Una talla apagada se ofrece como agotada.
       const available = v.active ? Math.max(0, v.stock - v.reserved) : 0;
+      const pricing = variantPrice(v, product.basePrice);
       return {
         id: v.id,
         size: v.size,
         sku: v.sku,
         available,
-        price: v.priceOverride ?? product.basePrice,
+        price: pricing.price,
+        regularPrice: pricing.regular,
+        salePercent: pricing.percent,
+        saleEndsAt: pricing.endsAt,
+        scarce: isScarce(available, v),
         // Agotada pero publicada: se ofrece a pedido por WhatsApp y el equipo
         // confirma a mano. Una talla apagada en el producto no se ofrece.
         whatsappOrder: aPedido && v.active && available <= 0,
@@ -286,8 +292,10 @@ export default async function ProductPage({
     offers: {
       '@type': 'AggregateOffer',
       priceCurrency: 'CLP',
-      lowPrice: product.basePrice,
-      highPrice: product.basePrice,
+      // Con una talla en oferta el rango baja a su precio: Google compara el
+      // marcado con lo que se ve en la ficha.
+      lowPrice: Math.min(product.basePrice, ...enVista.flatMap((c) => c.variants.map((v) => v.price))),
+      highPrice: Math.max(product.basePrice, ...enVista.flatMap((c) => c.variants.map((v) => v.price))),
       offerCount: enVista.reduce((s, c) => s + c.variants.filter((v) => v.available > 0).length, 0),
       availability:
         product.status === 'COMING_SOON'

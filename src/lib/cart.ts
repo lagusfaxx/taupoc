@@ -6,6 +6,7 @@ import { cookieSecure } from './cookies';
 import { evaluateCoupon } from './pricing';
 import { getSession } from './auth';
 import { colorLabel } from './colors';
+import { variantPrice } from '@/lib/variant-price';
 
 const CART_COOKIE = 'taupoc_cart';
 const CART_MAX_AGE = 60 * 60 * 24 * 45;
@@ -23,6 +24,10 @@ export interface CartLine {
   sku: string;
   imageUrl: string | null;
   unitPrice: number;
+  /** Precio sin la oferta de la talla. Igual a `unitPrice` si no hay oferta. */
+  regularUnitPrice: number;
+  /** Descuento de la talla aplicado a esta línea, o null. */
+  salePercent: number | null;
   quantity: number;
   lineTotal: number;
   weightGrams: number;
@@ -120,7 +125,8 @@ export async function getCart(): Promise<CartSummary> {
   const lines: CartLine[] = cart.items.map((item) => {
     const v = item.variant;
     const p = v.product;
-    const unitPrice = v.priceOverride ?? p.basePrice;
+    const pricing = variantPrice(v, p.basePrice);
+    const unitPrice = pricing.price;
     const image =
       p.images.find((i) => i.colorId === v.colorId) ??
       p.images.find((i) => i.isPrimary) ??
@@ -140,6 +146,8 @@ export async function getCart(): Promise<CartSummary> {
       sku: v.sku,
       imageUrl: image?.url ?? null,
       unitPrice,
+      regularUnitPrice: pricing.regular,
+      salePercent: pricing.percent,
       quantity: item.quantity,
       lineTotal: unitPrice * item.quantity,
       weightGrams: p.weightGrams,
@@ -154,7 +162,12 @@ export async function getCart(): Promise<CartSummary> {
   const session = await getSession();
   const evaluation = await evaluateCoupon(
     cart.couponCode,
-    lines.map((l) => ({ productId: l.productId, unitPrice: l.unitPrice, quantity: l.quantity })),
+    lines.map((l) => ({
+      productId: l.productId,
+      unitPrice: l.unitPrice,
+      quantity: l.quantity,
+      onSale: l.salePercent != null,
+    })),
     session?.email,
   );
 

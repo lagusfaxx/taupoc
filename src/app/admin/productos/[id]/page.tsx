@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/admin/PageHeader';
 import { Card } from '@/components/admin/Card';
 import { ProductForm } from '@/components/admin/ProductForm';
 import { VariantMatrix } from '@/components/admin/VariantMatrix';
+import { SizeDeals, type SizeDealRow } from '@/components/admin/SizeDeals';
 import { ColorManager } from '@/components/admin/ColorManager';
 import { ImageManager } from '@/components/admin/ImageManager';
 import { SpecsEditor, SizeChartEditor } from '@/components/admin/SpecsEditor';
@@ -56,6 +57,28 @@ export default async function EditProductPage({
   const sizes = [...new Set(product.variants.map((v) => v.size))].sort(
     (a, b) => (Number(a) || 0) - (Number(b) || 0),
   );
+
+  // Una fila por talla: la oferta se guarda igual en todos sus colores, así
+  // que la primera variante basta para leerla.
+  const activeColorIds = new Set(product.colors.filter((c) => c.active).map((c) => c.id));
+  const dealRows: SizeDealRow[] = sizes.map((size) => {
+    const vs = product.variants.filter((v) => v.size === size);
+    const first = vs[0];
+    const porColor = vs
+      .filter((v) => v.active && activeColorIds.has(v.colorId))
+      .map((v) => Math.max(0, v.stock - v.reserved));
+    const conStock = porColor.filter((n) => n > 0);
+    return {
+      size,
+      available: porColor.reduce((s, n) => s + n, 0),
+      minColorAvailable: conStock.length ? Math.min(...conStock) : 0,
+      regular: first?.priceOverride ?? product.basePrice,
+      salePercent: first?.salePercent ?? null,
+      saleEndsAt: first?.saleEndsAt?.toISOString() ?? null,
+      scarcityFrom: first?.scarcityFrom ?? null,
+    };
+  });
+  const tallasEnOferta = dealRows.filter((r) => r.salePercent).length;
 
   const colors = product.colors.map((color) => ({
     id: color.id,
@@ -154,6 +177,23 @@ export default async function EditProductPage({
                       lowStockThreshold: v.lowStockThreshold,
                     }))}
                   />
+                )}
+              </Card>
+            ),
+          },
+          {
+            id: 'ofertas',
+            label: `Ofertas por talla${tallasEnOferta ? ` (${tallasEnOferta})` : ''}`,
+            content: (
+              <Card
+                title="Ofertas y urgencia por talla"
+                description="Pon en descuento una talla puntual del modelo y decide cuándo la tienda avisa que quedan pocas."
+                padded
+              >
+                {sizes.length === 0 ? (
+                  <p className="text-[13.5px] text-chalk-faint">Este producto todavía no tiene tallas.</p>
+                ) : (
+                  <SizeDeals productId={product.id} rows={dealRows} />
                 )}
               </Card>
             ),
