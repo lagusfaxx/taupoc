@@ -602,3 +602,71 @@ export const resolveProductRoute = cache(async function resolveProductRoute(
 
   return null;
 });
+
+export interface TopSizeDeal {
+  productId: string;
+  productName: string;
+  size: string;
+  percent: number;
+  price: number;
+  regular: number;
+  imageUrl: string | null;
+  href: string;
+  endsAt: string | null;
+}
+
+/**
+ * La mejor oferta por talla que se puede comprar ahora: la del popup de
+ * entrada. Mayor porcentaje primero; ante empate, la que vence antes.
+ * Solo tallas con stock en productos y colores publicados: anunciar una
+ * oferta que no se puede comprar es peor que no anunciar nada.
+ */
+export const getTopSizeDeal = cache(async (): Promise<TopSizeDeal | null> => {
+  const now = new Date();
+  const candidates = await prisma.variant.findMany({
+    where: {
+      active: true,
+      salePercent: { gt: 0 },
+      OR: [{ saleEndsAt: null }, { saleEndsAt: { gt: now } }],
+      product: { status: 'ACTIVE' },
+      color: { active: true },
+    },
+    include: {
+      product: {
+        select: {
+          id: true, slug: true, name: true, basePrice: true,
+          images: { orderBy: { sortOrder: 'asc' }, take: 1, select: { url: true } },
+        },
+      },
+      color: {
+        select: { slug: true, images: { orderBy: { sortOrder: 'asc' }, take: 1, select: { url: true } } },
+      },
+    },
+    take: 200,
+  });
+
+  const best = candidates
+    .filter((v) => disponibles(v) > 0)
+    .map((v) => ({ v, p: variantPrice(v, v.product.basePrice, now) }))
+    .filter((x) => x.p.percent != null)
+    .sort(
+      (a, b) =>
+        (b.p.percent ?? 0) - (a.p.percent ?? 0) ||
+        (a.v.saleEndsAt?.getTime() ?? Infinity) - (b.v.saleEndsAt?.getTime() ?? Infinity),
+    )[0];
+  if (!best) return null;
+
+  const { v, p } = best;
+  const qs = new URLSearchParams({ color: v.color.slug, talla: v.size });
+  return {
+    productId: v.product.id,
+    productName: v.product.name,
+    size: v.size,
+    percent: p.percent!,
+    price: p.price,
+    regular: p.regular,
+    imageUrl: v.color.images[0]?.url ?? v.product.images[0]?.url ?? null,
+    href: `/producto/${v.product.slug}?${qs}`,
+    endsAt: p.endsAt,
+  };
+});

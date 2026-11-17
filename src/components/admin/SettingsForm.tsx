@@ -167,6 +167,12 @@ export function SettingsForm({ settings }: { settings: SiteSettings }) {
                       label="Mostrar la barra de anuncio"
                     />
                     <Checkbox
+                      name="dealPopupEnabled"
+                      defaultChecked={settings.dealPopupEnabled}
+                      label="Popup con la oferta por talla al entrar a la tienda"
+                      help="Muestra en grande la mejor talla en oferta con stock (Productos → Ofertas por talla). Sale una vez por día por visitante. Sin ofertas vigentes no aparece."
+                    />
+                    <Checkbox
                       name="catalogSplitByColor"
                       defaultChecked={settings.catalogSplitByColor}
                       label="Publicar una ficha por color"

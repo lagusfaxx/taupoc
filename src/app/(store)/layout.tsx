@@ -8,9 +8,12 @@ import { WhatsAppButton } from '@/components/shared/WhatsAppButton';
 import { RouletteWheel } from '@/components/shared/RouletteWheel';
 import { rouletteSegments, rouletteVisible } from '@/lib/roulette';
 import { getRoulette } from '@/lib/roulette-store';
+import { getTopSizeDeal } from '@/lib/catalog';
+import { DealPopup } from '@/components/store/DealPopup';
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
   const [settings, roulette] = await Promise.all([getSettings(), getRoulette()]);
+  const deal = settings.dealPopupEnabled ? await getTopSizeDeal().catch(() => null) : null;
   return (
     <MetaPixel pixelId={settings.metaPixelId}>
       <StorePrefs
@@ -31,6 +34,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       </div>
       </StorePrefs>
       <WhatsAppButton phone={settings.whatsapp} message="Hola, les escribo desde taupoc.cl." />
+      {deal ? <DealPopup deal={deal} /> : null}
       {rouletteVisible(roulette, 'CL') ? (
         <RouletteWheel
           segments={rouletteSegments(roulette, 'CL')}

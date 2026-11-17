@@ -134,6 +134,8 @@ export function RouletteWheel({
 
   const autoOpen = useCallback(() => {
     if (autoOpened.current || done || hidden) return;
+    // El popup de oferta ya salió en esta visita: no se apilan dos ventanas.
+    if ((window as unknown as Record<string, unknown>).__taupocPopupMostrado) return;
     const seen = Number(read(STORAGE_SEEN) ?? 0);
     if (seen && Date.now() - seen < snoozeDays * 86_400_000) return;
     autoOpened.current = true;
