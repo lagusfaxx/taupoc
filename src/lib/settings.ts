@@ -61,6 +61,11 @@ export interface SiteSettings {
   backorderEnabled: boolean;
   /** Plazo que se le muestra al cliente, en días. */
   backorderDays: number;
+  /**
+   * Popup al entrar a la tienda con la mejor oferta por talla vigente. Sin
+   * ninguna talla en oferta no aparece, aunque esté encendido.
+   */
+  dealPopupEnabled: boolean;
 
   // Medios de pago
   mercadoPagoEnabled: boolean;
@@ -112,6 +117,7 @@ export const DEFAULT_SETTINGS: SiteSettings = {
   transferReservationHours: 24,
   backorderEnabled: true,
   backorderDays: 7,
+  dealPopupEnabled: true,
 
   mercadoPagoEnabled: true,
   mercadoPagoDiscount: 0,

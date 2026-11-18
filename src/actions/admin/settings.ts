@@ -30,6 +30,7 @@ const schema = z.object({
   reservationMinutes: z.string().optional(),
   backorderEnabled: z.string().optional(),
   backorderDays: z.string().optional(),
+  dealPopupEnabled: z.string().optional(),
   transferReservationHours: z.string().optional(),
 
   mercadoPagoEnabled: z.string().optional(),
@@ -93,6 +94,7 @@ export async function updateSettings(
     reservationMinutes: Math.min(120, Math.max(5, Math.round(Number(d.reservationMinutes ?? 15)) || 15)),
     backorderEnabled: d.backorderEnabled === 'on',
     backorderDays: Math.min(60, Math.max(1, Math.round(Number(d.backorderDays ?? 7)) || 7)),
+    dealPopupEnabled: d.dealPopupEnabled === 'on',
     transferReservationHours: Math.min(168, Math.max(1, Math.round(Number(d.transferReservationHours ?? 24)) || 24)),
 
     mercadoPagoEnabled,
