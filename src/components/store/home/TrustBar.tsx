@@ -24,7 +24,7 @@ export async function TrustBar() {
     },
     {
       icon: IconCheck,
-      title: 'Cambio de talla sin costo',
+      title: 'Cambio de talla',
       text: 'Dentro de 10 días, sin uso',
     },
     {
