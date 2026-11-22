@@ -8,6 +8,7 @@ import { rouletteSegments, rouletteVisible } from '@/lib/roulette';
 import { getRoulette } from '@/lib/roulette-store';
 import { IntlCartDrawer } from '@/components/intl/CartDrawer';
 import { DeliveryLocationControl } from '@/components/intl/DeliveryLocation';
+import { DeliveryProvider } from '@/components/intl/DeliveryProvider';
 import { jsonLd } from '@/lib/seo';
 import { intlUrl } from '@/lib/intl-seo';
 import './intl.css';
@@ -53,48 +54,52 @@ export default async function IntlLayout({ children }: { children: React.ReactNo
       },
     ],
   };
+  // El proveedor de entrega va aquí y no en el layout raíz, para que cada
+  // componente que lo usa lo tenga siempre encima.
   return (
-    <div className="flex min-h-screen flex-col bg-paper text-graphite">
-      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(orgLd)} />
-      <Analytics />
-      <IntlHeader
-        cartCount={cartCount}
-        logo={
-          settings.intlLogoUrl
-            ? {
-                src: settings.intlLogoUrl,
-                height: settings.logoHeight,
-                darken: false,
-                hasName: settings.intlLogoHasName,
-              }
-            : settings.logoUrl
+    <DeliveryProvider>
+      <div className="flex min-h-screen flex-col bg-paper text-graphite">
+        <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(orgLd)} />
+        <Analytics />
+        <IntlHeader
+          cartCount={cartCount}
+          logo={
+            settings.intlLogoUrl
               ? {
-                  src: settings.logoUrl,
+                  src: settings.intlLogoUrl,
                   height: settings.logoHeight,
-                  darken: true,
-                  hasName: settings.logoHasName,
+                  darken: false,
+                  hasName: settings.intlLogoHasName,
                 }
-              : null
-        }
-      />
-      <DeliveryLocationControl />
-      <main id="contenido" className="flex-1">
-        {children}
-      </main>
-      <IntlFooter instagram={settings.instagram} contactEmail={settings.contactEmail} />
-      <WhatsAppButton phone={settings.whatsapp} message="Hola, les escribo desde taupoc.lat." />
-      <IntlCartDrawer />
-      {rouletteVisible(roulette, 'INTL') ? (
-        <RouletteWheel
-          segments={rouletteSegments(roulette, 'INTL')}
-          theme="light"
-          title={roulette.title}
-          buttonLabel={roulette.buttonLabel}
-          autoOpenSeconds={roulette.autoOpenSeconds}
-          exitIntent={roulette.exitIntent}
-          snoozeDays={roulette.snoozeDays}
+              : settings.logoUrl
+                ? {
+                    src: settings.logoUrl,
+                    height: settings.logoHeight,
+                    darken: true,
+                    hasName: settings.logoHasName,
+                  }
+                : null
+          }
         />
-      ) : null}
-    </div>
+        <DeliveryLocationControl />
+        <main id="contenido" className="flex-1">
+          {children}
+        </main>
+        <IntlFooter instagram={settings.instagram} contactEmail={settings.contactEmail} />
+        <WhatsAppButton phone={settings.whatsapp} message="Hola, les escribo desde taupoc.lat." />
+        <IntlCartDrawer />
+        {rouletteVisible(roulette, 'INTL') ? (
+          <RouletteWheel
+            segments={rouletteSegments(roulette, 'INTL')}
+            theme="light"
+            title={roulette.title}
+            buttonLabel={roulette.buttonLabel}
+            autoOpenSeconds={roulette.autoOpenSeconds}
+            exitIntent={roulette.exitIntent}
+            snoozeDays={roulette.snoozeDays}
+          />
+        ) : null}
+      </div>
+    </DeliveryProvider>
   );
 }

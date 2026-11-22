@@ -6,6 +6,7 @@ import { IntlNotFoundContent } from '@/components/intl/NotFound';
 import { getStore } from '@/lib/storefront-server';
 import { getSettings } from '@/lib/settings';
 import { DeliveryLocationControl } from '@/components/intl/DeliveryLocation';
+import { DeliveryProvider } from '@/components/intl/DeliveryProvider';
 // Sus reglas solo aplican con data-store="intl": en taupoc.cl no cambian nada.
 import './intl/intl.css';
 
@@ -14,14 +15,16 @@ export default async function NotFound() {
   if ((await getStore()) === 'INTL') {
     const settings = await getSettings();
     return (
-      <div className="flex min-h-screen flex-col bg-paper text-graphite">
-        <IntlHeader />
-        <DeliveryLocationControl />
-        <main id="contenido" className="flex-1">
-          <IntlNotFoundContent />
-        </main>
-        <IntlFooter instagram={settings.instagram} contactEmail={settings.contactEmail} />
-      </div>
+      <DeliveryProvider>
+        <div className="flex min-h-screen flex-col bg-paper text-graphite">
+          <IntlHeader />
+          <DeliveryLocationControl />
+          <main id="contenido" className="flex-1">
+            <IntlNotFoundContent />
+          </main>
+          <IntlFooter instagram={settings.instagram} contactEmail={settings.contactEmail} />
+        </div>
+      </DeliveryProvider>
     );
   }
   return (
