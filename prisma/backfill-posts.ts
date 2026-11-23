@@ -94,19 +94,20 @@ Revisa el calendario completo de diciembre y enero en nuestra nota [Torneos de n
     slug: 'calendario-natacion-chile-diciembre-2026-enero-2027',
     title: 'Torneos de natación en Chile hasta fin de año (y lo que viene en enero)',
     excerpt:
-      'Nacional Máster de primavera, Mundial de piscina corta, Open de Clausura y los nacionales de enero: las fechas del calendario FECHIDA que tienes que anotar.',
+      'Nacional Máster, Open de Clausura, torneos máster en Arica y Santiago y los nacionales de enero: las fechas en Chile que tienes que anotar.',
     tags: ['Torneos', 'Calendario'],
     accent: '#A46BFF',
     publishedAt: '2026-11-23T10:00:00-03:00',
-    body: `## Lo que queda de 2026
+    body: `## Lo que queda de 2026 en Chile
 
-Estas son las fechas del calendario oficial de natación clásica de FECHIDA para lo que resta del año. Las sedes y horarios los confirma la federación antes de cada torneo: revísalos en fechida.cl antes de viajar.
+Estos son los torneos de natación en Chile que quedan este año, según el calendario de FECHIDA y el de la Federación Chilena Máster. Las sedes y horarios se confirman antes de cada torneo: revísalos en fechida.cl y fchmn.cl antes de viajar.
 
-| Fecha | Torneo | Dónde |
+| Fecha | Torneo | Ciudad |
 |---|---|---|
-| 26 al 29 de noviembre | Nacional Máster (Primavera) | Chile |
-| 1 al 6 de diciembre | Mundial de Piscina Corta | China |
-| 10 al 13 de diciembre | **Open de Clausura** | Chile |
+| 26 al 29 de noviembre | Nacional Máster (Primavera) | Por confirmar |
+| 4 al 6 de diciembre | Natación Sin Fronteras (máster, piscina 50 m) | Arica |
+| 10 al 13 de diciembre | **Open de Clausura** | Por confirmar |
+| 12 de diciembre | XII Copa Natación Recoleta (máster, piscina 25 m) | Santiago |
 | Diciembre, por confirmar | Nacional de Aguas Abiertas Primavera (reprogramado) | Por confirmar |
 
 El **Open de Clausura** es el último gran torneo nacional del año en piscina y el objetivo de temporada de muchos nadadores. Si vas a estrenar traje ahí, cómpralo con tiempo: un traje de competición conviene usarlo al menos una vez antes de la carrera importante para conocer cómo se pone y cómo calza.
@@ -115,6 +116,7 @@ El **Open de Clausura** es el último gran torneo nacional del año en piscina y
 
 | Fecha | Torneo |
 |---|---|
+| 6 al 9 de enero | XXI Campeonato Nacional de Natación Máster |
 | 9 y 10 de enero | Festival de Menores |
 | 15 al 17 de enero | Nacional de Desarrollo |
 | 21 al 24 de enero | Nacional Infantil |
