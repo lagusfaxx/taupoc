@@ -52,6 +52,7 @@ export async function defaultNav(): Promise<NavItem[]> {
     },
     { label: 'Guía de tallas', href: '/guia-de-tallas' },
     { label: 'Clubes', href: '/clubes' },
+    { label: 'Venta por mayor', href: '/venta-por-mayor' },
     { label: 'La marca', href: '/marca' },
     { label: 'Blog', href: '/blog' },
     { label: 'Contacto', href: '/contacto' },

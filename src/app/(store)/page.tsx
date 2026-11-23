@@ -273,16 +273,36 @@ async function PortadaPorDefecto() {
       </section>
 
       <section className="border-t border-line bg-ink-900">
-        <div className="container flex flex-col gap-6 py-12 sm:flex-row sm:items-center sm:justify-between lg:py-14">
-          <div>
-            <h2 className="font-display text-[22px] leading-none tracking-tight text-chalk">Clubes</h2>
-            <p className="mt-2.5 max-w-xl text-[14.5px] leading-relaxed text-chalk-dim">
-              Precio por volumen desde 10 unidades.
-            </p>
+        <div className="container grid gap-4 py-12 lg:grid-cols-2 lg:gap-6 lg:py-16">
+          <div className="flex flex-col justify-between gap-6 border border-line p-6 sm:p-8">
+            <div>
+              <p className="eyebrow-accent mb-3">Clubes y equipos</p>
+              <h2 className="font-display text-[24px] leading-tight tracking-tight text-chalk sm:text-[28px]">
+                Trajes para todo el equipo
+              </h2>
+              <p className="mt-3 max-w-md text-[14.5px] leading-relaxed text-chalk-dim">
+                Precio por volumen desde 10 unidades y asesoría de tallas para cada nadador.
+              </p>
+            </div>
+            <ButtonLink href="/clubes" size="lg" className="self-start">
+              Cotización para clubes
+            </ButtonLink>
           </div>
-          <ButtonLink href="/clubes" size="lg" className="shrink-0">
-            Cotización para clubes
-          </ButtonLink>
+          <div className="flex flex-col justify-between gap-6 border border-line p-6 sm:p-8">
+            <div>
+              <p className="eyebrow-accent mb-3">Venta por mayor</p>
+              <h2 className="font-display text-[24px] leading-tight tracking-tight text-chalk sm:text-[28px]">
+                Vende TAUPOC en tu tienda
+              </h2>
+              <p className="mt-3 max-w-md text-[14.5px] leading-relaxed text-chalk-dim">
+                Lista de precios mayorista para tiendas deportivas y de natación, con despacho a todo
+                Chile y factura.
+              </p>
+            </div>
+            <ButtonLink href="/venta-por-mayor" size="lg" variant="outline" className="self-start">
+              Pedir precios mayoristas
+            </ButtonLink>
+          </div>
         </div>
       </section>
     </>

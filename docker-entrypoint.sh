@@ -54,5 +54,9 @@ fi
 echo "→ Actualizando líneas de producto…"
 npx tsx prisma/backfill-lines.ts || echo "⚠ No se pudieron actualizar las líneas; la aplicación arranca igual."
 
+# Notas nuevas del blog: crea las que falten y no toca las existentes.
+echo "→ Publicando notas nuevas del blog…"
+npx tsx prisma/backfill-posts.ts || echo "⚠ No se pudieron publicar las notas; la aplicación arranca igual."
+
 echo "→ Iniciando TAUPOC Chile en el puerto ${PORT:-3000}"
 exec "$@"

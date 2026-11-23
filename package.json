@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:lines": "tsx prisma/backfill-lines.ts",
+    "db:posts": "tsx prisma/backfill-posts.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {
