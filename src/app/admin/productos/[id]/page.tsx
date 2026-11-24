@@ -165,6 +165,7 @@ export default async function EditProductPage({
                 ) : (
                   <VariantMatrix
                     productId={product.id}
+                    kind={product.kind}
                     colors={colors.map((c) => ({ id: c.id, name: c.name, code: c.code, stripCode: c.stripCode, hex: c.hex }))}
                     sizes={sizes}
                     variants={product.variants.map((v) => ({

@@ -3,7 +3,7 @@
 import { useActionState, useMemo, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { addSize, removeSize, saveVariantMatrix, type AdminState } from '@/actions/admin/products';
+import { addSize, makeSingleSize, removeSize, saveVariantMatrix, type AdminState } from '@/actions/admin/products';
 import { cn } from '@/lib/utils';
 import { IconPlus, IconTrash } from '@/components/ui/Icons';
 
@@ -48,8 +48,10 @@ export function VariantMatrix({
   colors,
   sizes,
   variants,
+  kind,
 }: {
   productId: string;
+  kind: string;
   colors: MatrixColor[];
   sizes: string[];
   variants: MatrixVariant[];
@@ -58,6 +60,20 @@ export function VariantMatrix({
   const [state, action] = useActionState<AdminState | null, FormData>(saveVariantMatrix, null);
   const [sizeState, sizeAction] = useActionState<AdminState | null, FormData>(addSize, null);
   const [pending, startTransition] = useTransition();
+  const [singleState, setSingleState] = useState<AdminState | null>(null);
+  const esAccesorio = kind === 'ACCESSORY';
+
+  function toSingleSize() {
+    const ok = confirm(
+      `Se dejará una sola talla (única) por color y el producto pasará a ser accesorio. ` +
+        `El stock de las ${sizes.length} tallas se suma en esa celda. ¿Continuar?`,
+    );
+    if (!ok) return;
+    startTransition(async () => {
+      setSingleState(await makeSingleSize(productId));
+      router.refresh();
+    });
+  }
 
   const initial = useMemo(
     () => Object.fromEntries(variants.map((v) => [v.id, { stock: v.stock, active: v.active }])),
@@ -115,7 +131,8 @@ export function VariantMatrix({
           <div>
             <p className="text-[13px] text-chalk-dim">
               <strong className="text-chalk">{totals.total}</strong> unidades en stock ·{' '}
-              {variants.length} SKU · {colors.length} colores × {sizes.length} tallas
+              {variants.length} SKU · {colors.length} colores
+              {sizes.length === 1 && sizes[0] === 'U' ? ' · talla única' : ` × ${sizes.length} tallas`}
             </p>
             <p className="mt-1 text-[12px] text-chalk-faint">
               Escribe el stock directamente en la celda. Usa los botones de fila y columna para
@@ -124,6 +141,43 @@ export function VariantMatrix({
           </div>
           <Save dirty={dirty} />
         </div>
+
+        {sizes.length > 1 ? (
+          <div
+            className={cn(
+              'mb-4 flex flex-wrap items-center justify-between gap-3 border px-3.5 py-2.5 text-[13px]',
+              esAccesorio ? 'border-signal-warn/40 bg-signal-warn/10 text-signal-warn' : 'border-line text-chalk-dim',
+            )}
+          >
+            <span>
+              {esAccesorio
+                ? 'Este accesorio tiene tallas de traje. Si se vende en talla única, déjalo en una sola celda por color.'
+                : '¿Es un gorro, lentes u otro accesorio sin tallas? Pásalo a talla única.'}
+            </span>
+            <button
+              type="button"
+              onClick={toSingleSize}
+              disabled={pending}
+              className="h-8 border border-line-bright px-3 font-display text-[10.5px] font-semibold uppercase tracking-widest text-chalk transition-colors hover:border-chalk disabled:opacity-50"
+            >
+              {pending ? 'Convirtiendo…' : 'Pasar a talla única'}
+            </button>
+          </div>
+        ) : null}
+
+        {singleState ? (
+          <p
+            role="status"
+            className={cn(
+              'mb-4 border px-3.5 py-2.5 text-[13px]',
+              singleState.ok
+                ? 'border-signal-ok/40 bg-signal-ok/10 text-signal-ok'
+                : 'border-signal-bad/40 bg-signal-bad/10 text-signal-bad',
+            )}
+          >
+            {singleState.message}
+          </p>
+        ) : null}
 
         {state ? (
           <p
@@ -148,7 +202,9 @@ export function VariantMatrix({
                 </th>
                 {sizes.map((size) => (
                   <th key={size} className="border-b border-line bg-ink-800 px-2 py-2 text-center">
-                    <span className="block font-display text-[14px] font-bold text-chalk">{size}</span>
+                    <span className="block font-display text-[14px] font-bold text-chalk">
+                      {size === 'U' ? 'Única' : size}
+                    </span>
                     <span className="mt-0.5 block text-[10px] text-chalk-faint">
                       {totals.bySize.get(size) ?? 0} u.
                     </span>
