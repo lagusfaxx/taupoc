@@ -12,6 +12,9 @@ import { importMediaFromUrl, storeMediaImage } from '@/lib/media';
 import { parseCLP } from '@/lib/money';
 import { MAX_SALE_PERCENT } from '@/lib/variant-price';
 
+/** Talla de los accesorios que no se venden por talla (gorros, lentes…). */
+const SINGLE_SIZE = 'U';
+
 export interface AdminState {
   ok: boolean;
   message: string;
@@ -68,7 +71,7 @@ const productSchema = z.object({
 });
 
 export async function saveProduct(_prev: AdminState | null, formData: FormData): Promise<AdminState> {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const parsed = productSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) {
     return { ok: false, message: 'Revisa los campos marcados.', fieldErrors: errorsOf(parsed.error) };
@@ -130,9 +133,18 @@ export async function saveProduct(_prev: AdminState | null, formData: FormData):
   }
 
   if (d.id) {
+    const before = await prisma.product.findUnique({ where: { id: d.id }, select: { kind: true } });
     const product = await prisma.product.update({ where: { id: d.id }, data });
+    // Al pasar a accesorio, las tallas de traje que traía sobran: se dejan
+    // en talla única para que el stock se cargue en una sola celda por color.
+    let extra = '';
+    if (data.kind === 'ACCESSORY' && before?.kind !== 'ACCESSORY') {
+      const r = await collapseToSingleSize(product.id, admin.email);
+      if (r.ok && r.changed) extra = ' Quedó en talla única.';
+      if (!r.ok) extra = ` ${r.message}`;
+    }
     revalidateCatalog(product.slug);
-    return { ok: true, message: 'Producto actualizado.', id: product.id };
+    return { ok: true, message: `Producto actualizado.${extra}`, id: product.id };
   }
 
   const product = await prisma.product.create({ data });
@@ -320,9 +332,13 @@ export async function saveColor(_prev: AdminState | null, formData: FormData): P
       distinct: ['size'],
       orderBy: { size: 'asc' },
     });
+    // Sin tallas previas: un accesorio (gorro, lentes…) nace en talla única;
+    // un traje, con la curva de tallas de competición.
     const useSizes = sizes.length > 0
       ? sizes.map((s) => s.size)
-      : ['20', '22', '24', '26', '28', '30', '32', '34', '36'];
+      : product.kind === 'ACCESSORY'
+        ? [SINGLE_SIZE]
+        : ['20', '22', '24', '26', '28', '30', '32', '34', '36'];
 
     await prisma.variant.createMany({
       data: useSizes.map((size, i) => ({
@@ -505,6 +521,70 @@ export async function addSize(_prev: AdminState | null, formData: FormData): Pro
 
   revalidateCatalog(product.slug);
   return { ok: true, message: `Talla ${size} agregada a ${product.colors.length} colores.` };
+}
+
+/**
+ * Deja cada color del producto con una sola variante en talla única. El stock
+ * de las tallas que se eliminan se suma a la que queda, así no se pierde nada.
+ * Se niega si alguna de esas tallas tiene unidades apartadas por un carrito o
+ * un pedido en curso.
+ */
+async function collapseToSingleSize(
+  productId: string,
+  actorEmail?: string,
+): Promise<{ ok: boolean; changed: boolean; message: string }> {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { colors: { include: { variants: { orderBy: [{ sortOrder: 'asc' }, { size: 'asc' }] } } } },
+  });
+  if (!product) return { ok: false, changed: false, message: 'Producto no encontrado.' };
+
+  const plan = product.colors
+    .filter((c) => c.variants.length > 0 && !(c.variants.length === 1 && c.variants[0].size === SINGLE_SIZE))
+    .map((color) => {
+      // Se conserva la variante con más stock: es la que probablemente ya
+      // tiene ventas e historial asociados.
+      const keep = [...color.variants].sort((a, b) => b.stock + b.reserved - (a.stock + a.reserved))[0];
+      const drop = color.variants.filter((v) => v.id !== keep.id);
+      return { color, keep, drop, total: color.variants.reduce((s, v) => s + v.stock, 0) };
+    });
+
+  if (plan.length === 0) return { ok: true, changed: false, message: 'Ya está en talla única.' };
+  if (plan.some((p) => p.drop.some((v) => v.reserved > 0))) {
+    return {
+      ok: false,
+      changed: false,
+      message: 'No se pudo dejar en talla única: hay unidades reservadas en otras tallas. Inténtalo cuando se liberen.',
+    };
+  }
+
+  for (const { color, keep, drop, total } of plan) {
+    await prisma.$transaction([
+      prisma.variant.deleteMany({ where: { id: { in: drop.map((v) => v.id) } } }),
+      prisma.variant.update({
+        where: { id: keep.id },
+        data: {
+          size: SINGLE_SIZE,
+          sku: `${product.modelCode}-${color.code ?? color.slug.toUpperCase().slice(0, 3)}-${SINGLE_SIZE}`,
+          sortOrder: 0,
+        },
+      }),
+    ]);
+    await setStock({ variantId: keep.id, stock: total, actorEmail, reason: 'Paso a talla única' });
+  }
+
+  revalidateCatalog(product.slug);
+  revalidatePath('/admin/inventario');
+  return { ok: true, changed: true, message: 'Producto en talla única.' };
+}
+
+/** Botón de la matriz: convierte el producto en accesorio de talla única. */
+export async function makeSingleSize(productId: string): Promise<AdminState> {
+  const admin = await requireAdmin();
+  const r = await collapseToSingleSize(productId, admin.email);
+  if (!r.ok) return { ok: false, message: r.message };
+  await prisma.product.update({ where: { id: productId }, data: { kind: 'ACCESSORY' } });
+  return { ok: true, message: 'Listo: ahora es talla única. Carga el stock por color.' };
 }
 
 export async function removeSize(productId: string, size: string) {
